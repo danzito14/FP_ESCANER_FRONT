@@ -1,0 +1,58 @@
+<section class="crud-page">
+  <header class="crud-header">
+    <h1>Usuarios</h1>
+    <button class="btn btn-primary" (click)="nuevo()">+ Nuevo usuario</button>
+  </header>
+
+  @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
+
+  @if (loading()) {
+    <p class="loading">Cargando…</p>
+  } @else {
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Usuario</th>
+          <th>Rol</th>
+          <th>Estado</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (u of items(); track u.id_usuario) {
+          <tr>
+            <td>{{ u.id_usuario }}</td>
+            <td>{{ u.nombre_usuario }}</td>
+            <td>{{ rolNombre(u.id_rol) }}</td>
+            <td>
+              <span class="badge" [class.badge-on]="u.estado === 'activo'" [class.badge-off]="u.estado !== 'activo'">
+                {{ u.estado }}
+              </span>
+            </td>
+            <td class="actions">
+              <button class="btn btn-sm" (click)="editar(u)">Editar</button>
+              <button class="btn btn-sm btn-danger" (click)="eliminar(u)">Desactivar</button>
+            </td>
+          </tr>
+        } @empty {
+          <tr><td colspan="5" class="empty">Sin registros.</td></tr>
+        }
+      </tbody>
+    </table>
+  }
+
+  @if (showForm()) {
+    <div class="modal-backdrop" (click)="cerrar()">
+      <div class="modal" (click)="$event.stopPropagation()">
+        <h2>{{ selected() ? 'Editar usuario' : 'Nuevo usuario' }}</h2>
+        <app-usuario-form
+          [usuario]="selected()"
+          [roles]="roles()"
+          (save)="guardar($event)"
+          (cancel)="cerrar()"
+        />
+      </div>
+    </div>
+  }
+</section>

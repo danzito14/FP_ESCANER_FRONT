@@ -1,0 +1,48 @@
+<form [formGroup]="form" (ngSubmit)="onSubmit()" class="crud-form">
+  <div class="form-field">
+    <label for="nombre_empresa">Nombre de la empresa</label>
+    <input id="nombre_empresa" type="text" formControlName="nombre_empresa" />
+    @if (form.controls.nombre_empresa.touched && form.controls.nombre_empresa.invalid) {
+      <small class="error">El nombre es requerido.</small>
+    }
+  </div>
+
+  <div class="form-row">
+    <div class="form-field">
+      <label for="zona_horaria">Zona horaria</label>
+      <input id="zona_horaria" type="text" formControlName="zona_horaria" placeholder="America/Mazatlan" />
+      @if (form.controls.zona_horaria.touched && form.controls.zona_horaria.invalid) {
+        <small class="error">Requerida.</small>
+      }
+    </div>
+
+    <div class="form-field">
+      <label for="estado">Estado</label>
+      <select id="estado" formControlName="estado">
+        <option value="activo">Activo</option>
+        <option value="inactivo">Inactivo</option>
+      </select>
+    </div>
+  </div>
+
+  <fieldset class="coords" formArrayName="coordenadas">
+    <legend>Ubicación · vértices del polígono (latitud / longitud)</legend>
+
+    @for (coord of coordenadas.controls; track $index) {
+      <div class="coord-row" [formGroupName]="$index">
+        <input type="number" step="any" formControlName="lat" placeholder="Latitud" />
+        <input type="number" step="any" formControlName="lng" placeholder="Longitud" />
+        <button type="button" class="btn btn-ghost" (click)="removeCoordenada($index)">✕</button>
+      </div>
+    } @empty {
+      <p class="hint">Sin coordenadas. Agrega los vértices del polígono.</p>
+    }
+
+    <button type="button" class="btn btn-sm" (click)="addCoordenada()">+ Agregar coordenada</button>
+  </fieldset>
+
+  <div class="form-actions">
+    <button type="button" class="btn btn-ghost" (click)="cancel.emit()">Cancelar</button>
+    <button type="submit" class="btn btn-primary">{{ isEdit() ? 'Guardar' : 'Crear' }}</button>
+  </div>
+</form>

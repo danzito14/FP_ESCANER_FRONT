@@ -1,0 +1,49 @@
+<section class="crud-page">
+  <header class="crud-header">
+    <h1>Asistencias</h1>
+    <button class="btn btn-sm" (click)="load()">Actualizar</button>
+  </header>
+
+  @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
+
+  @if (loading()) {
+    <p class="loading">Cargando…</p>
+  } @else {
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Trabajador</th>
+          <th>Puerta</th>
+          <th>Tipo</th>
+          <th>Fecha / hora</th>
+          <th>Confianza</th>
+          <th>Estado</th>
+          <th>Dispositivo</th>
+          <th>Observaciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (a of items(); track a.id_asistencia) {
+          <tr>
+            <td>{{ a.id_asistencia }}</td>
+            <td>{{ trabajadorNombre(a.id_trabajador) }}</td>
+            <td>{{ puertaNombre(a.id_puerta) }}</td>
+            <td>{{ a.tipo_registro }}</td>
+            <td>{{ a.fecha_hora }}</td>
+            <td>{{ a.confianza_biometrica != null ? (a.confianza_biometrica * 100) + '%' : '—' }}</td>
+            <td>
+              <span class="badge" [class.badge-on]="a.estado_registro === 'exitoso'" [class.badge-off]="a.estado_registro !== 'exitoso'">
+                {{ a.estado_registro }}
+              </span>
+            </td>
+            <td>{{ dispositivoNombre(a.id_dispositivo) }}</td>
+            <td>{{ a.observaciones || '—' }}</td>
+          </tr>
+        } @empty {
+          <tr><td colspan="9" class="empty">Sin registros.</td></tr>
+        }
+      </tbody>
+    </table>
+  }
+</section>

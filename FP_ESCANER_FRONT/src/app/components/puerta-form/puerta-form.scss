@@ -1,0 +1,10 @@
+.check-field label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.check-field input {
+  width: auto;
+}

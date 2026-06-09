@@ -1,0 +1,68 @@
+<section class="crud-page">
+  <header class="crud-header">
+    <h1>Puertas de acceso</h1>
+    <button class="btn btn-primary" (click)="nuevo()">+ Nueva puerta</button>
+  </header>
+
+  @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
+
+  @if (loading()) {
+    <p class="loading">Cargando…</p>
+  } @else {
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nombre</th>
+          <th>Empresa</th>
+          <th>Área</th>
+          <th>Dispositivo</th>
+          <th>Tipo acceso</th>
+          <th>Autorización</th>
+          <th>Estado</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (p of items(); track p.id_puerta) {
+          <tr>
+            <td>{{ p.id_puerta }}</td>
+            <td>{{ p.nombre_puerta }}</td>
+            <td>{{ empresaNombre(p.id_empresa) }}</td>
+            <td>{{ areaNombre(p.id_area) }}</td>
+            <td>{{ dispositivoNombre(p.id_dispositivo) }}</td>
+            <td>{{ p.tipo_acceso }}</td>
+            <td>{{ p.requiere_autorizacion ? 'Sí' : 'No' }}</td>
+            <td>
+              <span class="badge" [class.badge-on]="p.estado === 'activo'" [class.badge-off]="p.estado !== 'activo'">
+                {{ p.estado }}
+              </span>
+            </td>
+            <td class="actions">
+              <button class="btn btn-sm" (click)="editar(p)">Editar</button>
+              <button class="btn btn-sm btn-danger" (click)="eliminar(p)">Desactivar</button>
+            </td>
+          </tr>
+        } @empty {
+          <tr><td colspan="9" class="empty">Sin registros.</td></tr>
+        }
+      </tbody>
+    </table>
+  }
+
+  @if (showForm()) {
+    <div class="modal-backdrop" (click)="cerrar()">
+      <div class="modal" (click)="$event.stopPropagation()">
+        <h2>{{ selected() ? 'Editar puerta' : 'Nueva puerta' }}</h2>
+        <app-puerta-form
+          [puerta]="selected()"
+          [areas]="areas()"
+          [empresas]="empresas()"
+          [dispositivos]="dispositivos()"
+          (save)="guardar($event)"
+          (cancel)="cerrar()"
+        />
+      </div>
+    </div>
+  }
+</section>

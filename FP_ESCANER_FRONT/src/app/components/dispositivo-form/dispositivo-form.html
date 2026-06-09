@@ -1,0 +1,72 @@
+<form [formGroup]="form" (ngSubmit)="onSubmit()" class="crud-form">
+  <div class="form-field">
+    <label for="nombre_dispositivo">Nombre del dispositivo</label>
+    <input id="nombre_dispositivo" type="text" formControlName="nombre_dispositivo" />
+    @if (form.controls.nombre_dispositivo.touched && form.controls.nombre_dispositivo.invalid) {
+      <small class="error">El nombre es requerido.</small>
+    }
+  </div>
+
+  <div class="form-row">
+    <div class="form-field">
+      <label for="tipo_dispositivo">Tipo</label>
+      <select id="tipo_dispositivo" formControlName="tipo_dispositivo">
+        <option value="escaner_facial">Escáner facial</option>
+        <option value="huella">Huella</option>
+        <option value="escaner_qr">Escáner QR</option>
+      </select>
+    </div>
+
+    <div class="form-field">
+      <label for="estado">Estado</label>
+      <select id="estado" formControlName="estado">
+        <option value="activo">Activo</option>
+        <option value="inactivo">Inactivo</option>
+        <option value="mantenimiento">Mantenimiento</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div class="form-field">
+      <label for="ip_dispositivo">IP</label>
+      <input id="ip_dispositivo" type="text" formControlName="ip_dispositivo" placeholder="192.168.1.100" />
+    </div>
+
+    <div class="form-field">
+      <label for="puerto">Puerto</label>
+      <input id="puerto" type="number" formControlName="puerto" />
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div class="form-field">
+      <label for="id_area">Área</label>
+      <select id="id_area" formControlName="id_area">
+        <option [ngValue]="0">Sin área</option>
+        @for (area of areas(); track area.id_area) {
+          <option [ngValue]="area.id_area">{{ area.nombre_area }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="form-field">
+      <label for="fecha_instalacion">Fecha de instalación</label>
+      <input id="fecha_instalacion" type="date" formControlName="fecha_instalacion" />
+    </div>
+  </div>
+
+  <fieldset class="coords">
+    <legend>Ubicación (punto)</legend>
+    <div class="coord-row">
+      <input type="number" step="any" formControlName="lat" placeholder="Latitud" />
+      <input type="number" step="any" formControlName="lng" placeholder="Longitud" />
+    </div>
+    <p class="hint">Opcional. Deja ambos vacíos si el dispositivo no tiene ubicación.</p>
+  </fieldset>
+
+  <div class="form-actions">
+    <button type="button" class="btn btn-ghost" (click)="cancel.emit()">Cancelar</button>
+    <button type="submit" class="btn btn-primary">{{ isEdit() ? 'Guardar' : 'Crear' }}</button>
+  </div>
+</form>

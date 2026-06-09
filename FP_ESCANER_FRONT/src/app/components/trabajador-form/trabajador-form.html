@@ -1,0 +1,48 @@
+<form [formGroup]="form" (ngSubmit)="onSubmit()" class="crud-form">
+  <div class="form-row">
+    <div class="form-field">
+      <label for="nombre">Nombre</label>
+      <input id="nombre" type="text" formControlName="nombre" />
+      @if (form.controls.nombre.touched && form.controls.nombre.invalid) {
+        <small class="error">Requerido.</small>
+      }
+    </div>
+
+    <div class="form-field">
+      <label for="apellido">Apellido</label>
+      <input id="apellido" type="text" formControlName="apellido" />
+      @if (form.controls.apellido.touched && form.controls.apellido.invalid) {
+        <small class="error">Requerido.</small>
+      }
+    </div>
+  </div>
+
+  <div class="form-field">
+    <label for="id_area">Área de trabajo</label>
+    <select id="id_area" formControlName="id_area">
+      <option [ngValue]="0" disabled>Selecciona un área…</option>
+      @for (area of areas(); track area.id_area) {
+        <option [ngValue]="area.id_area">{{ area.nombre_area }}</option>
+      }
+    </select>
+    @if (form.controls.id_area.touched && form.controls.id_area.invalid) {
+      <small class="error">Selecciona un área.</small>
+    }
+  </div>
+
+  @if (isEdit()) {
+    <div class="form-field">
+      <label for="estado">Estado</label>
+      <select id="estado" formControlName="estado">
+        <option value="activo">Activo</option>
+        <option value="inactivo">Inactivo</option>
+        <option value="suspendido">Suspendido</option>
+      </select>
+    </div>
+  }
+
+  <div class="form-actions">
+    <button type="button" class="btn btn-ghost" (click)="cancel.emit()">Cancelar</button>
+    <button type="submit" class="btn btn-primary">{{ isEdit() ? 'Guardar' : 'Crear' }}</button>
+  </div>
+</form>

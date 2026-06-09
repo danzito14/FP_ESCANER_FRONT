@@ -1,0 +1,59 @@
+<section class="crud-page">
+  <header class="crud-header">
+    <h1>Empresas</h1>
+    <button class="btn btn-primary" (click)="nuevo()">+ Nueva empresa</button>
+  </header>
+
+  @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
+
+  @if (loading()) {
+    <p class="loading">Cargando…</p>
+  } @else {
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Empresa</th>
+          <th>Zona horaria</th>
+          <th>Ubicación</th>
+          <th>Estado</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (e of items(); track e.id_empresa) {
+          <tr>
+            <td>{{ e.id_empresa }}</td>
+            <td>{{ e.nombre_empresa }}</td>
+            <td>{{ e.zona_horaria }}</td>
+            <td>{{ e.ubicacion ? 'Sí' : '—' }}</td>
+            <td>
+              <span class="badge" [class.badge-on]="e.estado === 'activo'" [class.badge-off]="e.estado !== 'activo'">
+                {{ e.estado }}
+              </span>
+            </td>
+            <td class="actions">
+              <button class="btn btn-sm" (click)="editar(e)">Editar</button>
+              <button class="btn btn-sm btn-danger" (click)="eliminar(e)">Desactivar</button>
+            </td>
+          </tr>
+        } @empty {
+          <tr><td colspan="6" class="empty">Sin registros.</td></tr>
+        }
+      </tbody>
+    </table>
+  }
+
+  @if (showForm()) {
+    <div class="modal-backdrop" (click)="cerrar()">
+      <div class="modal" (click)="$event.stopPropagation()">
+        <h2>{{ selected() ? 'Editar empresa' : 'Nueva empresa' }}</h2>
+        <app-empresa-form
+          [empresa]="selected()"
+          (save)="guardar($event)"
+          (cancel)="cerrar()"
+        />
+      </div>
+    </div>
+  }
+</section>

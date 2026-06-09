@@ -1,0 +1,62 @@
+<section class="crud-page">
+  <header class="crud-header">
+    <h1>Dispositivos</h1>
+    <button class="btn btn-primary" (click)="nuevo()">+ Nuevo dispositivo</button>
+  </header>
+
+  @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
+
+  @if (loading()) {
+    <p class="loading">Cargando…</p>
+  } @else {
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nombre</th>
+          <th>Tipo</th>
+          <th>IP</th>
+          <th>Área</th>
+          <th>Estado</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (d of items(); track d.id_dispositivo) {
+          <tr>
+            <td>{{ d.id_dispositivo }}</td>
+            <td>{{ d.nombre_dispositivo }}</td>
+            <td>{{ d.tipo_dispositivo }}</td>
+            <td>{{ d.ip_dispositivo || '—' }}{{ d.ip_dispositivo && d.puerto ? ':' + d.puerto : '' }}</td>
+            <td>{{ areaNombre(d.id_area) }}</td>
+            <td>
+              <span class="badge" [class.badge-on]="d.estado === 'activo'" [class.badge-off]="d.estado !== 'activo'">
+                {{ d.estado }}
+              </span>
+            </td>
+            <td class="actions">
+              <button class="btn btn-sm" (click)="editar(d)">Editar</button>
+              <button class="btn btn-sm btn-danger" (click)="eliminar(d)">Desactivar</button>
+            </td>
+          </tr>
+        } @empty {
+          <tr><td colspan="7" class="empty">Sin registros.</td></tr>
+        }
+      </tbody>
+    </table>
+  }
+
+  @if (showForm()) {
+    <div class="modal-backdrop" (click)="cerrar()">
+      <div class="modal" (click)="$event.stopPropagation()">
+        <h2>{{ selected() ? 'Editar dispositivo' : 'Nuevo dispositivo' }}</h2>
+        <app-dispositivo-form
+          [dispositivo]="selected()"
+          [areas]="areas()"
+          (save)="guardar($event)"
+          (cancel)="cerrar()"
+        />
+      </div>
+    </div>
+  }
+</section>

@@ -1,0 +1,66 @@
+<section class="crud-page">
+  <header class="crud-header">
+    <h1>Trabajadores</h1>
+    <button class="btn btn-primary" (click)="nuevo()">+ Nuevo trabajador</button>
+  </header>
+
+  @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
+
+  @if (loading()) {
+    <p class="loading">Cargando…</p>
+  } @else {
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nombre</th>
+          <th>Área</th>
+          <th>Estado</th>
+          <th>Rostro registrado</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (t of items(); track t.id_trabajador) {
+          <tr>
+            <td>{{ t.id_trabajador }}</td>
+            <td>{{ t.nombre }} {{ t.apellido }}</td>
+            <td>{{ areaNombre(t.id_area) }}</td>
+            <td>
+              <span class="badge" [class.badge-on]="t.estado === 'activo'" [class.badge-off]="t.estado !== 'activo'">
+                {{ t.estado }}
+              </span>
+            </td>
+            <td>
+              @if (t.tiene_embedding) {
+                <span class="badge badge-on">Sí</span>
+              } @else {
+                <span class="badge badge-off">No</span>
+              }
+            </td>
+            <td class="actions">
+              <button class="btn btn-sm" (click)="editar(t)">Editar</button>
+              <button class="btn btn-sm btn-danger" (click)="eliminar(t)">Desactivar</button>
+            </td>
+          </tr>
+        } @empty {
+          <tr><td colspan="6" class="empty">Sin registros.</td></tr>
+        }
+      </tbody>
+    </table>
+  }
+
+  @if (showForm()) {
+    <div class="modal-backdrop" (click)="cerrar()">
+      <div class="modal" (click)="$event.stopPropagation()">
+        <h2>{{ selected() ? 'Editar trabajador' : 'Nuevo trabajador' }}</h2>
+        <app-trabajador-form
+          [trabajador]="selected()"
+          [areas]="areas()"
+          (save)="guardar($event)"
+          (cancel)="cerrar()"
+        />
+      </div>
+    </div>
+  }
+</section>

@@ -1,0 +1,62 @@
+<section class="crud-page">
+  <header class="crud-header">
+    <h1>Áreas de trabajo</h1>
+    <button class="btn btn-primary" (click)="nuevo()">+ Nueva área</button>
+  </header>
+
+  @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
+
+  @if (loading()) {
+    <p class="loading">Cargando…</p>
+  } @else {
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Área</th>
+          <th>Descripción</th>
+          <th>Empresa</th>
+          <th>Hora entrada</th>
+          <th>Estado</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (a of items(); track a.id_area) {
+          <tr>
+            <td>{{ a.id_area }}</td>
+            <td>{{ a.nombre_area }}</td>
+            <td>{{ a.descripcion || '—' }}</td>
+            <td>{{ empresaNombre(a.id_empresa) }}</td>
+            <td>{{ a.hora_entrada || '—' }}</td>
+            <td>
+              <span class="badge" [class.badge-on]="a.estado === 'activo'" [class.badge-off]="a.estado !== 'activo'">
+                {{ a.estado }}
+              </span>
+            </td>
+            <td class="actions">
+              <button class="btn btn-sm" (click)="editar(a)">Editar</button>
+              <button class="btn btn-sm btn-danger" (click)="eliminar(a)">Desactivar</button>
+            </td>
+          </tr>
+        } @empty {
+          <tr><td colspan="7" class="empty">Sin registros.</td></tr>
+        }
+      </tbody>
+    </table>
+  }
+
+  @if (showForm()) {
+    <div class="modal-backdrop" (click)="cerrar()">
+      <div class="modal" (click)="$event.stopPropagation()">
+        <h2>{{ selected() ? 'Editar área' : 'Nueva área' }}</h2>
+        <app-area-form
+          [area]="selected()"
+          [empresas]="empresas()"
+          (save)="guardar($event)"
+          (cancel)="cerrar()"
+        />
+      </div>
+    </div>
+  }
+</section>

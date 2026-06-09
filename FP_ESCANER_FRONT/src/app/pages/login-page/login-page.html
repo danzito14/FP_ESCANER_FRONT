@@ -1,0 +1,21 @@
+<section class="login-page">
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="crud-form login-card">
+    <h1>Iniciar sesión</h1>
+
+    @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
+
+    <div class="form-field">
+      <label for="nombre_usuario">Usuario</label>
+      <input id="nombre_usuario" type="text" formControlName="nombre_usuario" autocomplete="username" />
+    </div>
+
+    <div class="form-field">
+      <label for="contrasena">Contraseña</label>
+      <input id="contrasena" type="password" formControlName="contrasena" autocomplete="current-password" />
+    </div>
+
+    <button type="submit" class="btn btn-primary" [disabled]="loading()">
+      {{ loading() ? 'Ingresando…' : 'Ingresar' }}
+    </button>
+  </form>
+</section>

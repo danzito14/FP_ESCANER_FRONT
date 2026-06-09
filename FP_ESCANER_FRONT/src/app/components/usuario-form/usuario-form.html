@@ -1,0 +1,48 @@
+<form [formGroup]="form" (ngSubmit)="onSubmit()" class="crud-form">
+  <div class="form-field">
+    <label for="nombre_usuario">Nombre de usuario</label>
+    <input id="nombre_usuario" type="text" formControlName="nombre_usuario" />
+    @if (form.controls.nombre_usuario.touched && form.controls.nombre_usuario.invalid) {
+      <small class="error">El nombre de usuario es requerido.</small>
+    }
+  </div>
+
+  <div class="form-field">
+    <label for="contrasena">
+      Contraseña
+      @if (isEdit()) { <span class="hint">(deja vacío para no cambiarla)</span> }
+    </label>
+    <input id="contrasena" type="password" formControlName="contrasena" autocomplete="new-password" />
+    @if (form.controls.contrasena.touched && form.controls.contrasena.errors?.['required']) {
+      <small class="error">La contraseña es requerida.</small>
+    }
+  </div>
+
+  <div class="form-field">
+    <label for="id_rol">Rol</label>
+    <select id="id_rol" formControlName="id_rol">
+      <option [ngValue]="0" disabled>Selecciona un rol…</option>
+      @for (rol of roles(); track rol.id_rol) {
+        <option [ngValue]="rol.id_rol">{{ rol.nombre }}</option>
+      }
+    </select>
+    @if (form.controls.id_rol.touched && form.controls.id_rol.invalid) {
+      <small class="error">Selecciona un rol.</small>
+    }
+  </div>
+
+  @if (isEdit()) {
+    <div class="form-field">
+      <label for="estado">Estado</label>
+      <select id="estado" formControlName="estado">
+        <option value="activo">Activo</option>
+        <option value="inactivo">Inactivo</option>
+      </select>
+    </div>
+  }
+
+  <div class="form-actions">
+    <button type="button" class="btn btn-ghost" (click)="cancel.emit()">Cancelar</button>
+    <button type="submit" class="btn btn-primary">{{ isEdit() ? 'Guardar' : 'Crear' }}</button>
+  </div>
+</form>
