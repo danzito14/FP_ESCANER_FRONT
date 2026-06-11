@@ -1,18 +1,20 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 
 import { AreaForm } from '../../components/area-form/area-form';
+import { MapFeature, MapView } from '../../components/map-view/map-view';
 import {
   AreaTrabajo,
   AreaTrabajoCreate,
   AreaTrabajoUpdate,
 } from '../../core/interfaces/area-trabajo';
 import { Empresa } from '../../core/interfaces/empresa';
+import { lngLatToWkt } from '../../core/utils/geo';
 import { AreaTrabajoService } from '../../service/area-trabajo';
 import { EmpresaService } from '../../service/empresa';
 
 @Component({
   selector: 'app-areas-page',
-  imports: [AreaForm],
+  imports: [AreaForm, MapView],
   templateUrl: './areas-page.html',
   styleUrl: './areas-page.scss',
 })
@@ -26,6 +28,17 @@ export class AreasPage {
   readonly error = signal<string | null>(null);
   readonly showForm = signal(false);
   readonly selected = signal<AreaTrabajo | null>(null);
+  readonly mapSelId = signal<number | null>(null);
+
+  readonly mapFeatures = computed<MapFeature[]>(() =>
+    this.items().map((a) => ({
+      id: a.id_area,
+      wkt: a.ubicacion ?? lngLatToWkt(a.coordenadas),
+      label: a.nombre_area,
+      // Azul si el área pertenece a una empresa; gris si no.
+      color: a.id_empresa ? '#3b82f6' : '#9099a5',
+    })),
+  );
 
   constructor() {
     this.empresaService.list().subscribe({

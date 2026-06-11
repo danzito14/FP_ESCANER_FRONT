@@ -6,8 +6,10 @@ export interface Dispositivo {
   tipo_dispositivo: TipoDispositivo;
   ip_dispositivo?: string | null;
   puerto?: number | null;
-  /** Punto PostGIS en formato WKT, ej: "POINT (lng lat)". */
+  /** Puede venir como WKT (POINT) y/o como latitud/longitud planas. */
   ubicacion?: string | null;
+  latitud?: number | null;
+  longitud?: number | null;
   id_area?: number | null;
   estado: EstadoDispositivo;
   ultima_conexion?: string | null;
@@ -21,10 +23,11 @@ export interface DispositivoCreate {
   tipo_dispositivo: TipoDispositivo;
   ip_dispositivo?: string;
   puerto?: number;
-  ubicacion?: string;
   id_area?: number;
   estado: EstadoDispositivo;
   fecha_instalacion?: string;
+  latitud?: number;
+  longitud?: number;
 }
 
 export interface DispositivoUpdate {
@@ -32,8 +35,9 @@ export interface DispositivoUpdate {
   tipo_dispositivo?: TipoDispositivo;
   ip_dispositivo?: string;
   puerto?: number;
-  ubicacion?: string;
   id_area?: number;
   estado?: EstadoDispositivo;
   fecha_instalacion?: string;
+  latitud?: number;
+  longitud?: number;
 }

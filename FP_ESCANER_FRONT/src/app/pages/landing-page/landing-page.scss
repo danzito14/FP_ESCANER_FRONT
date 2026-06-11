@@ -1,0 +1,90 @@
+.landing {
+  animation: fade-in 0.3s ease;
+}
+
+.hero {
+  background: linear-gradient(135deg, var(--accent), #e4ce00);
+  color: #fff;
+  border-radius: var(--radius-lg);
+  padding: 2.5rem 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 12px 32px rgba(255, 100, 39, 0.28);
+
+  .hero-tag {
+    display: inline-block;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    margin-bottom: 0.9rem;
+  }
+
+  h1 {
+    margin: 0 0 0.5rem;
+    font-size: 2.2rem;
+    font-weight: 800;
+  }
+
+  p {
+    margin: 0;
+    max-width: 520px;
+    opacity: 0.92;
+    font-size: 1rem;
+  }
+}
+
+.modulos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.modulo-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.15rem 1.25rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow);
+    border-color: var(--accent);
+
+    .modulo-arrow { transform: translateX(3px); color: var(--accent); }
+  }
+
+  .modulo-icono {
+    font-size: 1.6rem;
+    width: 48px;
+    height: 48px;
+    display: grid;
+    place-items: center;
+    background: var(--accent-soft);
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+  }
+
+  .modulo-info {
+    flex: 1;
+    min-width: 0;
+
+    h3 { margin: 0 0 0.15rem; font-size: 1rem; font-weight: 700; }
+    p { margin: 0; font-size: 0.84rem; color: var(--text-muted); }
+  }
+
+  .modulo-arrow {
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    transition: transform 0.15s ease, color 0.15s ease;
+  }
+}

@@ -1,12 +1,14 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 
 import { EmpresaForm } from '../../components/empresa-form/empresa-form';
+import { MapFeature, MapView } from '../../components/map-view/map-view';
 import { Empresa, EmpresaCreate, EmpresaUpdate } from '../../core/interfaces/empresa';
+import { lngLatToWkt } from '../../core/utils/geo';
 import { EmpresaService } from '../../service/empresa';
 
 @Component({
   selector: 'app-empresas-page',
-  imports: [EmpresaForm],
+  imports: [EmpresaForm, MapView],
   templateUrl: './empresas-page.html',
   styleUrl: './empresas-page.scss',
 })
@@ -18,6 +20,16 @@ export class EmpresasPage {
   readonly error = signal<string | null>(null);
   readonly showForm = signal(false);
   readonly selected = signal<Empresa | null>(null);
+  readonly mapSelId = signal<number | null>(null);
+
+  readonly mapFeatures = computed<MapFeature[]>(() =>
+    this.items().map((e) => ({
+      id: e.id_empresa,
+      wkt: e.ubicacion ?? lngLatToWkt(e.coordenadas),
+      label: e.nombre_empresa,
+      color: '#ff6427', // naranja
+    })),
+  );
 
   constructor() {
     this.load();
@@ -54,6 +66,7 @@ export class EmpresasPage {
   }
 
   guardar(payload: EmpresaCreate | EmpresaUpdate): void {
+    console.log(payload);
     const sel = this.selected();
     const req = sel
       ? this.service.update(sel.id_empresa, payload)

@@ -1,1 +1,20 @@
-<p>landing-page works!</p>
+<section class="landing">
+  <div class="hero">
+    <span class="hero-tag">Panel de administración</span>
+    <h1>FP Escáner</h1>
+    <p>Control de asistencia biométrico. Gestiona el catálogo del sistema desde un solo lugar.</p>
+  </div>
+
+  <div class="modulos-grid">
+    @for (m of modulos; track m.ruta) {
+      <a class="modulo-card" [routerLink]="m.ruta">
+        <span class="modulo-icono">{{ m.icono }}</span>
+        <div class="modulo-info">
+          <h3>{{ m.titulo }}</h3>
+          <p>{{ m.descripcion }}</p>
+        </div>
+        <span class="modulo-arrow">→</span>
+      </a>
+    }
+  </div>
+</section>

@@ -69,5 +69,11 @@ export const routes: Routes = [
         (m) => m.IncidenciasPage,
       ),
   },
+  {
+    path: 'scanner',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/scanner-page/scanner-page').then((m) => m.ScannerPage),
+  },
   { path: '**', redirectTo: '' },
 ];

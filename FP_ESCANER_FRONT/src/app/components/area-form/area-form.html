@@ -1,60 +1,84 @@
 <form [formGroup]="form" (ngSubmit)="onSubmit()" class="crud-form">
-  <div class="form-field">
-    <label for="nombre_area">Nombre del área</label>
-    <input id="nombre_area" type="text" formControlName="nombre_area" />
-    @if (form.controls.nombre_area.touched && form.controls.nombre_area.invalid) {
-      <small class="error">El nombre es requerido.</small>
-    }
-  </div>
-
-  <div class="form-field">
-    <label for="descripcion">Descripción</label>
-    <input id="descripcion" type="text" formControlName="descripcion" />
-  </div>
-
-  <div class="form-row">
-    <div class="form-field">
-      <label for="id_empresa">Empresa</label>
-      <select id="id_empresa" formControlName="id_empresa">
-        <option [ngValue]="0" disabled>Selecciona una empresa…</option>
-        @for (emp of empresas(); track emp.id_empresa) {
-          <option [ngValue]="emp.id_empresa">{{ emp.nombre_empresa }}</option>
+  <div class="form-with-map">
+    <div class="form-fields">
+      <div class="form-field">
+        <label for="nombre_area">Nombre del área</label>
+        <input id="nombre_area" type="text" formControlName="nombre_area" />
+        @if (form.controls.nombre_area.touched && form.controls.nombre_area.invalid) {
+          <small class="error">El nombre es requerido.</small>
         }
-      </select>
-      @if (form.controls.id_empresa.touched && form.controls.id_empresa.invalid) {
-        <small class="error">Selecciona una empresa.</small>
-      }
-    </div>
-
-    <div class="form-field">
-      <label for="hora_entrada">Hora de entrada</label>
-      <input id="hora_entrada" type="time" step="1" formControlName="hora_entrada" />
-    </div>
-
-    <div class="form-field">
-      <label for="estado">Estado</label>
-      <select id="estado" formControlName="estado">
-        <option value="activo">Activo</option>
-        <option value="inactivo">Inactivo</option>
-      </select>
-    </div>
-  </div>
-
-  <fieldset class="coords" formArrayName="coordenadas">
-    <legend>Ubicación · vértices del polígono (latitud / longitud)</legend>
-
-    @for (coord of coordenadas.controls; track $index) {
-      <div class="coord-row" [formGroupName]="$index">
-        <input type="number" step="any" formControlName="lat" placeholder="Latitud" />
-        <input type="number" step="any" formControlName="lng" placeholder="Longitud" />
-        <button type="button" class="btn btn-ghost" (click)="removeCoordenada($index)">✕</button>
       </div>
-    } @empty {
-      <p class="hint">Sin coordenadas. Agrega los vértices del área.</p>
-    }
 
-    <button type="button" class="btn btn-sm" (click)="addCoordenada()">+ Agregar coordenada</button>
-  </fieldset>
+      <div class="form-field">
+        <label for="descripcion">Descripción</label>
+        <input id="descripcion" type="text" formControlName="descripcion" />
+      </div>
+
+      <div class="form-row">
+        <div class="form-field">
+          <label for="id_empresa">Empresa</label>
+          <select id="id_empresa" formControlName="id_empresa">
+            <option [ngValue]="0" disabled>Selecciona una empresa…</option>
+            @for (emp of empresas(); track emp.id_empresa) {
+              <option [ngValue]="emp.id_empresa">{{ emp.nombre_empresa }}</option>
+            }
+          </select>
+          @if (form.controls.id_empresa.touched && form.controls.id_empresa.invalid) {
+            <small class="error">Selecciona una empresa.</small>
+          }
+        </div>
+
+        <div class="form-field">
+          <label for="hora_entrada">Hora de entrada</label>
+          <input id="hora_entrada" type="time" step="1" formControlName="hora_entrada" />
+        </div>
+
+        <div class="form-field">
+          <label for="estado">Estado</label>
+          <select id="estado" formControlName="estado">
+            <option value="activo">Activo</option>
+            <option value="inactivo">Inactivo</option>
+          </select>
+        </div>
+      </div>
+
+      <fieldset class="coords" formArrayName="coordenadas">
+        <legend>Ubicación · vértices del polígono (latitud / longitud)</legend>
+
+        @for (coord of coordenadas.controls; track $index) {
+          <div class="coord-row" [formGroupName]="$index">
+            <input type="number" step="any" formControlName="lat" placeholder="Latitud" />
+            <input type="number" step="any" formControlName="lng" placeholder="Longitud" />
+            <button type="button" class="btn btn-ghost" (click)="removeCoordenada($index)">✕</button>
+          </div>
+        } @empty {
+          <p class="hint">Dibuja el área en el mapa o agrega los vértices a mano.</p>
+        }
+
+        <button type="button" class="btn btn-sm" (click)="addCoordenada()">+ Agregar coordenada</button>
+
+        @if (coordenadas.length >= 3) {
+          <p class="area-info" [class.area-error]="coordenadas.invalid">
+            Área: {{ areaHa.toFixed(2) }} ha (permitido: 5 – 150 ha)
+          </p>
+          @if (coordenadas.errors?.['areaMin']) {
+            <small class="error">El área es muy pequeña; debe ser de al menos 5 ha.</small>
+          }
+          @if (coordenadas.errors?.['areaMax']) {
+            <small class="error">El área es muy grande; no puede superar 150 ha.</small>
+          }
+        }
+      </fieldset>
+    </div>
+
+    <aside class="form-map">
+      <app-map-picker
+        mode="polygon"
+        [wkt]="mapWkt()"
+        (coordsChange)="onMapCoords($event)"
+      />
+    </aside>
+  </div>
 
   <div class="form-actions">
     <button type="button" class="btn btn-ghost" (click)="cancel.emit()">Cancelar</button>

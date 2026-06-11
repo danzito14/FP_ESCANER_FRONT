@@ -1,5 +1,6 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 
+import { MapFeature, MapView } from '../../components/map-view/map-view';
 import { PuertaForm } from '../../components/puerta-form/puerta-form';
 import { AreaTrabajo } from '../../core/interfaces/area-trabajo';
 import { Dispositivo } from '../../core/interfaces/dispositivo';
@@ -9,6 +10,7 @@ import {
   PuertaAccesoCreate,
   PuertaAccesoUpdate,
 } from '../../core/interfaces/puerta-acceso';
+import { pointToWkt } from '../../core/utils/geo';
 import { AreaTrabajoService } from '../../service/area-trabajo';
 import { DispositivoService } from '../../service/dispositivo';
 import { EmpresaService } from '../../service/empresa';
@@ -16,7 +18,7 @@ import { PuertaAccesoService } from '../../service/puerta-acceso';
 
 @Component({
   selector: 'app-puertas-page',
-  imports: [PuertaForm],
+  imports: [PuertaForm, MapView],
   templateUrl: './puertas-page.html',
   styleUrl: './puertas-page.scss',
 })
@@ -34,6 +36,20 @@ export class PuertasPage {
   readonly error = signal<string | null>(null);
   readonly showForm = signal(false);
   readonly selected = signal<PuertaAcceso | null>(null);
+  readonly mapSelId = signal<number | null>(null);
+
+  readonly mapFeatures = computed<MapFeature[]>(() =>
+    this.items().map((p) => ({
+      id: p.id_puerta,
+      wkt:
+        p.ubicacion ??
+        (p.latitud != null && p.longitud != null
+          ? pointToWkt({ lat: p.latitud, lng: p.longitud })
+          : null),
+      label: p.nombre_puerta,
+      color: '#8b5e34', // café
+    })),
+  );
 
   constructor() {
     this.areaService.list().subscribe({

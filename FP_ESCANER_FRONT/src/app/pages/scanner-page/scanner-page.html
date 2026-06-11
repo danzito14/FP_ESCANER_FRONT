@@ -1,0 +1,101 @@
+<section class="crud-page scanner">
+  <header class="crud-header">
+    <h1>Scanner</h1>
+  </header>
+
+  @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
+
+  <div class="scanner-config">
+    <div class="form-field">
+      <label for="id_puerta">Puerta</label>
+      <select id="id_puerta" (change)="onPuerta($event)" [disabled]="activo()">
+        <option [value]="0" disabled selected>Selecciona una puerta…</option>
+        @for (p of puertas(); track p.id_puerta) {
+          <option [value]="p.id_puerta">{{ p.nombre_puerta }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="form-field">
+      <label for="tipo_registro">Registro</label>
+      <select id="tipo_registro" (change)="onTipo($event)" [disabled]="activo()">
+        <option value="entrada">Entrada</option>
+        <option value="salida">Salida</option>
+      </select>
+    </div>
+
+    <div class="form-field">
+      <label for="id_dispositivo">Dispositivo (opcional)</label>
+      <select id="id_dispositivo" (change)="onDispositivo($event)" [disabled]="activo()">
+        <option [value]="0">Sin dispositivo</option>
+        @for (d of dispositivos(); track d.id_dispositivo) {
+          <option [value]="d.id_dispositivo">{{ d.nombre_dispositivo }}</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  <div class="scanner-stage">
+    <div class="video-wrap">
+      <video #video playsinline muted></video>
+      <canvas #overlay class="overlay"></canvas>
+
+      <!-- Toast del resultado, por encima del video -->
+      @if (toast(); as t) {
+        <div class="scanner-toast" [class.ok]="t.exito" [class.fail]="!t.exito">
+          <strong>{{ t.titulo }}</strong>
+          <span>{{ t.nombre }}</span>
+          @if (t.pct != null) { <span class="toast-pct">{{ t.pct }}%</span> }
+        </div>
+      }
+
+      @if (status() === 'idle') {
+        <div class="stage-overlay">
+          <p>Selecciona la puerta y presiona <strong>Iniciar</strong>.</p>
+        </div>
+      }
+      @if (status() === 'cargando') {
+        <div class="stage-overlay">
+          <p>Cargando cámara y modelo…</p>
+        </div>
+      }
+      @if (status() === 'detectando') {
+        <div class="stage-hint" [class.detectado]="detectado()">
+          @if (enviando()) {
+            <span>Verificando…</span>
+          } @else if (capturando()) {
+            <span>📸 Capturando…</span>
+          } @else if (numRostros() === 0) {
+            <span>Acerca tu rostro a la cámara</span>
+          } @else if (detectado()) {
+            <span>✓ {{ numRostros() }} rostro(s) · mejor {{ (mejorScore() * 100) | number:'1.0-0' }}%</span>
+          } @else {
+            <span>Rostro detectado {{ (mejorScore() * 100) | number:'1.0-0' }}% (mín. 75%)</span>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  @if (notis().length) {
+    <div class="scanner-notis">
+      @for (n of notis(); track $index) { <div>{{ n }}</div> }
+    </div>
+  }
+
+  <div class="scanner-actions">
+    @switch (status()) {
+      @case ('idle') {
+        <button class="btn btn-primary" (click)="iniciar()">Iniciar</button>
+      }
+      @case ('error') {
+        <button class="btn btn-primary" (click)="iniciar()">Reintentar</button>
+      }
+      @default {
+        <button class="btn btn-ghost" (click)="detener()" [disabled]="status() === 'cargando'">
+          Detener
+        </button>
+      }
+    }
+  </div>
+</section>

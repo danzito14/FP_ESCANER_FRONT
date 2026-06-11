@@ -9,44 +9,52 @@
   @if (loading()) {
     <p class="loading">Cargando…</p>
   } @else {
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Empresa</th>
-          <th>Zona horaria</th>
-          <th>Ubicación</th>
-          <th>Estado</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (e of items(); track e.id_empresa) {
-          <tr>
-            <td>{{ e.id_empresa }}</td>
-            <td>{{ e.nombre_empresa }}</td>
-            <td>{{ e.zona_horaria }}</td>
-            <td>{{ e.ubicacion ? 'Sí' : '—' }}</td>
-            <td>
-              <span class="badge" [class.badge-on]="e.estado === 'activo'" [class.badge-off]="e.estado !== 'activo'">
-                {{ e.estado }}
-              </span>
-            </td>
-            <td class="actions">
-              <button class="btn btn-sm" (click)="editar(e)">Editar</button>
-              <button class="btn btn-sm btn-danger" (click)="eliminar(e)">Desactivar</button>
-            </td>
-          </tr>
-        } @empty {
-          <tr><td colspan="6" class="empty">Sin registros.</td></tr>
-        }
-      </tbody>
-    </table>
+    <div class="crud-layout with-map">
+      <div class="crud-table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Empresa</th>
+              <th>Zona horaria</th>
+              <th>Ubicación</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (e of items(); track e.id_empresa) {
+              <tr [class.is-selected]="mapSelId() === e.id_empresa" (click)="mapSelId.set(e.id_empresa)">
+                <td>{{ e.id_empresa }}</td>
+                <td>{{ e.nombre_empresa }}</td>
+                <td>{{ e.zona_horaria }}</td>
+                <td>{{ e.ubicacion ? 'Sí' : '—' }}</td>
+                <td>
+                  <span class="badge" [class.badge-on]="e.estado === 'activo'" [class.badge-off]="e.estado !== 'activo'">
+                    {{ e.estado }}
+                  </span>
+                </td>
+                <td class="actions">
+                  <button class="btn btn-sm" (click)="editar(e)">Editar</button>
+                  <button class="btn btn-sm btn-danger" (click)="eliminar(e)">Desactivar</button>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="6" class="empty">Sin registros.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <aside class="crud-map-aside">
+        <app-map-view [features]="mapFeatures()" [selectedId]="mapSelId()" />
+      </aside>
+    </div>
   }
 
   @if (showForm()) {
     <div class="modal-backdrop" (click)="cerrar()">
-      <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal modal-wide" (click)="$event.stopPropagation()">
         <h2>{{ selected() ? 'Editar empresa' : 'Nueva empresa' }}</h2>
         <app-empresa-form
           [empresa]="selected()"

@@ -1,18 +1,27 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 
 import { DispositivoForm } from '../../components/dispositivo-form/dispositivo-form';
+import { MapFeature, MapView } from '../../components/map-view/map-view';
 import { AreaTrabajo } from '../../core/interfaces/area-trabajo';
 import {
   Dispositivo,
   DispositivoCreate,
   DispositivoUpdate,
 } from '../../core/interfaces/dispositivo';
+import {
+  Coordenada,
+  lngLatToCoords,
+  pointInPolygon,
+  pointToWkt,
+  wktToCoords,
+  wktToPoint,
+} from '../../core/utils/geo';
 import { AreaTrabajoService } from '../../service/area-trabajo';
 import { DispositivoService } from '../../service/dispositivo';
 
 @Component({
   selector: 'app-dispositivos-page',
-  imports: [DispositivoForm],
+  imports: [DispositivoForm, MapView],
   templateUrl: './dispositivos-page.html',
   styleUrl: './dispositivos-page.scss',
 })
@@ -26,6 +35,38 @@ export class DispositivosPage {
   readonly error = signal<string | null>(null);
   readonly showForm = signal(false);
   readonly selected = signal<Dispositivo | null>(null);
+  readonly mapSelId = signal<number | null>(null);
+
+  readonly mapFeatures = computed<MapFeature[]>(() =>
+    this.items().map((d) => ({
+      id: d.id_dispositivo,
+      wkt: pointToWkt(this.puntoDe(d)),
+      label: d.nombre_dispositivo,
+      color: this.colorDispositivo(d),
+    })),
+  );
+
+  /** Punto del dispositivo, ya venga como WKT o como latitud/longitud. */
+  private puntoDe(d: Dispositivo): Coordenada | null {
+    if (d.ubicacion) return wktToPoint(d.ubicacion);
+    if (d.latitud != null && d.longitud != null) return { lat: d.latitud, lng: d.longitud };
+    return null;
+  }
+
+  /** Anillo del área, ya venga como WKT (POLYGON) o como arreglo de coordenadas. */
+  private ringDeArea(a?: AreaTrabajo): Coordenada[] {
+    if (!a) return [];
+    return a.ubicacion ? wktToCoords(a.ubicacion) : lngLatToCoords(a.coordenadas);
+  }
+
+  /** Verde claro si el punto cae dentro de su área; rojo si no; gris si no se puede determinar. */
+  private colorDispositivo(d: Dispositivo): string {
+    const punto = this.puntoDe(d);
+    if (!punto || !d.id_area) return '#9099a5';
+    const ring = this.ringDeArea(this.areas().find((a) => a.id_area === d.id_area));
+    if (!ring.length) return '#9099a5';
+    return pointInPolygon(punto, ring) ? '#4ade80' : '#ef4444';
+  }
 
   constructor() {
     this.areaService.list().subscribe({

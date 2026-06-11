@@ -1,80 +1,92 @@
 <form [formGroup]="form" (ngSubmit)="onSubmit()" class="crud-form">
-  <div class="form-field">
-    <label for="nombre_puerta">Nombre de la puerta</label>
-    <input id="nombre_puerta" type="text" formControlName="nombre_puerta" />
-    @if (form.controls.nombre_puerta.touched && form.controls.nombre_puerta.invalid) {
-      <small class="error">El nombre es requerido.</small>
-    }
-  </div>
-
-  <div class="form-row">
-    <div class="form-field">
-      <label for="id_empresa">Empresa</label>
-      <select id="id_empresa" formControlName="id_empresa">
-        <option [ngValue]="0">Sin empresa</option>
-        @for (emp of empresas(); track emp.id_empresa) {
-          <option [ngValue]="emp.id_empresa">{{ emp.nombre_empresa }}</option>
+  <div class="form-with-map">
+    <div class="form-fields">
+      <div class="form-field">
+        <label for="nombre_puerta">Nombre de la puerta</label>
+        <input id="nombre_puerta" type="text" formControlName="nombre_puerta" />
+        @if (form.controls.nombre_puerta.touched && form.controls.nombre_puerta.invalid) {
+          <small class="error">El nombre es requerido.</small>
         }
-      </select>
+      </div>
+
+      <div class="form-row">
+        <div class="form-field">
+          <label for="id_empresa">Empresa</label>
+          <select id="id_empresa" formControlName="id_empresa">
+            <option [ngValue]="0">Sin empresa</option>
+            @for (emp of empresas(); track emp.id_empresa) {
+              <option [ngValue]="emp.id_empresa">{{ emp.nombre_empresa }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label for="id_area">Área</label>
+          <select id="id_area" formControlName="id_area">
+            <option [ngValue]="0">Sin área</option>
+            @for (area of areas(); track area.id_area) {
+              <option [ngValue]="area.id_area">{{ area.nombre_area }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-field">
+          <label for="id_dispositivo">Dispositivo</label>
+          <select id="id_dispositivo" formControlName="id_dispositivo">
+            <option [ngValue]="0">Sin dispositivo</option>
+            @for (disp of dispositivos(); track disp.id_dispositivo) {
+              <option [ngValue]="disp.id_dispositivo">{{ disp.nombre_dispositivo }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label for="tipo_acceso">Tipo de acceso</label>
+          <select id="tipo_acceso" formControlName="tipo_acceso">
+            <option value="entrada">Entrada</option>
+            <option value="salida">Salida</option>
+            <option value="bidireccional">Bidireccional</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-field">
+          <label for="estado">Estado</label>
+          <select id="estado" formControlName="estado">
+            <option value="activo">Activo</option>
+            <option value="inactivo">Inactivo</option>
+          </select>
+        </div>
+
+        <div class="form-field check-field">
+          <label for="requiere_autorizacion">
+            <input id="requiere_autorizacion" type="checkbox" formControlName="requiere_autorizacion" />
+            Requiere autorización
+          </label>
+        </div>
+      </div>
+
+      <fieldset class="coords">
+        <legend>Ubicación (punto)</legend>
+        <div class="coord-row">
+          <input type="number" step="any" formControlName="lat" placeholder="Latitud" />
+          <input type="number" step="any" formControlName="lng" placeholder="Longitud" />
+        </div>
+        <p class="hint">Selecciónalo en el mapa o escríbelo. Opcional.</p>
+      </fieldset>
     </div>
 
-    <div class="form-field">
-      <label for="id_area">Área</label>
-      <select id="id_area" formControlName="id_area">
-        <option [ngValue]="0">Sin área</option>
-        @for (area of areas(); track area.id_area) {
-          <option [ngValue]="area.id_area">{{ area.nombre_area }}</option>
-        }
-      </select>
-    </div>
+    <aside class="form-map">
+      <app-map-picker
+        mode="point"
+        [wkt]="mapWkt()"
+        (coordsChange)="onMapCoords($event)"
+      />
+    </aside>
   </div>
-
-  <div class="form-row">
-    <div class="form-field">
-      <label for="id_dispositivo">Dispositivo</label>
-      <select id="id_dispositivo" formControlName="id_dispositivo">
-        <option [ngValue]="0">Sin dispositivo</option>
-        @for (disp of dispositivos(); track disp.id_dispositivo) {
-          <option [ngValue]="disp.id_dispositivo">{{ disp.nombre_dispositivo }}</option>
-        }
-      </select>
-    </div>
-
-    <div class="form-field">
-      <label for="tipo_acceso">Tipo de acceso</label>
-      <select id="tipo_acceso" formControlName="tipo_acceso">
-        <option value="entrada">Entrada</option>
-        <option value="salida">Salida</option>
-        <option value="bidireccional">Bidireccional</option>
-      </select>
-    </div>
-  </div>
-
-  <div class="form-row">
-    <div class="form-field">
-      <label for="estado">Estado</label>
-      <select id="estado" formControlName="estado">
-        <option value="activo">Activo</option>
-        <option value="inactivo">Inactivo</option>
-      </select>
-    </div>
-
-    <div class="form-field check-field">
-      <label for="requiere_autorizacion">
-        <input id="requiere_autorizacion" type="checkbox" formControlName="requiere_autorizacion" />
-        Requiere autorización
-      </label>
-    </div>
-  </div>
-
-  <fieldset class="coords">
-    <legend>Ubicación (punto)</legend>
-    <div class="coord-row">
-      <input type="number" step="any" formControlName="lat" placeholder="Latitud" />
-      <input type="number" step="any" formControlName="lng" placeholder="Longitud" />
-    </div>
-    <p class="hint">Opcional. Deja ambos vacíos si la puerta no tiene ubicación.</p>
-  </fieldset>
 
   <div class="form-actions">
     <button type="button" class="btn btn-ghost" (click)="cancel.emit()">Cancelar</button>

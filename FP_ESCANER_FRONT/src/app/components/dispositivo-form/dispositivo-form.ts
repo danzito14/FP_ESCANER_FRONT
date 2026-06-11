@@ -1,6 +1,7 @@
 import { Component, computed, effect, inject, input, output } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
+import { MapPicker } from '../map-picker/map-picker';
 import { AreaTrabajo } from '../../core/interfaces/area-trabajo';
 import { EstadoDispositivo, TipoDispositivo } from '../../core/interfaces/common';
 import {
@@ -8,11 +9,11 @@ import {
   DispositivoCreate,
   DispositivoUpdate,
 } from '../../core/interfaces/dispositivo';
-import { pointToWkt, wktToPoint } from '../../core/utils/geo';
+import { Coordenada, pointToWkt, wktToPoint } from '../../core/utils/geo';
 
 @Component({
   selector: 'app-dispositivo-form',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, MapPicker],
   templateUrl: './dispositivo-form.html',
   styleUrl: './dispositivo-form.scss',
 })
@@ -27,6 +28,15 @@ export class DispositivoForm {
   readonly cancel = output<void>();
 
   readonly isEdit = computed(() => this.dispositivo() !== null);
+  /** Geometría inicial para el mapa (acepta WKT o latitud/longitud). */
+  readonly mapWkt = computed(() => {
+    const d = this.dispositivo();
+    if (d?.ubicacion) return d.ubicacion;
+    if (d?.latitud != null && d?.longitud != null) {
+      return pointToWkt({ lat: d.latitud, lng: d.longitud });
+    }
+    return undefined;
+  });
 
   readonly form = this.fb.group({
     nombre_dispositivo: this.fb.nonNullable.control('', Validators.required),
@@ -46,7 +56,11 @@ export class DispositivoForm {
   constructor() {
     effect(() => {
       const d = this.dispositivo();
-      const punto = wktToPoint(d?.ubicacion);
+      const punto = d?.ubicacion
+        ? wktToPoint(d.ubicacion)
+        : d?.latitud != null && d?.longitud != null
+          ? { lat: d.latitud, lng: d.longitud }
+          : null;
       this.form.reset({
         nombre_dispositivo: d?.nombre_dispositivo ?? '',
         tipo_dispositivo: d?.tipo_dispositivo ?? 'escaner_facial',
@@ -61,16 +75,18 @@ export class DispositivoForm {
     });
   }
 
+  /** El mapa colocó/movió el punto: refleja en lat/lng. */
+  onMapCoords(coords: Coordenada[]): void {
+    const p = coords[0];
+    this.form.patchValue({ lat: p?.lat ?? null, lng: p?.lng ?? null });
+  }
+
   onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
     const v = this.form.getRawValue();
-    const ubicacion =
-      v.lat != null && v.lng != null
-        ? pointToWkt({ lat: v.lat, lng: v.lng })
-        : undefined;
 
     this.save.emit({
       nombre_dispositivo: v.nombre_dispositivo,
@@ -80,7 +96,8 @@ export class DispositivoForm {
       id_area: v.id_area || undefined,
       estado: v.estado,
       fecha_instalacion: v.fecha_instalacion || undefined,
-      ubicacion,
+      latitud: v.lat ?? undefined,
+      longitud: v.lng ?? undefined,
     });
   }
 }

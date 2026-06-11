@@ -10,11 +10,12 @@ import {
   PuertaAccesoCreate,
   PuertaAccesoUpdate,
 } from '../../core/interfaces/puerta-acceso';
-import { pointToWkt, wktToPoint } from '../../core/utils/geo';
+import { Coordenada, pointToWkt, wktToPoint } from '../../core/utils/geo';
+import { MapPicker } from '../map-picker/map-picker';
 
 @Component({
   selector: 'app-puerta-form',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, MapPicker],
   templateUrl: './puerta-form.html',
   styleUrl: './puerta-form.scss',
 })
@@ -30,6 +31,15 @@ export class PuertaForm {
   readonly cancel = output<void>();
 
   readonly isEdit = computed(() => this.puerta() !== null);
+  /** Geometría inicial para el mapa (acepta WKT o latitud/longitud). */
+  readonly mapWkt = computed(() => {
+    const p = this.puerta();
+    if (p?.ubicacion) return p.ubicacion;
+    if (p?.latitud != null && p?.longitud != null) {
+      return pointToWkt({ lat: p.latitud, lng: p.longitud });
+    }
+    return undefined;
+  });
 
   readonly form = this.fb.group({
     nombre_puerta: this.fb.nonNullable.control('', Validators.required),
@@ -46,7 +56,11 @@ export class PuertaForm {
   constructor() {
     effect(() => {
       const p = this.puerta();
-      const punto = wktToPoint(p?.ubicacion);
+      const punto = p?.ubicacion
+        ? wktToPoint(p.ubicacion)
+        : p?.latitud != null && p?.longitud != null
+          ? { lat: p.latitud, lng: p.longitud }
+          : null;
       this.form.reset({
         nombre_puerta: p?.nombre_puerta ?? '',
         id_area: p?.id_area ?? 0,
@@ -61,16 +75,17 @@ export class PuertaForm {
     });
   }
 
+  onMapCoords(coords: Coordenada[]): void {
+    const p = coords[0];
+    this.form.patchValue({ lat: p?.lat ?? null, lng: p?.lng ?? null });
+  }
+
   onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
     const v = this.form.getRawValue();
-    const ubicacion =
-      v.lat != null && v.lng != null
-        ? pointToWkt({ lat: v.lat, lng: v.lng })
-        : undefined;
 
     this.save.emit({
       nombre_puerta: v.nombre_puerta,
@@ -80,7 +95,8 @@ export class PuertaForm {
       tipo_acceso: v.tipo_acceso,
       requiere_autorizacion: v.requiere_autorizacion,
       estado: v.estado,
-      ubicacion,
+      latitud: v.lat ?? undefined,
+      longitud: v.lng ?? undefined,
     });
   }
 }

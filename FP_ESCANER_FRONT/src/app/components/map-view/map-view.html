@@ -1,0 +1,15 @@
+@if (isBrowser) {
+  @if (features().length) {
+    <div
+      leaflet
+      class="map"
+      [leafletOptions]="options"
+      [leafletLayers]="layers()"
+      (leafletMapReady)="onMapReady($event)"
+    ></div>
+  } @else {
+    <div class="map-empty">Sin coordenadas para mostrar.</div>
+  }
+} @else {
+  <div class="map-empty">Mapa disponible en el navegador.</div>
+}

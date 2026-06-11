@@ -9,46 +9,54 @@
   @if (loading()) {
     <p class="loading">Cargando…</p>
   } @else {
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Área</th>
-          <th>Descripción</th>
-          <th>Empresa</th>
-          <th>Hora entrada</th>
-          <th>Estado</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (a of items(); track a.id_area) {
-          <tr>
-            <td>{{ a.id_area }}</td>
-            <td>{{ a.nombre_area }}</td>
-            <td>{{ a.descripcion || '—' }}</td>
-            <td>{{ empresaNombre(a.id_empresa) }}</td>
-            <td>{{ a.hora_entrada || '—' }}</td>
-            <td>
-              <span class="badge" [class.badge-on]="a.estado === 'activo'" [class.badge-off]="a.estado !== 'activo'">
-                {{ a.estado }}
-              </span>
-            </td>
-            <td class="actions">
-              <button class="btn btn-sm" (click)="editar(a)">Editar</button>
-              <button class="btn btn-sm btn-danger" (click)="eliminar(a)">Desactivar</button>
-            </td>
-          </tr>
-        } @empty {
-          <tr><td colspan="7" class="empty">Sin registros.</td></tr>
-        }
-      </tbody>
-    </table>
+    <div class="crud-layout with-map">
+      <div class="crud-table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Área</th>
+              <th>Descripción</th>
+              <th>Empresa</th>
+              <th>Hora entrada</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of items(); track a.id_area) {
+              <tr [class.is-selected]="mapSelId() === a.id_area" (click)="mapSelId.set(a.id_area)">
+                <td>{{ a.id_area }}</td>
+                <td>{{ a.nombre_area }}</td>
+                <td>{{ a.descripcion || '—' }}</td>
+                <td>{{ empresaNombre(a.id_empresa) }}</td>
+                <td>{{ a.hora_entrada || '—' }}</td>
+                <td>
+                  <span class="badge" [class.badge-on]="a.estado === 'activo'" [class.badge-off]="a.estado !== 'activo'">
+                    {{ a.estado }}
+                  </span>
+                </td>
+                <td class="actions">
+                  <button class="btn btn-sm" (click)="editar(a)">Editar</button>
+                  <button class="btn btn-sm btn-danger" (click)="eliminar(a)">Desactivar</button>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="7" class="empty">Sin registros.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <aside class="crud-map-aside">
+        <app-map-view [features]="mapFeatures()" [selectedId]="mapSelId()" />
+      </aside>
+    </div>
   }
 
   @if (showForm()) {
     <div class="modal-backdrop" (click)="cerrar()">
-      <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal modal-wide" (click)="$event.stopPropagation()">
         <h2>{{ selected() ? 'Editar área' : 'Nueva área' }}</h2>
         <app-area-form
           [area]="selected()"
