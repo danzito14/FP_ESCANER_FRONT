@@ -23,23 +23,36 @@ import { PlatformService } from '../../service/platform';
 import { PuertaAccesoService } from '../../service/puerta-acceso';
 
 type Estado = 'idle' | 'cargando' | 'detectando' | 'error';
+type EstadoCara = 'detectando' | 'capturando' | 'enviando' | 'ok' | 'rechazado';
 
-/** Tiempo (ms) que el rostro debe mantenerse estable antes de capturar. */
 const ESTABLE_MS = 1200;
-/** Score de detección mínimo aceptable (MediaPipe, 0–1). */
 const SCORE_MIN = 0.75;
-/** Máximo de rostros a considerar simultáneamente. */
 const MAX_ROSTROS = 3;
-/** Capturas por ráfaga (el backend espera entre 3 y 5). */
 const TOTAL_CAPTURAS = 5;
-/** Mínimo de capturas válidas para enviar. */
 const MIN_CAPTURAS = 3;
-/** Milisegundos entre captura y captura. */
-const INTERVALO_MS = 600;
+const INTERVALO_MS = 100;
+/** Frames seguidos sin verse para descartar un rostro del seguimiento. */
+const MAX_MISSES = 12;
 
-interface Frame {
-  dataUrl: string;
-  score: number;
+/** Rostro con identidad estable a lo largo de los frames. */
+interface Track {
+  id: number; // número de cara (1..MAX_ROSTROS), estable
+  box: FaceBox;
+  cx: number;
+  cy: number;
+  misses: number;
+  estableDesde: number;
+  estado: EstadoCara;
+  resultado?: AccesoResponse;
+}
+
+interface Toast {
+  id: number;
+  exito: boolean;
+  titulo: string;
+  nombre: string;
+  pct: number | null;
+  mensaje?: string;
 }
 
 @Component({
@@ -69,34 +82,28 @@ export class ScannerPage implements OnDestroy {
 
   readonly status = signal<Estado>('idle');
   readonly error = signal<string | null>(null);
-  readonly progreso = signal(0);
   readonly detectado = signal(false);
   readonly mejorScore = signal(0);
   readonly numRostros = signal(0);
   readonly capturando = signal(false);
   readonly enviando = signal(false);
-  /** Toast del resultado, encima del video (se auto-oculta). */
-  readonly toast = signal<{ exito: boolean; titulo: string; nombre: string; pct: number | null } | null>(
-    null,
-  );
+  readonly toasts = signal<Toast[]>([]);
   /** Notificaciones simples de depuración (se quitarán después). */
   readonly notis = signal<string[]>([]);
 
-  private toastTimer = 0;
-
   readonly activo = computed(() => this.status() === 'detectando');
 
-  /** Si es false: solo detecta en vivo (no captura). */
+  /** Si es false: solo detecta en vivo (no escanea). */
   private readonly CAPTURAR_AUTO: boolean = true;
   /** Si es false: captura pero NO envía al backend (modo prueba). */
   private readonly ENVIAR_AL_BACKEND: boolean = true;
 
-  /** Frames del rostro principal capturados en la ráfaga. */
-  private frames: Frame[] = [];
-  private bloqueado = false;
+  private tracks: Track[] = [];
+  private lat?: number;
+  private lng?: number;
+  private toastSeq = 0;
   private raf = 0;
   private running = false;
-  private estableDesde = 0;
 
   constructor() {
     this.puertaService.list().subscribe({
@@ -131,18 +138,16 @@ export class ScannerPage implements OnDestroy {
       return;
     }
     this.error.set(null);
-    this.toast.set(null);
-    this.progreso.set(0);
-    this.bloqueado = false;
-    this.frames = [];
+    this.toasts.set([]);
     this.notis.set([]);
+    this.tracks = [];
     this.status.set('cargando');
 
     try {
       await this.faceDet.init();
       await this.camera.start(this.video()!.nativeElement);
+      await this.cargarUbicacion();
       this.status.set('detectando');
-      this.estableDesde = 0;
       this.running = true;
       this.raf = requestAnimationFrame(this.loop);
     } catch (e) {
@@ -155,8 +160,19 @@ export class ScannerPage implements OnDestroy {
     this.running = false;
     cancelAnimationFrame(this.raf);
     this.camera.stop();
+    this.tracks = [];
     this.status.set('idle');
-    this.progreso.set(0);
+  }
+
+  private async cargarUbicacion(): Promise<void> {
+    try {
+      const pos = await this.geo.getCurrentPosition();
+      this.lat = pos.lat;
+      this.lng = pos.lng;
+    } catch {
+      this.lat = undefined;
+      this.lng = undefined;
+    }
   }
 
   private readonly loop = (): void => {
@@ -164,36 +180,86 @@ export class ScannerPage implements OnDestroy {
     const v = this.video()?.nativeElement;
 
     if (v && v.readyState >= 2) {
-      const boxes = this.faceDet
-        .detect(v, performance.now())
-        .sort((a, b) => b.score - a.score)
-        .slice(0, MAX_ROSTROS);
-      this.dibujar(boxes, v);
+      const boxes = this.faceDet.detect(v, performance.now()).slice(0, MAX_ROSTROS + 2);
+      this.actualizarTracks(boxes);
+      this.dibujar(v);
 
-      this.numRostros.set(boxes.length);
-      this.mejorScore.set(boxes[0]?.score ?? 0);
+      this.numRostros.set(this.tracks.length);
+      this.mejorScore.set(Math.max(0, ...this.tracks.map((t) => t.box.score)));
+      this.detectado.set(this.tracks.some((t) => t.box.score >= SCORE_MIN));
+      this.capturando.set(this.tracks.some((t) => t.estado === 'capturando'));
+      this.enviando.set(this.tracks.some((t) => t.estado === 'enviando'));
 
-      const aceptable = boxes.length > 0 && boxes[0].score >= SCORE_MIN;
-      if (aceptable) {
-        this.detectado.set(true);
-        if (!this.estableDesde) this.estableDesde = performance.now();
-        const held = performance.now() - this.estableDesde;
-        this.progreso.set(Math.min(100, Math.round((held / ESTABLE_MS) * 100)));
-        if (this.CAPTURAR_AUTO && held >= ESTABLE_MS && !this.capturando() && !this.bloqueado) {
-          this.iniciarSecuencia(v);
+      // Dispara el escaneo de cada cara estable de forma independiente.
+      for (const t of this.tracks) {
+        if (t.estado !== 'detectando') continue;
+        if (t.box.score >= SCORE_MIN) {
+          if (!t.estableDesde) t.estableDesde = performance.now();
+          if (this.CAPTURAR_AUTO && performance.now() - t.estableDesde >= ESTABLE_MS) {
+            this.escanearCara(t);
+          }
+        } else {
+          t.estableDesde = 0;
         }
-      } else {
-        this.detectado.set(false);
-        this.estableDesde = 0;
-        this.progreso.set(0);
-        this.bloqueado = false; // el rostro salió: permite una nueva ráfaga
       }
     }
 
     this.raf = requestAnimationFrame(this.loop);
   };
 
-  private dibujar(boxes: FaceBox[], v: HTMLVideoElement): void {
+  /** Empareja detecciones con tracks por cercanía (centroide); conserva el número de cada cara. */
+  private actualizarTracks(boxes: FaceBox[]): void {
+    const usados = new Set<number>();
+
+    for (const t of this.tracks) {
+      let best = -1;
+      let bestD = Infinity;
+      boxes.forEach((b, i) => {
+        if (usados.has(i)) return;
+        const d = Math.hypot(b.x + b.width / 2 - t.cx, b.y + b.height / 2 - t.cy);
+        if (d < bestD) {
+          bestD = d;
+          best = i;
+        }
+      });
+      const umbral = Math.max(t.box.width, 60) * 0.8;
+      if (best >= 0 && bestD <= umbral) {
+        const b = boxes[best];
+        usados.add(best);
+        t.box = b;
+        t.cx = b.x + b.width / 2;
+        t.cy = b.y + b.height / 2;
+        t.misses = 0;
+      } else {
+        t.misses++;
+      }
+    }
+
+    this.tracks = this.tracks.filter((t) => t.misses <= MAX_MISSES);
+
+    boxes.forEach((b, i) => {
+      if (usados.has(i)) return;
+      if (this.tracks.length >= MAX_ROSTROS) return;
+      this.tracks.push({
+        id: this.siguienteSlot(),
+        box: b,
+        cx: b.x + b.width / 2,
+        cy: b.y + b.height / 2,
+        misses: 0,
+        estableDesde: 0,
+        estado: 'detectando',
+      });
+    });
+  }
+
+  private siguienteSlot(): number {
+    for (let n = 1; n <= MAX_ROSTROS; n++) {
+      if (!this.tracks.some((t) => t.id === n)) return n;
+    }
+    return this.tracks.length + 1;
+  }
+
+  private dibujar(v: HTMLVideoElement): void {
     const canvas = this.overlay()?.nativeElement;
     if (!canvas) return;
     if (canvas.width !== v.videoWidth) canvas.width = v.videoWidth;
@@ -206,11 +272,15 @@ export class ScannerPage implements OnDestroy {
     ctx.font = 'bold 16px Inter, system-ui, sans-serif';
     ctx.textBaseline = 'alphabetic';
 
-    boxes.forEach((b, i) => {
-      const aceptable = b.score >= SCORE_MIN;
-      const color = aceptable ? '#16a34a' : '#9099a5';
-      const mx = canvas.width - b.x - b.width; // espejo, para alinear con el video
-      const label = `Cara ${i + 1} · ${Math.round(b.score * 100)}%`;
+    for (const t of this.tracks) {
+      const b = t.box;
+      const color = this.colorCara(t);
+      const mx = canvas.width - b.x - b.width; // espejo
+      let label = `Cara ${t.id} · ${Math.round(b.score * 100)}%`;
+      if (t.estado === 'capturando') label += ' 📸';
+      else if (t.estado === 'enviando') label += ' …';
+      else if (t.estado === 'ok') label += ' ✓';
+      else if (t.estado === 'rechazado') label += ' ✗';
 
       ctx.strokeStyle = color;
       ctx.strokeRect(mx, b.y, b.width, b.height);
@@ -220,109 +290,101 @@ export class ScannerPage implements OnDestroy {
       ctx.fillRect(mx, Math.max(0, b.y - 24), tw + 12, 22);
       ctx.fillStyle = '#fff';
       ctx.fillText(label, mx + 6, Math.max(16, b.y - 7));
-    });
+    }
   }
 
-  /** Ráfaga: 5 capturas del rostro principal, 300 ms entre cada una. */
-  private async iniciarSecuencia(v: HTMLVideoElement): Promise<void> {
-    this.capturando.set(true);
-    this.bloqueado = true;
-    this.frames = [];
-    this.notificar('— Iniciando capturas —');
+  private colorCara(t: Track): string {
+    if (t.estado === 'ok') return '#16a34a';
+    if (t.estado === 'rechazado') return '#dc2626';
+    return t.box.score >= SCORE_MIN ? '#ff6427' : '#9099a5';
+  }
+
+  /** Captura la ráfaga de una cara (recorte con margen) y la envía al liveness. */
+  private async escanearCara(t: Track): Promise<void> {
+    t.estado = 'capturando';
+    const frames: { dataUrl: string; score: number }[] = [];
 
     for (let foto = 1; foto <= TOTAL_CAPTURAS; foto++) {
-      const face = this.faceDet
-        .detect(v, performance.now())
-        .sort((a, b) => b.score - a.score)
-        .filter((f) => f.score >= SCORE_MIN)[0];
-
-      if (face) {
-        // Frame completo (no recorte): el backend detecta el rostro y mide liveness.
-        const dataUrl = this.camera.capture(v);
-        this.frames.push({ dataUrl, score: face.score });
-        this.notificar(`Foto ${foto}/${TOTAL_CAPTURAS} · ${Math.round(face.score * 100)}% ✓`);
-      } else {
-        this.notificar(`Foto ${foto}/${TOTAL_CAPTURAS}: sin rostro válido`);
+      const v = this.video()?.nativeElement;
+      if (v) {
+        // Una sola cara → frame completo (probado). Varias → recorte con margen para aislarla.
+        const dataUrl =
+          this.tracks.length <= 1
+            ? this.camera.capture(v)
+            : (() => {
+                const r = this.regionConMargen(t.box, v);
+                return this.camera.captureRegion(v, r.x, r.y, r.w, r.h);
+              })();
+        frames.push({ dataUrl, score: t.box.score });
+        this.notificar(`Cara ${t.id} · foto ${foto}/${TOTAL_CAPTURAS} · ${Math.round(t.box.score * 100)}%`);
       }
-
       if (foto < TOTAL_CAPTURAS) await this.delay(INTERVALO_MS);
     }
 
-    this.capturando.set(false);
-    await this.enviarLiveness();
-  }
+    const orden = frames.sort((a, b) => b.score - a.score).slice(0, TOTAL_CAPTURAS);
+    const scoreMejor = orden[0]?.score ?? t.box.score;
 
-  /** Envía 3–5 capturas (de mayor a menor score) sin interrumpir la cámara. */
-  private async enviarLiveness(): Promise<void> {
-    const frames = [...this.frames].sort((a, b) => b.score - a.score).slice(0, TOTAL_CAPTURAS);
-    const scoreMejor = frames[0]?.score ?? this.mejorScore();
-
-    if (frames.length < MIN_CAPTURAS) {
-      this.notificar(`Solo ${frames.length} capturas válidas (mín. ${MIN_CAPTURAS}). Reintenta.`);
-      return; // sigue detectando; se desbloquea cuando el rostro salga
-    }
-
-    if (!this.ENVIAR_AL_BACKEND) {
-      this.mostrarToast({
-        acceso: true,
-        mensaje: 'Modo prueba',
-        trabajador: null,
-        id_escaneo: 0,
-        estado_registro: 'prueba',
-      }, scoreMejor);
+    if (orden.length < MIN_CAPTURAS) {
+      this.notificar(`Cara ${t.id}: solo ${orden.length} capturas (mín. ${MIN_CAPTURAS}).`);
+      t.estado = 'detectando';
+      t.estableDesde = 0;
       return;
     }
 
-    let latitud: number | undefined;
-    let longitud: number | undefined;
-    try {
-      const pos = await this.geo.getCurrentPosition();
-      latitud = pos.lat;
-      longitud = pos.lng;
-    } catch {
-      // sin ubicación: el backend decide
+    if (!this.ENVIAR_AL_BACKEND) {
+      t.estado = 'ok';
+      this.toastPush(t.id, { acceso: true, mensaje: 'Modo prueba', trabajador: null, id_escaneo: 0, estado_registro: 'prueba' }, scoreMejor);
+      return;
     }
 
-    this.enviando.set(true);
+    t.estado = 'enviando';
     try {
       const params: AccesoParams = {
         id_puerta: this.idPuerta(),
         tipo_registro: this.tipoRegistro(),
         id_dispositivo: this.idDispositivo() || undefined,
-        latitud,
-        longitud,
+        latitud: this.lat,
+        longitud: this.lng,
       };
-      const blobs = frames.map((f) => dataUrlToBlob(f.dataUrl));
-      this.notificar(`Enviando ${blobs.length} fotos…`);
-
+      const blobs = orden.map((f) => dataUrlToBlob(f.dataUrl));
       const res = await firstValueFrom(this.scanner.acceso(params, blobs));
-      this.mostrarToast(res, scoreMejor);
+      t.resultado = res;
+      t.estado = res.acceso ? 'ok' : 'rechazado';
+      this.toastPush(t.id, res, scoreMejor);
     } catch (e) {
-      this.notificar(`Error: ${this.msg(e)}`);
-      this.toastTimerReset({ exito: false, titulo: 'Error', nombre: this.msg(e), pct: null });
-    } finally {
-      this.enviando.set(false);
+      t.estado = 'rechazado';
+      this.notificar(`Cara ${t.id} error: ${this.msg(e)}`);
+      this.toastPush(t.id, { acceso: false, mensaje: this.msg(e), trabajador: null, id_escaneo: null, estado_registro: 'error' }, scoreMejor);
     }
   }
 
-  /** Muestra el resultado como toast por encima del video (auto-oculta). */
-  private mostrarToast(res: AccesoResponse, scoreDeteccion: number): void {
+  /** Recorte del rostro con margen alrededor (para que el backend lo detecte bien). */
+  private regionConMargen(b: FaceBox, v: HTMLVideoElement): { x: number; y: number; w: number; h: number } {
+    const padX = b.width * 0.6;
+    const padY = b.height * 0.7;
+    const x = Math.max(0, b.x - padX);
+    const y = Math.max(0, b.y - padY);
+    const w = Math.min(v.videoWidth - x, b.width + padX * 2);
+    const h = Math.min(v.videoHeight - y, b.height + padY * 2);
+    return { x, y, w, h };
+  }
+
+  private toastPush(cara: number, res: AccesoResponse, scoreFallback: number): void {
+    const id = ++this.toastSeq;
     const nombre = res.trabajador
       ? `${res.trabajador.nombre} ${res.trabajador.apellido}`
       : 'No reconocido';
-    const conf = res.confianza != null ? res.confianza : scoreDeteccion;
-    this.toastTimerReset({
+    const conf = res.confianza != null ? res.confianza : scoreFallback;
+    const toast: Toast = {
+      id,
       exito: res.acceso,
-      titulo: res.acceso ? 'Exitoso' : 'Rechazado',
+      titulo: `Cara ${cara}: ${res.acceso ? 'Exitoso' : 'Rechazado'}`,
       nombre,
       pct: conf != null ? Math.round(conf * 100) : null,
-    });
-  }
-
-  private toastTimerReset(t: { exito: boolean; titulo: string; nombre: string; pct: number | null }): void {
-    this.toast.set(t);
-    clearTimeout(this.toastTimer);
-    this.toastTimer = setTimeout(() => this.toast.set(null), 5000) as unknown as number;
+      mensaje: res.mensaje,
+    };
+    this.toasts.update((arr) => [toast, ...arr]);
+    setTimeout(() => this.toasts.update((arr) => arr.filter((x) => x.id !== id)), 5000);
   }
 
   private delay(ms: number): Promise<void> {
@@ -337,7 +399,6 @@ export class ScannerPage implements OnDestroy {
   ngOnDestroy(): void {
     this.running = false;
     cancelAnimationFrame(this.raf);
-    clearTimeout(this.toastTimer);
     this.camera.stop();
   }
 

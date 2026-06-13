@@ -40,12 +40,19 @@
       <video #video playsinline muted></video>
       <canvas #overlay class="overlay"></canvas>
 
-      <!-- Toast del resultado, por encima del video -->
-      @if (toast(); as t) {
-        <div class="scanner-toast" [class.ok]="t.exito" [class.fail]="!t.exito">
-          <strong>{{ t.titulo }}</strong>
-          <span>{{ t.nombre }}</span>
-          @if (t.pct != null) { <span class="toast-pct">{{ t.pct }}%</span> }
+      <!-- Toasts (uno por cara), por encima del video -->
+      @if (toasts().length) {
+        <div class="scanner-toasts">
+          @for (t of toasts(); track t.id) {
+            <div class="scanner-toast" [class.ok]="t.exito" [class.fail]="!t.exito">
+              <div class="toast-head">
+                <strong>{{ t.titulo }}</strong>
+                @if (t.pct != null) { <span class="toast-pct">{{ t.pct }}%</span> }
+              </div>
+              <span class="toast-nombre">{{ t.nombre }}</span>
+              @if (t.mensaje) { <span class="toast-msg">{{ t.mensaje }}</span> }
+            </div>
+          }
         </div>
       }
 

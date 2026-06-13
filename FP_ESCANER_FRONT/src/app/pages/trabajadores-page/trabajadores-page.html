@@ -34,8 +34,11 @@
             <td>
               @if (t.tiene_embedding) {
                 <span class="badge badge-on">Sí</span>
+                <button class="btn btn-sm" (click)="actualizarRostro(t)">Actualizar</button>
+                <button class="btn btn-sm btn-danger" (click)="eliminarRostro(t)">Eliminar</button>
               } @else {
                 <span class="badge badge-off">No</span>
+                <button class="btn btn-sm" (click)="registrarRostro(t)">Registrar rostro</button>
               }
             </td>
             <td class="actions">
@@ -50,16 +53,27 @@
     </table>
   }
 
-  @if (showForm()) {
+  @if (showForm() || enrolling()) {
     <div class="modal-backdrop" (click)="cerrar()">
       <div class="modal" (click)="$event.stopPropagation()">
-        <h2>{{ selected() ? 'Editar trabajador' : 'Nuevo trabajador' }}</h2>
-        <app-trabajador-form
-          [trabajador]="selected()"
-          [areas]="areas()"
-          (save)="guardar($event)"
-          (cancel)="cerrar()"
-        />
+        @if (enrolling(); as t) {
+          <h2>{{ enrollModo() === 'actualizar' ? 'Actualizar rostro' : 'Registrar rostro' }}</h2>
+          <app-embedding-capture
+            [idTrabajador]="t.id_trabajador"
+            [nombre]="t.nombre + ' ' + t.apellido"
+            [modo]="enrollModo()"
+            (done)="rostroListo()"
+            (cancel)="rostroListo()"
+          />
+        } @else {
+          <h2>{{ selected() ? 'Editar trabajador' : 'Nuevo trabajador' }}</h2>
+          <app-trabajador-form
+            [trabajador]="selected()"
+            [areas]="areas()"
+            (save)="guardar($event)"
+            (cancel)="cerrar()"
+          />
+        }
       </div>
     </div>
   }

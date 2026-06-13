@@ -1,0 +1,98 @@
+<div class="enroll">
+  <input #archivo type="file" accept="image/jpeg,image/png" hidden (change)="onArchivo($event)" />
+
+  <p class="enroll-sub">
+    Registrando rostro de <strong>{{ nombre() || 'trabajador' }}</strong>
+  </p>
+
+  @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
+
+  @switch (status()) {
+    @case ('listo') {
+      <div class="enroll-result">
+        @if (mejorImg(); as img) {
+          <img class="enroll-img" [class.no-mirror]="desdeArchivo()" [src]="img" alt="Mejor foto" />
+        }
+        <div>
+          <h3>Foto lista</h3>
+          <p class="muted">Revisa la foto y súbela para registrar el rostro.</p>
+        </div>
+      </div>
+    }
+
+    @case ('ok') {
+      @if (resumen(); as r) {
+        <div class="enroll-result">
+          @if (mejorImg(); as img) {
+            <img class="enroll-img ok" [class.no-mirror]="desdeArchivo()" [src]="img" alt="Rostro" />
+          }
+          <div>
+            <h3>{{ r.titulo }}</h3>
+            @if (r.calidad != null) {
+              <p>Calidad: <strong>{{ (r.calidad * 100) | number:'1.0-1' }}%</strong></p>
+            }
+            @if (r.modelo) { <p class="muted">Modelo: {{ r.modelo }}</p> }
+            @if (r.mensaje) { <p class="muted">{{ r.mensaje }}</p> }
+          </div>
+        </div>
+      }
+    }
+
+    @case ('error') {
+      <div class="enroll-placeholder"><p>Ocurrió un problema. Puedes reintentar u omitir.</p></div>
+    }
+
+    @default {
+      <!-- cargando / preview / capturando / enviando -->
+      <div class="enroll-stage">
+        <video #video playsinline muted></video>
+        <canvas #overlay class="overlay"></canvas>
+
+        @if (status() === 'cargando') {
+          <div class="enroll-overlay"><p>Abriendo cámara…</p></div>
+        }
+        @if (status() === 'preview') {
+          <div class="enroll-hint">Acomoda el rostro y presiona “Comenzar captura”.</div>
+        }
+        @if (status() === 'capturando') {
+          <div class="enroll-hint">Capturando rostro… {{ progreso() }}%</div>
+        }
+        @if (status() === 'enviando') {
+          <div class="enroll-overlay"><p>Registrando rostro…</p></div>
+        }
+      </div>
+    }
+  }
+
+  <div class="enroll-actions">
+    @switch (status()) {
+      @case ('preview') {
+        <button class="btn btn-ghost" (click)="cancelar()">Omitir</button>
+        <button class="btn btn-ghost" (click)="archivo.click()">Subir archivo</button>
+        <button class="btn btn-primary" (click)="comenzar()">Comenzar captura</button>
+      }
+      @case ('listo') {
+        <button class="btn btn-ghost" (click)="abrirCamara()">Usar cámara</button>
+        <button class="btn btn-ghost" (click)="archivo.click()">Otro archivo</button>
+        <button class="btn btn-primary" (click)="subir()">Subir foto</button>
+      }
+      @case ('ok') {
+        <button class="btn btn-primary" (click)="terminar()">Terminar</button>
+      }
+      @case ('error') {
+        <button class="btn btn-ghost" (click)="cancelar()">Omitir</button>
+        <button class="btn btn-ghost" (click)="archivo.click()">Subir archivo</button>
+        <button class="btn btn-primary" (click)="abrirCamara()">Reintentar</button>
+      }
+      @default {
+        <!-- cargando / capturando / enviando -->
+        <button class="btn btn-ghost" (click)="archivo.click()" [disabled]="status() === 'enviando'">
+          Subir archivo
+        </button>
+        <button class="btn btn-ghost" (click)="cancelar()" [disabled]="status() === 'enviando'">
+          Cancelar
+        </button>
+      }
+    }
+  </div>
+</div>

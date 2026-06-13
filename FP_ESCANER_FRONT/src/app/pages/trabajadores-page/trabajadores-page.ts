@@ -1,5 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 
+import { EmbeddingCapture } from '../../components/embedding-capture/embedding-capture';
 import { TrabajadorForm } from '../../components/trabajador-form/trabajador-form';
 import { AreaTrabajo } from '../../core/interfaces/area-trabajo';
 import {
@@ -8,17 +9,19 @@ import {
   TrabajadorUpdate,
 } from '../../core/interfaces/trabajador';
 import { AreaTrabajoService } from '../../service/area-trabajo';
+import { EmbeddingService } from '../../service/embedding';
 import { TrabajadorService } from '../../service/trabajador';
 
 @Component({
   selector: 'app-trabajadores-page',
-  imports: [TrabajadorForm],
+  imports: [TrabajadorForm, EmbeddingCapture],
   templateUrl: './trabajadores-page.html',
   styleUrl: './trabajadores-page.scss',
 })
 export class TrabajadoresPage {
   private readonly service = inject(TrabajadorService);
   private readonly areaService = inject(AreaTrabajoService);
+  private readonly embeddingService = inject(EmbeddingService);
 
   readonly items = signal<Trabajador[]>([]);
   readonly areas = signal<AreaTrabajo[]>([]);
@@ -26,6 +29,9 @@ export class TrabajadoresPage {
   readonly error = signal<string | null>(null);
   readonly showForm = signal(false);
   readonly selected = signal<Trabajador | null>(null);
+  /** Trabajador en proceso de registro de rostro (muestra el capturador en el modal). */
+  readonly enrolling = signal<Trabajador | null>(null);
+  readonly enrollModo = signal<'registrar' | 'actualizar'>('registrar');
 
   constructor() {
     this.areaService.list().subscribe({
@@ -67,21 +73,68 @@ export class TrabajadoresPage {
   cerrar(): void {
     this.showForm.set(false);
     this.selected.set(null);
+    this.enrolling.set(null);
   }
 
   guardar(payload: TrabajadorCreate | TrabajadorUpdate): void {
     const sel = this.selected();
-    const req = sel
-      ? this.service.update(sel.id_trabajador, payload)
-      : this.service.create(payload as TrabajadorCreate);
 
-    req.subscribe({
-      next: () => {
-        this.cerrar();
+    if (sel) {
+      this.service.update(sel.id_trabajador, payload).subscribe({
+        next: () => {
+          this.cerrar();
+          this.load();
+        },
+        error: (e) => this.error.set(this.msg(e)),
+      });
+      return;
+    }
+
+    // Alta: tras crear, pasa a registrar el rostro del nuevo trabajador.
+    this.service.create(payload as TrabajadorCreate).subscribe({
+      next: (creado) => {
         this.load();
+        if (creado?.id_trabajador) {
+          this.selected.set(null);
+          this.enrollModo.set('registrar');
+          this.enrolling.set(creado);
+        } else {
+          this.cerrar();
+        }
       },
       error: (e) => this.error.set(this.msg(e)),
     });
+  }
+
+  /** Abre el capturador para registrar (nuevo) el rostro de un trabajador. */
+  registrarRostro(t: Trabajador): void {
+    this.selected.set(null);
+    this.enrollModo.set('registrar');
+    this.enrolling.set(t);
+    this.showForm.set(true);
+  }
+
+  /** Abre el capturador para reemplazar (actualizar) el rostro existente. */
+  actualizarRostro(t: Trabajador): void {
+    this.selected.set(null);
+    this.enrollModo.set('actualizar');
+    this.enrolling.set(t);
+    this.showForm.set(true);
+  }
+
+  /** Borra el rostro registrado del trabajador. */
+  eliminarRostro(t: Trabajador): void {
+    if (!confirm(`¿Eliminar el rostro de "${t.nombre} ${t.apellido}"? No es reversible.`)) return;
+    this.embeddingService.eliminarDeTrabajador(t.id_trabajador).subscribe({
+      next: () => this.load(),
+      error: (e) => this.error.set(this.msg(e)),
+    });
+  }
+
+  /** El registro de rostro terminó (o se omitió): cierra y recarga. */
+  rostroListo(): void {
+    this.cerrar();
+    this.load();
   }
 
   eliminar(t: Trabajador): void {

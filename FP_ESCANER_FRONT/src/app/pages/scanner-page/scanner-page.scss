@@ -84,27 +84,40 @@
   }
 }
 
-.scanner-toast {
+.scanner-toasts {
   position: absolute;
   top: 0.85rem;
   left: 50%;
   transform: translateX(-50%);
   z-index: 5;
   display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.6rem 1rem;
-  border-radius: 999px;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: max-content;
+  max-width: 92%;
+}
+
+.scanner-toast {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--radius);
   color: #fff;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   box-shadow: var(--shadow);
   animation: fade-in 0.2s ease;
-  max-width: 92%;
 
-  &.ok { background: rgba(22, 163, 74, 0.95); }
-  &.fail { background: rgba(220, 38, 38, 0.95); }
+  &.ok { background: rgba(22, 163, 74, 0.96); }
+  &.fail { background: rgba(220, 38, 38, 0.96); }
 
-  strong { font-weight: 700; }
+  .toast-head {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+
+    strong { font-weight: 700; }
+  }
 
   .toast-pct {
     margin-left: auto;
@@ -112,6 +125,13 @@
     background: rgba(255, 255, 255, 0.25);
     padding: 0.1rem 0.5rem;
     border-radius: 999px;
+  }
+
+  .toast-nombre { font-weight: 600; }
+
+  .toast-msg {
+    font-size: 0.8rem;
+    opacity: 0.92;
   }
 }
 
