@@ -6,6 +6,8 @@
 
   @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
 
+  <app-filtros-tabla [esAdmin]="false" [mostrarArea]="false" [(texto)]="buscar" />
+
   @if (loading()) {
     <p class="loading">Cargando…</p>
   } @else {

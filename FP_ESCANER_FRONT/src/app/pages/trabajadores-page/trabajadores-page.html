@@ -6,6 +6,15 @@
 
   @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
 
+  <app-filtros-tabla
+    [esAdmin]="esAdmin()"
+    [empresas]="empresas()"
+    [areas]="areasFiltro()"
+    [(empresa)]="filtroEmpresa"
+    [(area)]="filtroArea"
+    [(texto)]="buscar"
+  />
+
   @if (loading()) {
     <p class="loading">Cargando…</p>
   } @else {
@@ -21,7 +30,7 @@
         </tr>
       </thead>
       <tbody>
-        @for (t of items(); track t.id_trabajador) {
+        @for (t of itemsFiltrados(); track t.id_trabajador) {
           <tr>
             <td>{{ t.id_trabajador }}</td>
             <td>{{ t.nombre }} {{ t.apellido }}</td>

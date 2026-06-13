@@ -1,20 +1,25 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 
 import { EmbeddingCapture } from '../../components/embedding-capture/embedding-capture';
+import { FiltrosTabla } from '../../components/filtros-tabla/filtros-tabla';
 import { TrabajadorForm } from '../../components/trabajador-form/trabajador-form';
 import { AreaTrabajo } from '../../core/interfaces/area-trabajo';
+import { Empresa } from '../../core/interfaces/empresa';
 import {
   Trabajador,
   TrabajadorCreate,
   TrabajadorUpdate,
 } from '../../core/interfaces/trabajador';
+import { alBuscar } from '../../core/utils/buscar';
 import { AreaTrabajoService } from '../../service/area-trabajo';
+import { AuthService } from '../../service/auth';
 import { EmbeddingService } from '../../service/embedding';
+import { EmpresaService } from '../../service/empresa';
 import { TrabajadorService } from '../../service/trabajador';
 
 @Component({
   selector: 'app-trabajadores-page',
-  imports: [TrabajadorForm, EmbeddingCapture],
+  imports: [TrabajadorForm, EmbeddingCapture, FiltrosTabla],
   templateUrl: './trabajadores-page.html',
   styleUrl: './trabajadores-page.scss',
 })
@@ -22,9 +27,14 @@ export class TrabajadoresPage {
   private readonly service = inject(TrabajadorService);
   private readonly areaService = inject(AreaTrabajoService);
   private readonly embeddingService = inject(EmbeddingService);
+  private readonly empresaService = inject(EmpresaService);
+  private readonly auth = inject(AuthService);
+
+  readonly esAdmin = this.auth.esAdmin;
 
   readonly items = signal<Trabajador[]>([]);
   readonly areas = signal<AreaTrabajo[]>([]);
+  readonly empresas = signal<Empresa[]>([]);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly showForm = signal(false);
@@ -33,18 +43,51 @@ export class TrabajadoresPage {
   readonly enrolling = signal<Trabajador | null>(null);
   readonly enrollModo = signal<'registrar' | 'actualizar'>('registrar');
 
+  /** Filtros. 0 = todos. */
+  readonly filtroEmpresa = signal(0);
+  readonly filtroArea = signal(0);
+  readonly buscar = signal('');
+
+  /** Áreas disponibles en el selector de área, acotadas por la empresa elegida. */
+  readonly areasFiltro = computed(() => {
+    const emp = this.filtroEmpresa();
+    return emp ? this.areas().filter((a) => a.id_empresa === emp) : this.areas();
+  });
+
+  /** Trabajadores tras aplicar empresa + área (la búsqueda por nombre es server-side). */
+  readonly itemsFiltrados = computed(() => {
+    const emp = this.filtroEmpresa();
+    const area = this.filtroArea();
+    const lista = this.items();
+    if (area) return lista.filter((t) => t.id_area === area);
+    if (emp) {
+      const idsArea = new Set(
+        this.areas().filter((a) => a.id_empresa === emp).map((a) => a.id_area),
+      );
+      return lista.filter((t) => idsArea.has(t.id_area));
+    }
+    return lista;
+  });
+
   constructor() {
     this.areaService.list().subscribe({
       next: (data) => this.areas.set(data),
       error: (e) => this.error.set(this.msg(e)),
     });
+    if (this.esAdmin()) {
+      this.empresaService.list().subscribe({
+        next: (data) => this.empresas.set(data),
+        error: (e) => this.error.set(this.msg(e)),
+      });
+    }
+    alBuscar(this.buscar, () => this.load());
     this.load();
   }
 
   load(): void {
     this.loading.set(true);
     this.error.set(null);
-    this.service.list().subscribe({
+    this.service.list({ nombre: this.buscar() }).subscribe({
       next: (data) => {
         this.items.set(data);
         this.loading.set(false);

@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 
 import { AreaForm } from '../../components/area-form/area-form';
+import { FiltrosTabla } from '../../components/filtros-tabla/filtros-tabla';
 import { MapFeature, MapView } from '../../components/map-view/map-view';
 import {
   AreaTrabajo,
@@ -8,19 +9,24 @@ import {
   AreaTrabajoUpdate,
 } from '../../core/interfaces/area-trabajo';
 import { Empresa } from '../../core/interfaces/empresa';
+import { alBuscar } from '../../core/utils/buscar';
 import { lngLatToWkt } from '../../core/utils/geo';
 import { AreaTrabajoService } from '../../service/area-trabajo';
+import { AuthService } from '../../service/auth';
 import { EmpresaService } from '../../service/empresa';
 
 @Component({
   selector: 'app-areas-page',
-  imports: [AreaForm, MapView],
+  imports: [AreaForm, MapView, FiltrosTabla],
   templateUrl: './areas-page.html',
   styleUrl: './areas-page.scss',
 })
 export class AreasPage {
   private readonly service = inject(AreaTrabajoService);
   private readonly empresaService = inject(EmpresaService);
+  private readonly auth = inject(AuthService);
+
+  readonly esAdmin = this.auth.esAdmin;
 
   readonly items = signal<AreaTrabajo[]>([]);
   readonly empresas = signal<Empresa[]>([]);
@@ -30,8 +36,17 @@ export class AreasPage {
   readonly selected = signal<AreaTrabajo | null>(null);
   readonly mapSelId = signal<number | null>(null);
 
+  readonly filtroEmpresa = signal(0);
+  readonly buscar = signal('');
+
+  readonly itemsFiltrados = computed(() => {
+    const emp = this.filtroEmpresa();
+    const lista = this.items();
+    return emp ? lista.filter((a) => a.id_empresa === emp) : lista;
+  });
+
   readonly mapFeatures = computed<MapFeature[]>(() =>
-    this.items().map((a) => ({
+    this.itemsFiltrados().map((a) => ({
       id: a.id_area,
       wkt: a.ubicacion ?? lngLatToWkt(a.coordenadas),
       label: a.nombre_area,
@@ -45,13 +60,14 @@ export class AreasPage {
       next: (data) => this.empresas.set(data),
       error: (e) => this.error.set(this.msg(e)),
     });
+    alBuscar(this.buscar, () => this.load());
     this.load();
   }
 
   load(): void {
     this.loading.set(true);
     this.error.set(null);
-    this.service.list().subscribe({
+    this.service.list({ nombre: this.buscar() }).subscribe({
       next: (data) => {
         this.items.set(data);
         this.loading.set(false);

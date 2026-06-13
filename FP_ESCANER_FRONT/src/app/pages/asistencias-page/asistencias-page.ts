@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 
+import { FiltrosTabla } from '../../components/filtros-tabla/filtros-tabla';
 import { MapFeature, MapView } from '../../components/map-view/map-view';
 import { AreaTrabajo } from '../../core/interfaces/area-trabajo';
 import { Asistencia } from '../../core/interfaces/asistencia';
@@ -14,8 +15,10 @@ import {
   wktToCoords,
   wktToPoint,
 } from '../../core/utils/geo';
+import { alBuscar } from '../../core/utils/buscar';
 import { AreaTrabajoService } from '../../service/area-trabajo';
 import { AsistenciaService } from '../../service/asistencia';
+import { AuthService } from '../../service/auth';
 import { DispositivoService } from '../../service/dispositivo';
 import { EmpresaService } from '../../service/empresa';
 import { PuertaAccesoService } from '../../service/puerta-acceso';
@@ -23,7 +26,7 @@ import { TrabajadorService } from '../../service/trabajador';
 
 @Component({
   selector: 'app-asistencias-page',
-  imports: [MapView],
+  imports: [MapView, FiltrosTabla],
   templateUrl: './asistencias-page.html',
   styleUrl: './asistencias-page.scss',
 })
@@ -34,6 +37,9 @@ export class AsistenciasPage {
   private readonly puertaService = inject(PuertaAccesoService);
   private readonly areaService = inject(AreaTrabajoService);
   private readonly empresaService = inject(EmpresaService);
+  private readonly auth = inject(AuthService);
+
+  readonly esAdmin = this.auth.esAdmin;
 
   readonly items = signal<Asistencia[]>([]);
   readonly trabajadores = signal<Map<number, Trabajador>>(new Map());
@@ -44,6 +50,29 @@ export class AsistenciasPage {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly mapSelId = signal<number | null>(null);
+
+  readonly filtroEmpresa = signal(0);
+  readonly filtroArea = signal(0);
+  readonly buscar = signal('');
+
+  /** Empresas/áreas como arreglo para los selectores. */
+  readonly empresasArr = computed(() => [...this.empresas().values()]);
+  readonly areasFiltro = computed(() => {
+    const emp = this.filtroEmpresa();
+    const arr = [...this.areas().values()];
+    return emp ? arr.filter((a) => a.id_empresa === emp) : arr;
+  });
+
+  /** Asistencias tras empresa + área (la búsqueda por nombre es server-side). */
+  readonly itemsFiltrados = computed(() => {
+    const emp = this.filtroEmpresa();
+    const area = this.filtroArea();
+    return this.items().filter((a) => {
+      if (area) return this.idAreaDe(a) === area;
+      if (emp) return this.idEmpresaDe(a) === emp;
+      return true;
+    });
+  });
 
   readonly mapFeatures = computed<MapFeature[]>(() => {
     const features: MapFeature[] = [];
@@ -65,7 +94,7 @@ export class AsistenciasPage {
     }
 
     // Puntos de asistencia (verde/rojo) — encima.
-    for (const a of this.items()) {
+    for (const a of this.itemsFiltrados()) {
       features.push({
         id: a.id_asistencia,
         wkt: a.ubicacion,
@@ -100,6 +129,7 @@ export class AsistenciasPage {
       next: (data) => this.empresas.set(new Map(data.map((e) => [e.id_empresa, e]))),
       error: (e) => this.error.set(this.msg(e)),
     });
+    alBuscar(this.buscar, () => this.load());
     this.load();
   }
 
@@ -131,12 +161,18 @@ export class AsistenciasPage {
     return this.areas().get(idArea)?.nombre_area ?? `#${idArea}`;
   }
 
-  /** Nombre de la empresa designada (vía el área o la puerta). */
-  empresaNombre(a: Asistencia): string {
-    const idEmpresa =
+  /** Empresa designada del registro (vía el área o la puerta). */
+  private idEmpresaDe(a: Asistencia): number | null {
+    return (
       this.areas().get(this.idAreaDe(a) ?? -1)?.id_empresa ??
       this.puertas().get(a.id_puerta)?.id_empresa ??
-      null;
+      null
+    );
+  }
+
+  /** Nombre de la empresa designada. */
+  empresaNombre(a: Asistencia): string {
+    const idEmpresa = this.idEmpresaDe(a);
     if (!idEmpresa) return '—';
     return this.empresas().get(idEmpresa)?.nombre_empresa ?? `#${idEmpresa}`;
   }
@@ -144,7 +180,7 @@ export class AsistenciasPage {
   load(): void {
     this.loading.set(true);
     this.error.set(null);
-    this.service.list().subscribe({
+    this.service.list({ nombre: this.buscar() }).subscribe({
       next: (data) => {
         this.items.set(data);
         this.loading.set(false);

@@ -9,6 +9,8 @@ import { Usuario } from '../core/interfaces/usuario';
 
 const TOKEN_KEY = 'access_token';
 const USER_KEY = 'usuario';
+/** Empresa reservada para el super-admin (ve todas las empresas). */
+const EMPRESA_SUPERADMIN = 99;
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -19,6 +21,10 @@ export class AuthService {
   /** Usuario autenticado actual (null si no hay sesión). */
   readonly currentUser = signal<Usuario | null>(this.readUser());
   readonly isAuthenticated = computed(() => this.currentUser() !== null);
+  /** Super-admin (empresa 99): ve y opera todas las empresas. */
+  readonly esAdmin = computed(() => this.currentUser()?.empresa === EMPRESA_SUPERADMIN);
+  /** Empresa del usuario logueado (null si no hay sesión). */
+  readonly empresaActual = computed(() => this.currentUser()?.empresa ?? null);
 
   /** POST /usuarios/login */
   login(credentials: LoginRequest): Observable<LoginResponse> {

@@ -23,9 +23,13 @@ export abstract class BaseCrud<T, TCreate = Partial<T>, TUpdate = Partial<T>> {
     return `${API_URL}/${this.resource}`;
   }
 
-  /** GET /recurso?skip=&limit= */
-  list(skip = 0, limit = 100): Observable<T[]> {
-    const params = new HttpParams().set('skip', skip).set('limit', limit);
+  /** GET /recurso?skip=&limit=&nombre= (nombre = búsqueda server-side opcional). */
+  list(opts: { skip?: number; limit?: number; nombre?: string } = {}): Observable<T[]> {
+    let params = new HttpParams()
+      .set('skip', opts.skip ?? 0)
+      .set('limit', opts.limit ?? 100);
+    const nombre = opts.nombre?.trim();
+    if (nombre) params = params.set('nombre', nombre);
     return this.http.get<T[]>(this.baseUrl, { params });
   }
 

@@ -6,6 +6,14 @@
 
   @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
 
+  <app-filtros-tabla
+    [esAdmin]="esAdmin()"
+    [empresas]="empresas()"
+    [mostrarArea]="false"
+    [(empresa)]="filtroEmpresa"
+    [(texto)]="buscar"
+  />
+
   @if (loading()) {
     <p class="loading">Cargando…</p>
   } @else {
@@ -15,16 +23,18 @@
           <th>ID</th>
           <th>Usuario</th>
           <th>Rol</th>
+          <th>Empresa</th>
           <th>Estado</th>
           <th></th>
         </tr>
       </thead>
       <tbody>
-        @for (u of items(); track u.id_usuario) {
+        @for (u of itemsFiltrados(); track u.id_usuario) {
           <tr>
             <td>{{ u.id_usuario }}</td>
             <td>{{ u.nombre_usuario }}</td>
             <td>{{ rolNombre(u.id_rol) }}</td>
+            <td>{{ empresaNombre(u.empresa) }}</td>
             <td>
               <span class="badge" [class.badge-on]="u.estado === 'activo'" [class.badge-off]="u.estado !== 'activo'">
                 {{ u.estado }}
@@ -36,7 +46,7 @@
             </td>
           </tr>
         } @empty {
-          <tr><td colspan="5" class="empty">Sin registros.</td></tr>
+          <tr><td colspan="6" class="empty">Sin registros.</td></tr>
         }
       </tbody>
     </table>
@@ -49,6 +59,7 @@
         <app-usuario-form
           [usuario]="selected()"
           [roles]="roles()"
+          [empresas]="empresas()"
           (save)="guardar($event)"
           (cancel)="cerrar()"
         />

@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 
 import { DispositivoForm } from '../../components/dispositivo-form/dispositivo-form';
+import { FiltrosTabla } from '../../components/filtros-tabla/filtros-tabla';
 import { MapFeature, MapView } from '../../components/map-view/map-view';
 import { AreaTrabajo } from '../../core/interfaces/area-trabajo';
 import {
@@ -8,6 +9,7 @@ import {
   DispositivoCreate,
   DispositivoUpdate,
 } from '../../core/interfaces/dispositivo';
+import { Empresa } from '../../core/interfaces/empresa';
 import {
   Coordenada,
   lngLatToCoords,
@@ -16,29 +18,60 @@ import {
   wktToCoords,
   wktToPoint,
 } from '../../core/utils/geo';
+import { alBuscar } from '../../core/utils/buscar';
 import { AreaTrabajoService } from '../../service/area-trabajo';
+import { AuthService } from '../../service/auth';
 import { DispositivoService } from '../../service/dispositivo';
+import { EmpresaService } from '../../service/empresa';
 
 @Component({
   selector: 'app-dispositivos-page',
-  imports: [DispositivoForm, MapView],
+  imports: [DispositivoForm, MapView, FiltrosTabla],
   templateUrl: './dispositivos-page.html',
   styleUrl: './dispositivos-page.scss',
 })
 export class DispositivosPage {
   private readonly service = inject(DispositivoService);
   private readonly areaService = inject(AreaTrabajoService);
+  private readonly empresaService = inject(EmpresaService);
+  private readonly auth = inject(AuthService);
+
+  readonly esAdmin = this.auth.esAdmin;
 
   readonly items = signal<Dispositivo[]>([]);
   readonly areas = signal<AreaTrabajo[]>([]);
+  readonly empresas = signal<Empresa[]>([]);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly showForm = signal(false);
   readonly selected = signal<Dispositivo | null>(null);
   readonly mapSelId = signal<number | null>(null);
 
+  readonly filtroEmpresa = signal(0);
+  readonly filtroArea = signal(0);
+  readonly buscar = signal('');
+
+  readonly areasFiltro = computed(() => {
+    const emp = this.filtroEmpresa();
+    return emp ? this.areas().filter((a) => a.id_empresa === emp) : this.areas();
+  });
+
+  readonly itemsFiltrados = computed(() => {
+    const emp = this.filtroEmpresa();
+    const area = this.filtroArea();
+    const lista = this.items();
+    if (area) return lista.filter((d) => d.id_area === area);
+    if (emp) {
+      const idsArea = new Set(
+        this.areas().filter((a) => a.id_empresa === emp).map((a) => a.id_area),
+      );
+      return lista.filter((d) => d.id_area != null && idsArea.has(d.id_area));
+    }
+    return lista;
+  });
+
   readonly mapFeatures = computed<MapFeature[]>(() =>
-    this.items().map((d) => ({
+    this.itemsFiltrados().map((d) => ({
       id: d.id_dispositivo,
       wkt: pointToWkt(this.puntoDe(d)),
       label: d.nombre_dispositivo,
@@ -73,13 +106,20 @@ export class DispositivosPage {
       next: (data) => this.areas.set(data),
       error: (e) => this.error.set(this.msg(e)),
     });
+    if (this.esAdmin()) {
+      this.empresaService.list().subscribe({
+        next: (data) => this.empresas.set(data),
+        error: (e) => this.error.set(this.msg(e)),
+      });
+    }
+    alBuscar(this.buscar, () => this.load());
     this.load();
   }
 
   load(): void {
     this.loading.set(true);
     this.error.set(null);
-    this.service.list().subscribe({
+    this.service.list({ nombre: this.buscar() }).subscribe({
       next: (data) => {
         this.items.set(data);
         this.loading.set(false);

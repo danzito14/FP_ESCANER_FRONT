@@ -6,6 +6,15 @@
 
   @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
 
+  <app-filtros-tabla
+    [esAdmin]="esAdmin()"
+    [empresas]="empresas()"
+    [areas]="areasFiltro()"
+    [(empresa)]="filtroEmpresa"
+    [(area)]="filtroArea"
+    [(texto)]="buscar"
+  />
+
   @if (loading()) {
     <p class="loading">Cargando…</p>
   } @else {
@@ -18,11 +27,10 @@
           <th>Fecha</th>
           <th>Descripción</th>
           <th>Estado</th>
-          <th></th>
         </tr>
       </thead>
       <tbody>
-        @for (inc of items(); track inc.id_incidencia) {
+        @for (inc of itemsFiltrados(); track inc.id_incidencia) {
           <tr>
             <td>{{ inc.id_incidencia }}</td>
             <td>{{ trabajadorNombre(inc.id_trabajador) }}</td>
@@ -36,12 +44,9 @@
                 }
               </select>
             </td>
-            <td class="actions">
-              <button class="btn btn-sm btn-danger" (click)="eliminar(inc)">Eliminar</button>
-            </td>
           </tr>
         } @empty {
-          <tr><td colspan="7" class="empty">Sin registros.</td></tr>
+          <tr><td colspan="6" class="empty">Sin registros.</td></tr>
         }
       </tbody>
     </table>

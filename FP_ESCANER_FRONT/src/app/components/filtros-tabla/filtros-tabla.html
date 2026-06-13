@@ -1,0 +1,31 @@
+<div class="filtros">
+  @if (esAdmin()) {
+    <div class="form-field">
+      <label>Empresa</label>
+      <select [value]="empresa()" (change)="onEmpresa($event)">
+        <option [value]="0">Todas</option>
+        @for (e of empresas(); track e.id_empresa) {
+          <option [value]="e.id_empresa">{{ e.nombre_empresa }}</option>
+        }
+      </select>
+    </div>
+
+    @if (mostrarArea()) {
+      <div class="form-field">
+        <label>Área</label>
+        <select [value]="area()" (change)="onArea($event)">
+          <option [value]="0">Todas</option>
+          @for (a of areas(); track a.id_area) {
+            <option [value]="a.id_area">{{ a.nombre_area }}</option>
+          }
+        </select>
+      </div>
+    }
+  }
+
+  <div class="form-field filtro-buscar">
+    <label>Buscar</label>
+    <input type="search" placeholder="Buscar en la tabla…" [value]="texto()" (input)="onBuscar($event)" />
+  </div>
+</div>
+

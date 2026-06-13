@@ -31,6 +31,19 @@
     }
   </div>
 
+  <div class="form-field">
+    <label for="empresa">Empresa</label>
+    <select id="empresa" formControlName="empresa">
+      <option [ngValue]="0" disabled>Selecciona una empresa…</option>
+      @for (emp of empresas(); track emp.id_empresa) {
+        <option [ngValue]="emp.id_empresa">{{ emp.nombre_empresa }}</option>
+      }
+    </select>
+    @if (form.controls.empresa.touched && form.controls.empresa.invalid) {
+      <small class="error">Selecciona una empresa.</small>
+    }
+  </div>
+
   @if (isEdit()) {
     <div class="form-field">
       <label for="estado">Estado</label>

@@ -1,40 +1,64 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 
+import { FiltrosTabla } from '../../components/filtros-tabla/filtros-tabla';
 import { UsuarioForm } from '../../components/usuario-form/usuario-form';
+import { Empresa } from '../../core/interfaces/empresa';
 import { Rol } from '../../core/interfaces/rol';
 import { Usuario, UsuarioCreate, UsuarioUpdate } from '../../core/interfaces/usuario';
+import { alBuscar } from '../../core/utils/buscar';
+import { AuthService } from '../../service/auth';
+import { EmpresaService } from '../../service/empresa';
 import { RolService } from '../../service/rol';
 import { UsuarioService } from '../../service/usuario';
 
 @Component({
   selector: 'app-usuarios-page',
-  imports: [UsuarioForm],
+  imports: [UsuarioForm, FiltrosTabla],
   templateUrl: './usuarios-page.html',
   styleUrl: './usuarios-page.scss',
 })
 export class UsuariosPage {
   private readonly service = inject(UsuarioService);
   private readonly rolService = inject(RolService);
+  private readonly empresaService = inject(EmpresaService);
+  private readonly auth = inject(AuthService);
+
+  readonly esAdmin = this.auth.esAdmin;
 
   readonly items = signal<Usuario[]>([]);
   readonly roles = signal<Rol[]>([]);
+  readonly empresas = signal<Empresa[]>([]);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly showForm = signal(false);
   readonly selected = signal<Usuario | null>(null);
+
+  readonly filtroEmpresa = signal(0);
+  readonly buscar = signal('');
+
+  readonly itemsFiltrados = computed(() => {
+    const emp = this.filtroEmpresa();
+    const lista = this.items();
+    return emp ? lista.filter((u) => u.empresa === emp) : lista;
+  });
 
   constructor() {
     this.rolService.list().subscribe({
       next: (data) => this.roles.set(data),
       error: (e) => this.error.set(this.msg(e)),
     });
+    this.empresaService.list().subscribe({
+      next: (data) => this.empresas.set(data),
+      error: (e) => this.error.set(this.msg(e)),
+    });
+    alBuscar(this.buscar, () => this.load());
     this.load();
   }
 
   load(): void {
     this.loading.set(true);
     this.error.set(null);
-    this.service.list().subscribe({
+    this.service.list({ nombre: this.buscar() }).subscribe({
       next: (data) => {
         this.items.set(data);
         this.loading.set(false);
@@ -48,6 +72,10 @@ export class UsuariosPage {
 
   rolNombre(id: number): string {
     return this.roles().find((r) => r.id_rol === id)?.nombre ?? `#${id}`;
+  }
+
+  empresaNombre(id: number): string {
+    return this.empresas().find((e) => e.id_empresa === id)?.nombre_empresa ?? `#${id}`;
   }
 
   nuevo(): void {

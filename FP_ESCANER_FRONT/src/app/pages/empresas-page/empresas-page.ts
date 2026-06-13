@@ -1,14 +1,16 @@
 import { Component, computed, inject, signal } from '@angular/core';
 
 import { EmpresaForm } from '../../components/empresa-form/empresa-form';
+import { FiltrosTabla } from '../../components/filtros-tabla/filtros-tabla';
 import { MapFeature, MapView } from '../../components/map-view/map-view';
 import { Empresa, EmpresaCreate, EmpresaUpdate } from '../../core/interfaces/empresa';
+import { alBuscar } from '../../core/utils/buscar';
 import { lngLatToWkt } from '../../core/utils/geo';
 import { EmpresaService } from '../../service/empresa';
 
 @Component({
   selector: 'app-empresas-page',
-  imports: [EmpresaForm, MapView],
+  imports: [EmpresaForm, MapView, FiltrosTabla],
   templateUrl: './empresas-page.html',
   styleUrl: './empresas-page.scss',
 })
@@ -21,6 +23,7 @@ export class EmpresasPage {
   readonly showForm = signal(false);
   readonly selected = signal<Empresa | null>(null);
   readonly mapSelId = signal<number | null>(null);
+  readonly buscar = signal('');
 
   readonly mapFeatures = computed<MapFeature[]>(() =>
     this.items().map((e) => ({
@@ -32,13 +35,14 @@ export class EmpresasPage {
   );
 
   constructor() {
+    alBuscar(this.buscar, () => this.load());
     this.load();
   }
 
   load(): void {
     this.loading.set(true);
     this.error.set(null);
-    this.service.list().subscribe({
+    this.service.list({ nombre: this.buscar() }).subscribe({
       next: (data) => {
         this.items.set(data);
         this.loading.set(false);

@@ -190,6 +190,50 @@ h1, h2, h3 {
   }
 }
 
+/* ===================== Filtros (admin) ===================== */
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  padding: 0.85rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+
+  .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-width: 180px;
+
+    label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    select,
+    input {
+      padding: 0.5rem 0.65rem;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      font: inherit;
+
+      &:focus { outline: none; border-color: var(--accent); box-shadow: var(--ring); }
+    }
+  }
+
+  .filtro-buscar {
+    margin-left: auto;
+    min-width: 240px;
+  }
+}
+
 /* ===================== Layout tabla + mapa ===================== */
 .crud-layout {
   display: grid;

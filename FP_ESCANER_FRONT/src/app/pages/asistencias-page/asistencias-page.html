@@ -6,6 +6,15 @@
 
   @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
 
+  <app-filtros-tabla
+    [esAdmin]="esAdmin()"
+    [empresas]="empresasArr()"
+    [areas]="areasFiltro()"
+    [(empresa)]="filtroEmpresa"
+    [(area)]="filtroArea"
+    [(texto)]="buscar"
+  />
+
   @if (loading()) {
     <p class="loading">Cargando…</p>
   } @else {
@@ -28,7 +37,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (a of items(); track a.id_asistencia) {
+            @for (a of itemsFiltrados(); track a.id_asistencia) {
               <tr [class.is-selected]="mapSelId() === a.id_asistencia" (click)="mapSelId.set(a.id_asistencia)">
                 <td>{{ a.id_asistencia }}</td>
                 <td>{{ trabajadorNombre(a.id_trabajador) }}</td>

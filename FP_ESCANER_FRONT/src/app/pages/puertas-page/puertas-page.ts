@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 
+import { FiltrosTabla } from '../../components/filtros-tabla/filtros-tabla';
 import { MapFeature, MapView } from '../../components/map-view/map-view';
 import { PuertaForm } from '../../components/puerta-form/puerta-form';
 import { AreaTrabajo } from '../../core/interfaces/area-trabajo';
@@ -10,15 +11,17 @@ import {
   PuertaAccesoCreate,
   PuertaAccesoUpdate,
 } from '../../core/interfaces/puerta-acceso';
+import { alBuscar } from '../../core/utils/buscar';
 import { pointToWkt } from '../../core/utils/geo';
 import { AreaTrabajoService } from '../../service/area-trabajo';
+import { AuthService } from '../../service/auth';
 import { DispositivoService } from '../../service/dispositivo';
 import { EmpresaService } from '../../service/empresa';
 import { PuertaAccesoService } from '../../service/puerta-acceso';
 
 @Component({
   selector: 'app-puertas-page',
-  imports: [PuertaForm, MapView],
+  imports: [PuertaForm, MapView, FiltrosTabla],
   templateUrl: './puertas-page.html',
   styleUrl: './puertas-page.scss',
 })
@@ -27,6 +30,9 @@ export class PuertasPage {
   private readonly areaService = inject(AreaTrabajoService);
   private readonly empresaService = inject(EmpresaService);
   private readonly dispositivoService = inject(DispositivoService);
+  private readonly auth = inject(AuthService);
+
+  readonly esAdmin = this.auth.esAdmin;
 
   readonly items = signal<PuertaAcceso[]>([]);
   readonly areas = signal<AreaTrabajo[]>([]);
@@ -38,8 +44,26 @@ export class PuertasPage {
   readonly selected = signal<PuertaAcceso | null>(null);
   readonly mapSelId = signal<number | null>(null);
 
+  readonly filtroEmpresa = signal(0);
+  readonly filtroArea = signal(0);
+  readonly buscar = signal('');
+
+  readonly areasFiltro = computed(() => {
+    const emp = this.filtroEmpresa();
+    return emp ? this.areas().filter((a) => a.id_empresa === emp) : this.areas();
+  });
+
+  readonly itemsFiltrados = computed(() => {
+    const emp = this.filtroEmpresa();
+    const area = this.filtroArea();
+    const lista = this.items();
+    if (area) return lista.filter((p) => p.id_area === area);
+    if (emp) return lista.filter((p) => p.id_empresa === emp);
+    return lista;
+  });
+
   readonly mapFeatures = computed<MapFeature[]>(() =>
-    this.items().map((p) => ({
+    this.itemsFiltrados().map((p) => ({
       id: p.id_puerta,
       wkt:
         p.ubicacion ??
@@ -64,13 +88,14 @@ export class PuertasPage {
       next: (data) => this.dispositivos.set(data),
       error: (e) => this.error.set(this.msg(e)),
     });
+    alBuscar(this.buscar, () => this.load());
     this.load();
   }
 
   load(): void {
     this.loading.set(true);
     this.error.set(null);
-    this.service.list().subscribe({
+    this.service.list({ nombre: this.buscar() }).subscribe({
       next: (data) => {
         this.items.set(data);
         this.loading.set(false);
