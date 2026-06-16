@@ -40,6 +40,23 @@
           }
         </select>
       </label>
+
+      <label>
+        <span>Cámara</span>
+        <select [value]="cfg.camaraId()" (change)="cfg.camaraId.set($any($event.target).value)">
+          <option value="">Predeterminada (frontal)</option>
+          @for (c of camaras(); track c.deviceId; let i = $index) {
+            <option [value]="c.deviceId">{{ nombreCamara(c, i) }}</option>
+          }
+        </select>
+      </label>
+
+      <div class="config-cam-acciones">
+        <button type="button" class="btn btn-sm" (click)="detectarCamaras()" [disabled]="detectandoCam()">
+          {{ detectandoCam() ? 'Detectando…' : 'Detectar cámaras' }}
+        </button>
+        <small class="hint">Dale permiso de cámara para ver los nombres y elegir la externa, trasera o frontal.</small>
+      </div>
     </div>
   </div>
 

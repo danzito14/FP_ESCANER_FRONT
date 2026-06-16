@@ -9,6 +9,7 @@ interface ScannerCfg {
   idPuerta: number;
   idDispositivo: number;
   tipoRegistro: TipoRegistro;
+  camaraId: string;
 }
 
 /**
@@ -22,6 +23,8 @@ export class ScannerConfigService {
   readonly idPuerta = signal(0);
   readonly idDispositivo = signal(0);
   readonly tipoRegistro = signal<TipoRegistro>('entrada');
+  /** deviceId de la cámara elegida ('' = predeterminada / frontal). */
+  readonly camaraId = signal('');
 
   constructor() {
     this.cargar();
@@ -31,6 +34,7 @@ export class ScannerConfigService {
           idPuerta: this.idPuerta(),
           idDispositivo: this.idDispositivo(),
           tipoRegistro: this.tipoRegistro(),
+          camaraId: this.camaraId(),
         };
         localStorage.setItem(KEY, JSON.stringify(cfg));
       });
@@ -48,6 +52,7 @@ export class ScannerConfigService {
       if (c.tipoRegistro === 'entrada' || c.tipoRegistro === 'salida') {
         this.tipoRegistro.set(c.tipoRegistro);
       }
+      if (typeof c.camaraId === 'string') this.camaraId.set(c.camaraId);
     } catch {
       // Config corrupta: se ignora.
     }

@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 
 import { PlatformService } from './platform';
+import { ScannerConfigService } from './scanner-config';
 
 /**
  * Acceso a la cámara para el scanner: abrir stream y capturar un frame.
@@ -11,23 +12,62 @@ import { PlatformService } from './platform';
 @Injectable({ providedIn: 'root' })
 export class CameraService {
   private readonly platform = inject(PlatformService);
+  private readonly cfg = inject(ScannerConfigService);
   private stream: MediaStream | null = null;
 
   get isSupported(): boolean {
     return this.platform.isBrowser && !!navigator.mediaDevices?.getUserMedia;
   }
 
-  async start(video: HTMLVideoElement): Promise<void> {
+  /**
+   * Abre la cámara. Usa el `deviceId` indicado o, si no, el elegido en
+   * Configuración; si no hay, la frontal. Si el id guardado ya no existe,
+   * reintenta con la cámara por defecto.
+   */
+  async start(video: HTMLVideoElement, deviceId?: string): Promise<void> {
     if (!this.isSupported) {
       throw new Error('La cámara no está disponible en este dispositivo/navegador.');
     }
     this.stop();
-    this.stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
-      audio: false,
-    });
+    const id = deviceId || this.cfg.camaraId();
+    const tamano = { width: { ideal: 640 }, height: { ideal: 480 } };
+    try {
+      this.stream = await navigator.mediaDevices.getUserMedia({
+        video: id ? { deviceId: { exact: id }, ...tamano } : { facingMode: 'user', ...tamano },
+        audio: false,
+      });
+    } catch (e) {
+      // La cámara elegida ya no está disponible: reintenta con la por defecto.
+      if (!id) throw e;
+      this.stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', ...tamano },
+        audio: false,
+      });
+    }
     video.srcObject = this.stream;
     await video.play();
+  }
+
+  /** Lista las cámaras (videoinput). Las etiquetas solo aparecen con permiso. */
+  async listarCamaras(): Promise<MediaDeviceInfo[]> {
+    if (!this.isSupported || !navigator.mediaDevices.enumerateDevices) return [];
+    const dispositivos = await navigator.mediaDevices.enumerateDevices();
+    return dispositivos.filter((d) => d.kind === 'videoinput');
+  }
+
+  /**
+   * Pide permiso (para poder leer las etiquetas) y devuelve las cámaras.
+   * Abre y cierra un stream temporal solo para obtener el permiso.
+   */
+  async pedirPermisoYListar(): Promise<MediaDeviceInfo[]> {
+    if (!this.isSupported) return [];
+    try {
+      const tmp = await navigator.mediaDevices.getUserMedia({ video: true });
+      tmp.getTracks().forEach((t) => t.stop());
+    } catch {
+      // Sin permiso: se enumeran igual (probablemente sin etiquetas).
+    }
+    return this.listarCamaras();
   }
 
   /** Captura el frame actual como data URL JPEG (con prefijo data:image/jpeg;base64,). */

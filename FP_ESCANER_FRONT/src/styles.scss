@@ -633,6 +633,7 @@ h1, h2, h3 {
   border-radius: var(--radius-lg);
   padding: 1.75rem;
   width: 100%;
+  min-width: 0; /* permite encoger en el flex del backdrop (móvil) */
   max-width: 540px;
   max-height: calc(100vh - 8rem);
   overflow-y: auto;
@@ -642,6 +643,29 @@ h1, h2, h3 {
   h2 {
     margin: 0 0 1.25rem;
     font-size: 1.25rem;
+  }
+}
+
+/* Móvil: más espacio para el modal y formularios en una sola columna. */
+@media (max-width: 560px) {
+  .modal-backdrop {
+    padding: 1.5rem 0.75rem;
+    align-items: stretch;
+  }
+
+  .modal {
+    padding: 1.25rem;
+    max-height: calc(100vh - 3rem);
+  }
+
+  .crud-form .form-row {
+    flex-direction: column;
+    gap: 1.1rem;
+  }
+
+  .crud-page .crud-header {
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
   }
 }
 
