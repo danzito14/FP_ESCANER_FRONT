@@ -112,6 +112,25 @@ export class CameraService {
   }
 }
 
+/**
+ * Convierte la etiqueta cruda de una cámara (la da el navegador/SO, ej.
+ * "camera 0, facing back", "USB2.0 HD UVC WebCam (1234:5678)") en un nombre
+ * legible en español. No hay estándar: se normaliza por palabras clave.
+ */
+export function etiquetaCamara(label: string | undefined, index: number): string {
+  const raw = (label ?? '').trim();
+  if (!raw) return `Cámara ${index + 1}`;
+  const l = raw.toLowerCase();
+  // Limpia identificadores de hardware tipo (1234:5678).
+  const limpio = raw.replace(/\s*\([0-9a-f]{4}:[0-9a-f]{4}\)\s*/i, '').trim();
+
+  if (/\busb\b/.test(l)) return limpio || `Cámara USB ${index + 1}`;
+  if (/back|rear|trasera|environment/.test(l)) return 'Cámara trasera';
+  if (/front|user|frontal|selfie/.test(l)) return 'Cámara frontal';
+  // Webcam con nombre real (integrada/externa): usa su nombre ya limpio.
+  return limpio;
+}
+
 /** Quita el prefijo "data:image/...;base64," y deja solo el base64. */
 export function stripDataUrl(dataUrl: string): string {
   const i = dataUrl.indexOf(',');

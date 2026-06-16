@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FaIconComponent } from '@fortawesome/angular-fontawesome';
 import { faVolumeHigh, faVolumeXmark } from '@fortawesome/free-solid-svg-icons';
@@ -6,7 +6,7 @@ import { faVolumeHigh, faVolumeXmark } from '@fortawesome/free-solid-svg-icons';
 import { Dispositivo } from '../../core/interfaces/dispositivo';
 import { PuertaAcceso } from '../../core/interfaces/puerta-acceso';
 import { AuthService } from '../../service/auth';
-import { CameraService } from '../../service/camera';
+import { CameraService, etiquetaCamara } from '../../service/camera';
 import { DispositivoService } from '../../service/dispositivo';
 import { PuertaAccesoService } from '../../service/puerta-acceso';
 import { ScannerConfigService } from '../../service/scanner-config';
@@ -34,6 +34,23 @@ export class ConfiguracionPage {
   readonly camaras = signal<MediaDeviceInfo[]>([]);
   readonly detectandoCam = signal(false);
 
+  /** Cámaras con nombre legible (frontal/trasera/USB…) y sin nombres repetidos. */
+  readonly camarasOpts = computed(() => {
+    const base = this.camaras().map((c, i) => ({
+      id: c.deviceId,
+      nombre: etiquetaCamara(c.label, i),
+    }));
+    const repetidos = new Map<string, number>();
+    for (const o of base) repetidos.set(o.nombre, (repetidos.get(o.nombre) ?? 0) + 1);
+    const usados = new Map<string, number>();
+    return base.map((o) => {
+      if ((repetidos.get(o.nombre) ?? 0) <= 1) return o;
+      const n = (usados.get(o.nombre) ?? 0) + 1;
+      usados.set(o.nombre, n);
+      return { id: o.id, nombre: `${o.nombre} ${n}` };
+    });
+  });
+
   constructor() {
     // Quien configura el scanner puede tener 'puertas:read'/'dispositivos:read'
     // (admin/config) o solo 'scanner:use' (kiosko). Carga con cualquiera.
@@ -57,10 +74,6 @@ export class ConfiguracionPage {
     }
   }
 
-  /** Etiqueta legible de una cámara (o un nombre genérico si no hay permiso). */
-  nombreCamara(d: MediaDeviceInfo, i: number): string {
-    return d.label || `Cámara ${i + 1}`;
-  }
 
   /** Activa/silencia la voz; al silenciar corta lo que se esté diciendo. */
   toggleVoz(): void {

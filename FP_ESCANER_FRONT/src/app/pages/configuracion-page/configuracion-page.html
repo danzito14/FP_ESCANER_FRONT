@@ -45,8 +45,8 @@
         <span>Cámara</span>
         <select [value]="cfg.camaraId()" (change)="cfg.camaraId.set($any($event.target).value)">
           <option value="">Predeterminada (frontal)</option>
-          @for (c of camaras(); track c.deviceId; let i = $index) {
-            <option [value]="c.deviceId">{{ nombreCamara(c, i) }}</option>
+          @for (c of camarasOpts(); track c.id) {
+            <option [value]="c.id">{{ c.nombre }}</option>
           }
         </select>
       </label>
