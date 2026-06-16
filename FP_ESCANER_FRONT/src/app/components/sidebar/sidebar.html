@@ -1,0 +1,14 @@
+<nav class="side-nav">
+  <span class="side-title">Navegación</span>
+  @for (m of items(); track m.ruta) {
+    <a class="side-item" [routerLink]="m.ruta" routerLinkActive="active">
+      <fa-icon [icon]="m.icono" />
+      <span class="side-label">{{ m.titulo }}</span>
+    </a>
+  }
+
+  <a class="side-item side-config" routerLink="/configuracion" routerLinkActive="active">
+    <fa-icon [icon]="iconConfig" />
+    <span class="side-label">Configuración</span>
+  </a>
+</nav>

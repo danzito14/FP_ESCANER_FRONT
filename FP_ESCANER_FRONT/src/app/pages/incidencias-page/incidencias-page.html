@@ -10,9 +10,20 @@
     [esAdmin]="esAdmin()"
     [empresas]="empresas()"
     [areas]="areasFiltro()"
+    [estados]="estados"
+    [conteos]="conteos()"
+    [total]="baseFiltrados().length"
+    [chips]="true"
+    [tipos]="tipos"
+    [conteosTipo]="conteosTipo()"
+    [fechas]="true"
     [(empresa)]="filtroEmpresa"
     [(area)]="filtroArea"
     [(texto)]="buscar"
+    [(estado)]="filtroEstado"
+    [(tipo)]="filtroTipo"
+    [(fechaInicio)]="fechaInicio"
+    [(fechaFin)]="fechaFin"
   />
 
   @if (loading()) {
@@ -32,17 +43,20 @@
       <tbody>
         @for (inc of itemsFiltrados(); track inc.id_incidencia) {
           <tr>
-            <td>{{ inc.id_incidencia }}</td>
-            <td>{{ trabajadorNombre(inc.id_trabajador) }}</td>
-            <td>{{ inc.tipo_incidencia }}</td>
+            <td>{{ inc.id_trabajador }}</td>
+            <td>{{ trabajadorNombre(inc) }}</td>
+            <td><span class="tag" [style.--c]="colorEstado(inc.tipo_incidencia)">{{ inc.tipo_incidencia }}</span></td>
             <td>{{ inc.fecha }}</td>
             <td>{{ inc.descripcion || '—' }}</td>
             <td>
-              <select class="estado-select" (change)="cambiarEstado(inc, $event)">
-                @for (e of estados; track e) {
-                  <option [value]="e" [selected]="e === inc.estado">{{ e }}</option>
-                }
-              </select>
+              <span class="estado-cell" [class]="'est-' + inc.estado">
+                <span class="dot"></span>
+                <select class="estado-select" [disabled]="!puedeEditar()" (change)="cambiarEstado(inc, $event)">
+                  @for (e of estados; track e) {
+                    <option [value]="e" [selected]="e === inc.estado">{{ e }}</option>
+                  }
+                </select>
+              </span>
             </td>
           </tr>
         } @empty {

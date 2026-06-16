@@ -1,19 +1,16 @@
 <header class="app-header">
-  <a routerLink="/" class="brand">FP Escáner</a>
+  @if (auth.isAuthenticated()) {
+    <button class="nav-toggle" type="button" (click)="layout.toggle()" aria-label="Mostrar u ocultar menú">
+      <fa-icon [icon]="iconMenu" />
+    </button>
+  }
+
+  <a routerLink="/" class="brand">
+    <img class="brand-logo" src="favicon.ico" alt="FP Escáner" />
+    FP Escáner
+  </a>
 
   @if (auth.isAuthenticated()) {
-    <nav class="nav-links">
-      <a routerLink="/usuarios" routerLinkActive="active">Usuarios</a>
-      <a routerLink="/trabajadores" routerLinkActive="active">Trabajadores</a>
-      <a routerLink="/empresas" routerLinkActive="active">Empresas</a>
-      <a routerLink="/areas" routerLinkActive="active">Áreas</a>
-      <a routerLink="/dispositivos" routerLinkActive="active">Dispositivos</a>
-      <a routerLink="/puertas" routerLinkActive="active">Puertas</a>
-      <a routerLink="/asistencias" routerLinkActive="active">Asistencias</a>
-      <a routerLink="/incidencias" routerLinkActive="active">Incidencias</a>
-      <a routerLink="/scanner" routerLinkActive="active">Scanner</a>
-    </nav>
-
     <div class="header-user">
       <span>{{ auth.currentUser()?.nombre_usuario }}</span>
       <button class="btn btn-sm" (click)="logout()">Salir</button>

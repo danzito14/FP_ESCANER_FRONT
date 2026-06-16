@@ -1,1 +1,15 @@
 /* Estilos compartidos de formularios en styles.scss (.crud-form, .coords) */
+
+.switch-field {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+
+  input {
+    width: auto;
+  }
+}

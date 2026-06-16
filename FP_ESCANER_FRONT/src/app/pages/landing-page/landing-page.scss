@@ -2,6 +2,16 @@
   animation: fade-in 0.3s ease;
 }
 
+/* --- Tarjeta que envuelve el dashboard de inicio --- */
+.dash-card {
+  padding: 1.4rem 1.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  animation: fade-in 0.3s ease;
+}
+
 .hero {
   background: linear-gradient(135deg, var(--accent), #e4ce00);
   color: #fff;

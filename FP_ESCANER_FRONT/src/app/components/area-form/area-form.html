@@ -17,7 +17,7 @@
       <div class="form-row">
         <div class="form-field">
           <label for="id_empresa">Empresa</label>
-          <select id="id_empresa" formControlName="id_empresa">
+          <select id="id_empresa" formControlName="id_empresa" (change)="onEmpresaChange()">
             <option [ngValue]="0" disabled>Selecciona una empresa…</option>
             @for (emp of empresas(); track emp.id_empresa) {
               <option [ngValue]="emp.id_empresa">{{ emp.nombre_empresa }}</option>
@@ -42,41 +42,57 @@
         </div>
       </div>
 
-      <fieldset class="coords" formArrayName="coordenadas">
-        <legend>Ubicación · vértices del polígono (latitud / longitud)</legend>
+      <label class="switch-field">
+        <input type="checkbox" [checked]="administrativa()" (change)="onAdministrativa($event)" />
+        <span>Área administrativa (usa las coordenadas de la empresa)</span>
+      </label>
 
-        @for (coord of coordenadas.controls; track $index) {
-          <div class="coord-row" [formGroupName]="$index">
-            <input type="number" step="any" formControlName="lat" placeholder="Latitud" />
-            <input type="number" step="any" formControlName="lng" placeholder="Longitud" />
-            <button type="button" class="btn btn-ghost" (click)="removeCoordenada($index)">✕</button>
-          </div>
-        } @empty {
-          <p class="hint">Dibuja el área en el mapa o agrega los vértices a mano.</p>
-        }
+      @if (administrativa()) {
+        <p class="hint">
+          El área tomará las mismas coordenadas de la empresa seleccionada
+          ({{ coordenadas.length }} vértice(s)).
+        </p>
+      } @else {
+        <fieldset class="coords" formArrayName="coordenadas">
+          <legend>Ubicación · vértices del polígono (latitud / longitud)</legend>
 
-        <button type="button" class="btn btn-sm" (click)="addCoordenada()">+ Agregar coordenada</button>
-
-        @if (coordenadas.length >= 3) {
-          <p class="area-info" [class.area-error]="coordenadas.invalid">
-            Área: {{ areaHa.toFixed(2) }} ha (permitido: 5 – 150 ha)
-          </p>
-          @if (coordenadas.errors?.['areaMin']) {
-            <small class="error">El área es muy pequeña; debe ser de al menos 5 ha.</small>
+          @for (coord of coordenadas.controls; track $index) {
+            <div class="coord-row" [formGroupName]="$index">
+              <input type="number" step="any" formControlName="lat" placeholder="Latitud" />
+              <input type="number" step="any" formControlName="lng" placeholder="Longitud" />
+              <button type="button" class="btn btn-ghost" (click)="removeCoordenada($index)">✕</button>
+            </div>
+          } @empty {
+            <p class="hint">Dibuja el área en el mapa o agrega los vértices a mano.</p>
           }
-          @if (coordenadas.errors?.['areaMax']) {
-            <small class="error">El área es muy grande; no puede superar 150 ha.</small>
+
+          <button type="button" class="btn btn-sm" (click)="addCoordenada()">+ Agregar coordenada</button>
+
+          @if (coordenadas.length >= 3) {
+            <p class="area-info" [class.area-error]="coordenadas.invalid">
+              Área: {{ areaHa.toFixed(2) }} ha (permitido: 5 – 150 ha)
+            </p>
+            @if (coordenadas.errors?.['areaMin']) {
+              <small class="error">El área es muy pequeña; debe ser de al menos 5 ha.</small>
+            }
+            @if (coordenadas.errors?.['areaMax']) {
+              <small class="error">El área es muy grande; no puede superar 150 ha.</small>
+            }
           }
-        }
-      </fieldset>
+        </fieldset>
+      }
     </div>
 
     <aside class="form-map">
-      <app-map-picker
-        mode="polygon"
-        [wkt]="mapWkt()"
-        (coordsChange)="onMapCoords($event)"
-      />
+      @if (administrativa()) {
+        <app-map-view [features]="mapAdminFeatures()" />
+      } @else {
+        <app-map-picker
+          mode="polygon"
+          [wkt]="mapWkt()"
+          (coordsChange)="onMapCoords($event)"
+        />
+      }
     </aside>
   </div>
 

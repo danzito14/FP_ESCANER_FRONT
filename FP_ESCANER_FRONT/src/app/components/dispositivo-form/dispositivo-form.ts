@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, output } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { MapPicker } from '../map-picker/map-picker';
@@ -9,7 +9,8 @@ import {
   DispositivoCreate,
   DispositivoUpdate,
 } from '../../core/interfaces/dispositivo';
-import { Coordenada, pointToWkt, wktToPoint } from '../../core/utils/geo';
+import { Empresa } from '../../core/interfaces/empresa';
+import { Coordenada, lngLatToWkt, pointToWkt, wktToPoint } from '../../core/utils/geo';
 
 @Component({
   selector: 'app-dispositivo-form',
@@ -22,12 +23,30 @@ export class DispositivoForm {
 
   /** Dispositivo a editar; null = creación. */
   readonly dispositivo = input<Dispositivo | null>(null);
-  /** Áreas disponibles para el selector. */
+  /** Empresas disponibles para el selector. */
+  readonly empresas = input<Empresa[]>([]);
+  /** Áreas disponibles (todas); se filtran por empresa. */
   readonly areas = input<AreaTrabajo[]>([]);
   readonly save = output<DispositivoCreate | DispositivoUpdate>();
   readonly cancel = output<void>();
 
   readonly isEdit = computed(() => this.dispositivo() !== null);
+
+  /** Empresa elegida (solo filtra áreas; no se envía). */
+  readonly empresaSel = signal(0);
+  /** Área elegida (mirror del form para reactividad). */
+  readonly idAreaSel = signal(0);
+
+  readonly areasFiltradas = computed(() => {
+    const emp = this.empresaSel();
+    return emp ? this.areas().filter((a) => a.id_empresa === emp) : [];
+  });
+
+  /** Polígono del área elegida (contexto del mapa). */
+  readonly areaContextoWkt = computed(() => {
+    const a = this.areas().find((x) => x.id_area === this.idAreaSel());
+    return a?.ubicacion ?? lngLatToWkt(a?.coordenadas);
+  });
   /** Geometría inicial para el mapa (acepta WKT o latitud/longitud). */
   readonly mapWkt = computed(() => {
     const d = this.dispositivo();
@@ -61,6 +80,11 @@ export class DispositivoForm {
         : d?.latitud != null && d?.longitud != null
           ? { lat: d.latitud, lng: d.longitud }
           : null;
+      const empresaDeArea = d
+        ? (this.areas().find((a) => a.id_area === d.id_area)?.id_empresa ?? 0)
+        : 0;
+      this.empresaSel.set(empresaDeArea);
+      this.idAreaSel.set(d?.id_area ?? 0);
       this.form.reset({
         nombre_dispositivo: d?.nombre_dispositivo ?? '',
         tipo_dispositivo: d?.tipo_dispositivo ?? 'escaner_facial',
@@ -73,6 +97,17 @@ export class DispositivoForm {
         lng: punto?.lng ?? null,
       });
     });
+  }
+
+  onEmpresa(e: Event): void {
+    this.empresaSel.set(+(e.target as HTMLSelectElement).value);
+    this.form.controls.id_area.setValue(0);
+    this.idAreaSel.set(0);
+  }
+
+  onArea(): void {
+    // El select de área usa [ngValue]; el id correcto está en el form control.
+    this.idAreaSel.set(this.form.controls.id_area.value);
   }
 
   /** El mapa colocó/movió el punto: refleja en lat/lng. */

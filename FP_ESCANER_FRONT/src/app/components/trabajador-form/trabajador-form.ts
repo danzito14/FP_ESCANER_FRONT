@@ -1,8 +1,9 @@
-import { Component, computed, effect, inject, input, output } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { AreaTrabajo } from '../../core/interfaces/area-trabajo';
 import { EstadoTrabajador } from '../../core/interfaces/common';
+import { Empresa } from '../../core/interfaces/empresa';
 import {
   Trabajador,
   TrabajadorCreate,
@@ -20,12 +21,23 @@ export class TrabajadorForm {
 
   /** Trabajador a editar; null = creación. */
   readonly trabajador = input<Trabajador | null>(null);
-  /** Áreas disponibles para el selector. */
+  /** Empresas disponibles para el selector. */
+  readonly empresas = input<Empresa[]>([]);
+  /** Áreas disponibles (todas); se filtran por empresa. */
   readonly areas = input<AreaTrabajo[]>([]);
   readonly save = output<TrabajadorCreate | TrabajadorUpdate>();
   readonly cancel = output<void>();
 
   readonly isEdit = computed(() => this.trabajador() !== null);
+
+  /** Empresa elegida (solo para filtrar áreas; no se envía al backend). */
+  readonly empresaSel = signal(0);
+
+  /** Áreas de la empresa seleccionada. */
+  readonly areasFiltradas = computed(() => {
+    const emp = this.empresaSel();
+    return emp ? this.areas().filter((a) => a.id_empresa === emp) : [];
+  });
 
   readonly form = this.fb.nonNullable.group({
     nombre: ['', Validators.required],
@@ -37,6 +49,11 @@ export class TrabajadorForm {
   constructor() {
     effect(() => {
       const t = this.trabajador();
+      // En edición, deduce la empresa a partir del área del trabajador.
+      const empresaDeArea = t
+        ? (this.areas().find((a) => a.id_area === t.id_area)?.id_empresa ?? 0)
+        : 0;
+      this.empresaSel.set(empresaDeArea);
       this.form.reset({
         nombre: t?.nombre ?? '',
         apellido: t?.apellido ?? '',
@@ -44,6 +61,11 @@ export class TrabajadorForm {
         estado: t?.estado ?? 'activo',
       });
     });
+  }
+
+  onEmpresa(e: Event): void {
+    this.empresaSel.set(+(e.target as HTMLSelectElement).value);
+    this.form.controls.id_area.setValue(0); // resetea el área al cambiar de empresa
   }
 
   onSubmit(): void {

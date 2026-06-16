@@ -1,4 +1,4 @@
-import { Component, PLATFORM_ID, inject, input, output, signal } from '@angular/core';
+import { Component, PLATFORM_ID, effect, inject, input, output, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { LeafletModule } from '@bluehalo/ngx-leaflet';
 import * as L from 'leaflet';
@@ -26,6 +26,8 @@ export class MapPicker {
   readonly mode = input<'point' | 'polygon'>('point');
   /** Geometría inicial en WKT (para edición). */
   readonly wkt = input<string | null | undefined>(null);
+  /** Polígono de contexto (ej. el área): se dibuja como guía y centra el mapa. */
+  readonly contexto = input<string | null | undefined>(null);
   readonly coordsChange = output<Coordenada[]>();
 
   readonly locating = signal(false);
@@ -33,6 +35,15 @@ export class MapPicker {
 
   private map: L.Map | null = null;
   private drawn: L.FeatureGroup | null = null;
+  private contextoLayer: L.Polygon | null = null;
+
+  constructor() {
+    // Redibuja/centra en el contexto (área) cuando cambia.
+    effect(() => {
+      const wkt = this.contexto();
+      if (this.map) this.pintarContexto(wkt);
+    });
+  }
 
   readonly options: L.MapOptions = {
     layers: [
@@ -82,7 +93,31 @@ export class MapPicker {
     map.on(L.Draw.Event.EDITED, () => this.emit());
     map.on(L.Draw.Event.DELETED, () => this.emit());
 
+    this.pintarContexto(this.contexto());
     setTimeout(() => map.invalidateSize(), 0);
+  }
+
+  /** Dibuja el polígono de contexto (área) como guía y centra el mapa en él. */
+  private pintarContexto(wkt: string | null | undefined): void {
+    if (!this.map) return;
+    if (this.contextoLayer) {
+      this.map.removeLayer(this.contextoLayer);
+      this.contextoLayer = null;
+    }
+    const ring = wktToCoords(wkt).map((c) => [c.lat, c.lng] as [number, number]);
+    if (!ring.length) return;
+    this.contextoLayer = L.polygon(ring, {
+      color: '#3b82f6',
+      weight: 2,
+      dashArray: '6 4',
+      fillOpacity: 0.08,
+      interactive: false,
+    }).addTo(this.map);
+    this.map.fitBounds(this.contextoLayer.getBounds(), {
+      padding: [24, 24],
+      maxZoom: 18,
+      animate: false,
+    });
   }
 
   /** Obtiene la ubicación actual del dispositivo y la coloca como punto. */
@@ -101,7 +136,7 @@ export class MapPicker {
           fillOpacity: 0.6,
         }),
       );
-      this.map.setView([pos.lat, pos.lng], 17);
+      this.map.setView([pos.lat, pos.lng], 17, { animate: false });
       this.coordsChange.emit([{ lat: pos.lat, lng: pos.lng }]);
     } catch (e) {
       this.geoError.set(e instanceof Error ? e.message : 'No se pudo obtener la ubicación.');
@@ -125,14 +160,14 @@ export class MapPicker {
             fillOpacity: 0.6,
           }),
         );
-        this.map?.setView([p.lat, p.lng], 16);
+        this.map?.setView([p.lat, p.lng], 16, { animate: false });
       }
     } else {
       const ring = wktToCoords(w).map((c) => [c.lat, c.lng] as [number, number]);
       if (ring.length) {
         const poly = L.polygon(ring, { color: '#3b82f6', weight: 2, fillOpacity: 0.2 });
         drawn.addLayer(poly);
-        this.map?.fitBounds(poly.getBounds(), { padding: [24, 24], maxZoom: 17 });
+        this.map?.fitBounds(poly.getBounds(), { padding: [24, 24], maxZoom: 17, animate: false });
       }
     }
   }

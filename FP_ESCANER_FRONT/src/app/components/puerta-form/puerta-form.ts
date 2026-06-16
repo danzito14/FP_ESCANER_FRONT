@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, output } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { AreaTrabajo } from '../../core/interfaces/area-trabajo';
@@ -10,7 +10,7 @@ import {
   PuertaAccesoCreate,
   PuertaAccesoUpdate,
 } from '../../core/interfaces/puerta-acceso';
-import { Coordenada, pointToWkt, wktToPoint } from '../../core/utils/geo';
+import { Coordenada, lngLatToWkt, pointToWkt, wktToPoint } from '../../core/utils/geo';
 import { MapPicker } from '../map-picker/map-picker';
 
 @Component({
@@ -31,6 +31,22 @@ export class PuertaForm {
   readonly cancel = output<void>();
 
   readonly isEdit = computed(() => this.puerta() !== null);
+
+  /** Mirrors de empresa/área para reactividad (cascada + contexto del mapa). */
+  readonly idEmpresaSel = signal(0);
+  readonly idAreaSel = signal(0);
+
+  readonly areasFiltradas = computed(() => {
+    const emp = this.idEmpresaSel();
+    return emp ? this.areas().filter((a) => a.id_empresa === emp) : this.areas();
+  });
+
+  /** Polígono del área elegida (contexto del mapa). */
+  readonly areaContextoWkt = computed(() => {
+    const a = this.areas().find((x) => x.id_area === this.idAreaSel());
+    return a?.ubicacion ?? lngLatToWkt(a?.coordenadas);
+  });
+
   /** Geometría inicial para el mapa (acepta WKT o latitud/longitud). */
   readonly mapWkt = computed(() => {
     const p = this.puerta();
@@ -61,6 +77,8 @@ export class PuertaForm {
         : p?.latitud != null && p?.longitud != null
           ? { lat: p.latitud, lng: p.longitud }
           : null;
+      this.idEmpresaSel.set(p?.id_empresa ?? 0);
+      this.idAreaSel.set(p?.id_area ?? 0);
       this.form.reset({
         nombre_puerta: p?.nombre_puerta ?? '',
         id_area: p?.id_area ?? 0,
@@ -73,6 +91,16 @@ export class PuertaForm {
         lng: punto?.lng ?? null,
       });
     });
+  }
+
+  onEmpresa(): void {
+    this.idEmpresaSel.set(this.form.controls.id_empresa.value);
+    this.form.controls.id_area.setValue(0);
+    this.idAreaSel.set(0);
+  }
+
+  onArea(): void {
+    this.idAreaSel.set(this.form.controls.id_area.value);
   }
 
   onMapCoords(coords: Coordenada[]): void {

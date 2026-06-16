@@ -10,9 +10,20 @@
     [esAdmin]="esAdmin()"
     [empresas]="empresasArr()"
     [areas]="areasFiltro()"
+    [estados]="estados"
+    [conteos]="conteos()"
+    [total]="baseFiltrados().length"
+    [chips]="true"
+    [tipos]="tipos"
+    [conteosTipo]="conteosTipo()"
+    [fechas]="true"
     [(empresa)]="filtroEmpresa"
     [(area)]="filtroArea"
     [(texto)]="buscar"
+    [(estado)]="filtroEstado"
+    [(tipo)]="filtroTipo"
+    [(fechaInicio)]="fechaInicio"
+    [(fechaFin)]="fechaFin"
   />
 
   @if (loading()) {
@@ -39,20 +50,22 @@
           <tbody>
             @for (a of itemsFiltrados(); track a.id_asistencia) {
               <tr [class.is-selected]="mapSelId() === a.id_asistencia" (click)="mapSelId.set(a.id_asistencia)">
-                <td>{{ a.id_asistencia }}</td>
-                <td>{{ trabajadorNombre(a.id_trabajador) }}</td>
+                <td>{{ a.id_trabajador }}</td>
+                <td>{{ trabajadorNombre(a) }}</td>
                 <td>{{ empresaNombre(a) }}</td>
                 <td>{{ areaNombre(a) }}</td>
-                <td>{{ puertaNombre(a.id_puerta) }}</td>
-                <td>{{ a.tipo_registro }}</td>
-                <td>{{ a.fecha_hora }}</td>
-                <td>{{ a.confianza_biometrica != null ? (a.confianza_biometrica * 100) + '%' : '—' }}</td>
+                <td>{{ puertaNombre(a) }}</td>
+                <td><span class="tag" [style.--c]="colorEstado(a.tipo_registro)">{{ a.tipo_registro }}</span></td>
+                <td>{{ a.fecha_hora | date: 'dd/MM/yyyy HH:mm:ss' }}</td>
                 <td>
-                  <span class="badge" [class.badge-on]="a.estado_registro === 'exitoso'" [class.badge-off]="a.estado_registro !== 'exitoso'">
-                    {{ a.estado_registro }}
-                  </span>
+                  @if (a.confianza_biometrica != null) {
+                    {{ a.confianza_biometrica * 100 | number: '1.0-2' }}%
+                  } @else {
+                    —
+                  }
                 </td>
-                <td>{{ dispositivoNombre(a.id_dispositivo) }}</td>
+                <td><span class="tag" [style.--c]="colorEstado(a.estado_registro)">{{ a.estado_registro }}</span></td>
+                <td>{{ dispositivoNombre(a) }}</td>
                 <td>{{ a.observaciones || '—' }}</td>
               </tr>
             } @empty {

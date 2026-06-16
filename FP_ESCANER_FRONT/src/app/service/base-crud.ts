@@ -23,13 +23,30 @@ export abstract class BaseCrud<T, TCreate = Partial<T>, TUpdate = Partial<T>> {
     return `${API_URL}/${this.resource}`;
   }
 
-  /** GET /recurso?skip=&limit=&nombre= (nombre = búsqueda server-side opcional). */
-  list(opts: { skip?: number; limit?: number; nombre?: string } = {}): Observable<T[]> {
+  /**
+   * GET /recurso?skip=&limit=&nombre=&fecha_inicio=&fecha_fin=&id_empresa=
+   * - nombre: búsqueda server-side opcional.
+   * - fechaInicio/fechaFin ('YYYY-MM-DD'): rango opcional (asistencias/incidencias).
+   * - idEmpresa: filtro por empresa server-side (máx. backend: limit ≤ 500).
+   */
+  list(
+    opts: {
+      skip?: number;
+      limit?: number;
+      nombre?: string;
+      fechaInicio?: string;
+      fechaFin?: string;
+      idEmpresa?: number;
+    } = {},
+  ): Observable<T[]> {
     let params = new HttpParams()
       .set('skip', opts.skip ?? 0)
       .set('limit', opts.limit ?? 100);
     const nombre = opts.nombre?.trim();
     if (nombre) params = params.set('nombre', nombre);
+    if (opts.fechaInicio) params = params.set('fecha_inicio', opts.fechaInicio);
+    if (opts.fechaFin) params = params.set('fecha_fin', opts.fechaFin);
+    if (opts.idEmpresa) params = params.set('id_empresa', opts.idEmpresa);
     return this.http.get<T[]>(this.baseUrl, { params });
   }
 

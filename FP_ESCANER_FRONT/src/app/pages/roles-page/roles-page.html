@@ -1,0 +1,71 @@
+<section class="crud-page">
+  <header class="crud-header">
+    <h1>Roles</h1>
+    <button *appPuede="'roles:write'" class="btn btn-primary" (click)="nuevo()">+ Nuevo rol</button>
+  </header>
+
+  @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
+
+  <app-filtros-tabla
+    [esAdmin]="false"
+    [mostrarArea]="false"
+    [estados]="estados"
+    [(estado)]="filtroEstado"
+    [(texto)]="buscar"
+  />
+
+  @if (loading()) {
+    <p class="loading">Cargando…</p>
+  } @else {
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Rol</th>
+          <th>Descripción</th>
+          <th>Permisos</th>
+          <th>Estado</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (r of itemsFiltrados(); track r.id_rol) {
+          <tr>
+            <td>{{ r.id_rol }}</td>
+            <td>{{ r.nombre_rol }}</td>
+            <td>{{ r.descripcion || '—' }}</td>
+            <td>
+              @for (s of r.permisos.scopes; track s) {
+                <span class="badge">{{ s }}</span>
+              }
+            </td>
+            <td>
+              <span class="badge" [class.badge-on]="r.estado === 'activo'" [class.badge-off]="r.estado !== 'activo'">
+                {{ r.estado }}
+              </span>
+            </td>
+            <td class="actions">
+              <button *appPuede="'roles:write'" class="btn btn-sm" (click)="editar(r)">Editar</button>
+              <button *appPuede="'roles:delete'" class="btn btn-sm btn-danger" (click)="eliminar(r)">Desactivar</button>
+            </td>
+          </tr>
+        } @empty {
+          <tr><td colspan="6" class="empty">Sin registros.</td></tr>
+        }
+      </tbody>
+    </table>
+  }
+
+  @if (showForm()) {
+    <div class="modal-backdrop" (click)="cerrar()">
+      <div class="modal" (click)="$event.stopPropagation()">
+        <h2>{{ selected() ? 'Editar rol' : 'Nuevo rol' }}</h2>
+        <app-rol-form
+          [rol]="selected()"
+          (save)="guardar($event)"
+          (cancel)="cerrar()"
+        />
+      </div>
+    </div>
+  }
+</section>

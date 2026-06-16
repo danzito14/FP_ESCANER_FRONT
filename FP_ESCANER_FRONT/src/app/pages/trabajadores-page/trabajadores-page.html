@@ -1,7 +1,7 @@
 <section class="crud-page">
   <header class="crud-header">
     <h1>Trabajadores</h1>
-    <button class="btn btn-primary" (click)="nuevo()">+ Nuevo trabajador</button>
+    <button *appPuede="'trabajadores:write'" class="btn btn-primary" (click)="nuevo()">+ Nuevo trabajador</button>
   </header>
 
   @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
@@ -10,8 +10,10 @@
     [esAdmin]="esAdmin()"
     [empresas]="empresas()"
     [areas]="areasFiltro()"
+    [estados]="estados"
     [(empresa)]="filtroEmpresa"
     [(area)]="filtroArea"
+    [(estado)]="filtroEstado"
     [(texto)]="buscar"
   />
 
@@ -43,16 +45,16 @@
             <td>
               @if (t.tiene_embedding) {
                 <span class="badge badge-on">Sí</span>
-                <button class="btn btn-sm" (click)="actualizarRostro(t)">Actualizar</button>
-                <button class="btn btn-sm btn-danger" (click)="eliminarRostro(t)">Eliminar</button>
+                <button *appPuede="'embeddings:write'" class="btn btn-sm" (click)="actualizarRostro(t)">Actualizar</button>
+                <button *appPuede="'embeddings:delete'" class="btn btn-sm btn-danger" (click)="eliminarRostro(t)">Eliminar</button>
               } @else {
                 <span class="badge badge-off">No</span>
-                <button class="btn btn-sm" (click)="registrarRostro(t)">Registrar rostro</button>
+                <button *appPuede="'embeddings:write'" class="btn btn-sm" (click)="registrarRostro(t)">Registrar rostro</button>
               }
             </td>
             <td class="actions">
-              <button class="btn btn-sm" (click)="editar(t)">Editar</button>
-              <button class="btn btn-sm btn-danger" (click)="eliminar(t)">Desactivar</button>
+              <button *appPuede="'trabajadores:write'" class="btn btn-sm" (click)="editar(t)">Editar</button>
+              <button *appPuede="'trabajadores:delete'" class="btn btn-sm btn-danger" (click)="eliminar(t)">Desactivar</button>
             </td>
           </tr>
         } @empty {
@@ -78,6 +80,7 @@
           <h2>{{ selected() ? 'Editar trabajador' : 'Nuevo trabajador' }}</h2>
           <app-trabajador-form
             [trabajador]="selected()"
+            [empresas]="empresas()"
             [areas]="areas()"
             (save)="guardar($event)"
             (cancel)="cerrar()"

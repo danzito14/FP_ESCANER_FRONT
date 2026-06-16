@@ -17,17 +17,31 @@
     </div>
   </div>
 
-  <div class="form-field">
-    <label for="id_area">Área de trabajo</label>
-    <select id="id_area" formControlName="id_area">
-      <option [ngValue]="0" disabled>Selecciona un área…</option>
-      @for (area of areas(); track area.id_area) {
-        <option [ngValue]="area.id_area">{{ area.nombre_area }}</option>
+  <div class="form-row">
+    <div class="form-field">
+      <label for="empresa_sel">Empresa</label>
+      <select id="empresa_sel" [value]="empresaSel()" (change)="onEmpresa($event)">
+        <option [value]="0" disabled>Selecciona una empresa…</option>
+        @for (emp of empresas(); track emp.id_empresa) {
+          <option [value]="emp.id_empresa">{{ emp.nombre_empresa }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="form-field">
+      <label for="id_area">Área de trabajo</label>
+      <select id="id_area" formControlName="id_area">
+        <option [ngValue]="0" disabled>
+          {{ empresaSel() ? 'Selecciona un área…' : 'Elige una empresa primero' }}
+        </option>
+        @for (area of areasFiltradas(); track area.id_area) {
+          <option [ngValue]="area.id_area">{{ area.nombre_area }}</option>
+        }
+      </select>
+      @if (form.controls.id_area.touched && form.controls.id_area.invalid) {
+        <small class="error">Selecciona un área.</small>
       }
-    </select>
-    @if (form.controls.id_area.touched && form.controls.id_area.invalid) {
-      <small class="error">Selecciona un área.</small>
-    }
+    </div>
   </div>
 
   @if (isEdit()) {

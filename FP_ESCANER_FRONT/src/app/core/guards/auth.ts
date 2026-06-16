@@ -12,3 +12,26 @@ export const authGuard: CanActivateFn = () => {
 
   return router.createUrlTree(['/login']);
 };
+
+/**
+ * Protege una ruta exigiendo un scope (ej. 'usuarios:read', 'scanner:use').
+ * Sin sesión → /login; con sesión pero sin permiso → inicio.
+ */
+export function scopeGuard(scope: string): CanActivateFn {
+  return () => {
+    const auth = inject(AuthService);
+    const router = inject(Router);
+
+    if (!auth.isAuthenticated()) return router.createUrlTree(['/login']);
+    if (auth.tieneScope(scope)) return true;
+    return router.createUrlTree(['/']);
+  };
+}
+
+/** Solo invitados: si ya hay sesión, manda al inicio (evita volver al login). */
+export const guestGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+
+  return auth.isAuthenticated() ? router.createUrlTree(['/']) : true;
+};

@@ -1,4 +1,5 @@
 import { Estado } from './common';
+import { Rol } from './rol';
 
 export interface Usuario {
   id_usuario: number;
@@ -9,6 +10,11 @@ export interface Usuario {
   estado: Estado;
   fecha_creacion: string;
   fecha_actualizacion: string;
+}
+
+/** Respuesta de GET /usuarios/me: el usuario con su rol y permisos. */
+export interface UsuarioMe extends Usuario {
+  rol?: Rol;
 }
 
 export interface UsuarioCreate {

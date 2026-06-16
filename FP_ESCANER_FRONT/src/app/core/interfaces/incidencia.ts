@@ -11,6 +11,8 @@ export interface Incidencia {
   id_escaneo_ref?: number | null;
   estado: EstadoIncidencia;
   fecha_creacion: string;
+  /** Nombre ya resuelto por el backend (para mostrar sin leer trabajadores). */
+  trabajador_nombre?: string | null;
 }
 
 export interface IncidenciaUpdate {

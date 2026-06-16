@@ -14,10 +14,11 @@ import { lngLatToWkt } from '../../core/utils/geo';
 import { AreaTrabajoService } from '../../service/area-trabajo';
 import { AuthService } from '../../service/auth';
 import { EmpresaService } from '../../service/empresa';
+import { PuedeDirective } from '../../core/directives/puede';
 
 @Component({
   selector: 'app-areas-page',
-  imports: [AreaForm, MapView, FiltrosTabla],
+  imports: [AreaForm, MapView, FiltrosTabla, PuedeDirective],
   templateUrl: './areas-page.html',
   styleUrl: './areas-page.scss',
 })
@@ -37,12 +38,17 @@ export class AreasPage {
   readonly mapSelId = signal<number | null>(null);
 
   readonly filtroEmpresa = signal(0);
+  readonly filtroEstado = signal('');
   readonly buscar = signal('');
+  readonly estados = ['activo', 'inactivo'];
 
   readonly itemsFiltrados = computed(() => {
     const emp = this.filtroEmpresa();
-    const lista = this.items();
-    return emp ? lista.filter((a) => a.id_empresa === emp) : lista;
+    const estado = this.filtroEstado();
+    let lista = this.items();
+    if (emp) lista = lista.filter((a) => a.id_empresa === emp);
+    if (estado) lista = lista.filter((a) => a.estado === estado);
+    return lista;
   });
 
   readonly mapFeatures = computed<MapFeature[]>(() =>
@@ -56,7 +62,7 @@ export class AreasPage {
   );
 
   constructor() {
-    this.empresaService.list().subscribe({
+    this.auth.listarSiPuede('empresas', this.empresaService.list()).subscribe({
       next: (data) => this.empresas.set(data),
       error: (e) => this.error.set(this.msg(e)),
     });

@@ -1,0 +1,105 @@
+<form [formGroup]="form" (ngSubmit)="onSubmit()" class="crud-form">
+  <div class="form-field">
+    <label for="nombre_rol">Nombre del rol</label>
+    <input id="nombre_rol" type="text" formControlName="nombre_rol" />
+    @if (form.controls.nombre_rol.touched && form.controls.nombre_rol.invalid) {
+      <small class="error">El nombre del rol es requerido.</small>
+    }
+  </div>
+
+  <div class="form-field">
+    <label for="descripcion">Descripción</label>
+    <input id="descripcion" type="text" formControlName="descripcion" />
+  </div>
+
+  <!-- Editor de permisos -->
+  <div class="form-field">
+    <label>Permisos</label>
+
+    <div class="presets">
+      @for (p of presets; track p.label) {
+        <button type="button" class="btn btn-sm" (click)="aplicarPreset(p)">{{ p.label }}</button>
+      }
+    </div>
+
+    <table class="perm-table">
+      <thead>
+        <tr>
+          <th>Recurso</th>
+          @for (a of acciones; track a.key) {
+            <th>{{ a.label }}</th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (r of recursos; track r.key) {
+          <tr>
+            <td class="perm-recurso">{{ r.label }}</td>
+            @for (a of acciones; track a.key) {
+              <td class="perm-cell">
+                @if (r.acciones.includes(a.key)) {
+                  <input
+                    type="checkbox"
+                    [checked]="cubierto(r.key, a.key)"
+                    (change)="toggleAccion(r.key, a.key)"
+                    [attr.aria-label]="r.label + ' ' + a.label"
+                  />
+                } @else {
+                  <span class="perm-na">—</span>
+                }
+              </td>
+            }
+          </tr>
+        }
+      </tbody>
+    </table>
+
+    <label class="perm-scanner">
+      <input type="checkbox" [checked]="scannerOn()" (change)="toggleScanner()" />
+      Usar scanner (reconocimiento facial)
+    </label>
+  </div>
+
+  <!-- Scope manual + chips -->
+  <div class="form-field">
+    <label for="scope-manual">Scopes asignados</label>
+    @if (scopes().length) {
+      <div class="scope-chips">
+        @for (s of scopes(); track s) {
+          <span class="scope-chip">
+            {{ s }}
+            <button type="button" class="scope-x" (click)="quitarScope(s)" aria-label="Quitar">×</button>
+          </span>
+        }
+      </div>
+    } @else {
+      <small class="hint">Sin permisos: este rol no podrá hacer nada.</small>
+    }
+    <div class="scope-add">
+      <input
+        id="scope-manual"
+        type="text"
+        placeholder="Agregar scope manual (ej. reportes:read)"
+        [value]="scopeManual()"
+        (input)="scopeManual.set($any($event.target).value)"
+        (keydown.enter)="$event.preventDefault(); agregarManual()"
+      />
+      <button type="button" class="btn btn-sm" (click)="agregarManual()">Agregar</button>
+    </div>
+  </div>
+
+  @if (isEdit()) {
+    <div class="form-field">
+      <label for="estado">Estado</label>
+      <select id="estado" formControlName="estado">
+        <option value="activo">Activo</option>
+        <option value="inactivo">Inactivo</option>
+      </select>
+    </div>
+  }
+
+  <div class="form-actions">
+    <button type="button" class="btn btn-ghost" (click)="cancel.emit()">Cancelar</button>
+    <button type="submit" class="btn btn-primary">{{ isEdit() ? 'Guardar' : 'Crear' }}</button>
+  </div>
+</form>

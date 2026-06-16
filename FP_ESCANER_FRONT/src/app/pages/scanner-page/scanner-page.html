@@ -5,38 +5,22 @@
 
   @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
 
-  <div class="scanner-config">
-    <div class="form-field">
-      <label for="id_puerta">Puerta</label>
-      <select id="id_puerta" (change)="onPuerta($event)" [disabled]="activo()">
-        <option [value]="0" disabled selected>Selecciona una puerta…</option>
-        @for (p of puertas(); track p.id_puerta) {
-          <option [value]="p.id_puerta">{{ p.nombre_puerta }}</option>
-        }
-      </select>
-    </div>
-
-    <div class="form-field">
-      <label for="tipo_registro">Registro</label>
-      <select id="tipo_registro" (change)="onTipo($event)" [disabled]="activo()">
-        <option value="entrada">Entrada</option>
-        <option value="salida">Salida</option>
-      </select>
-    </div>
-
-    <div class="form-field">
-      <label for="id_dispositivo">Dispositivo (opcional)</label>
-      <select id="id_dispositivo" (change)="onDispositivo($event)" [disabled]="activo()">
-        <option [value]="0">Sin dispositivo</option>
-        @for (d of dispositivos(); track d.id_dispositivo) {
-          <option [value]="d.id_dispositivo">{{ d.nombre_dispositivo }}</option>
-        }
-      </select>
-    </div>
+  <div class="scanner-resumen">
+    @if (cfg.idPuerta()) {
+      <span><strong>Puerta:</strong> {{ puertaNombre() }}</span>
+      <span><strong>Registro:</strong> {{ cfg.tipoRegistro() === 'entrada' ? 'Entrada' : 'Salida' }}</span>
+      @if (cfg.idDispositivo()) {
+        <span><strong>Dispositivo:</strong> {{ dispositivoNombre() }}</span>
+      }
+      <a routerLink="/configuracion" class="scanner-config-link">Cambiar</a>
+    } @else {
+      <span>No hay puerta configurada.</span>
+      <a routerLink="/configuracion" class="scanner-config-link">Configurar scanner</a>
+    }
   </div>
 
   <div class="scanner-stage">
-    <div class="video-wrap">
+    <div class="video-wrap" [class.fullscreen]="camaraAbierta()">
       <video #video playsinline muted></video>
       <canvas #overlay class="overlay"></canvas>
 
@@ -90,7 +74,17 @@
     </div>
   }
 
-  <div class="scanner-actions">
+  <div class="scanner-actions" [class.flotante]="camaraAbierta()">
+    <button
+      class="btn btn-ghost btn-voz"
+      type="button"
+      (click)="toggleVoz()"
+      [attr.aria-label]="voz.activa() ? 'Silenciar voz' : 'Activar voz'"
+      [title]="voz.activa() ? 'Silenciar voz' : 'Activar voz'"
+    >
+      <fa-icon [icon]="voz.activa() ? iconVoz : iconMute" />
+    </button>
+
     @switch (status()) {
       @case ('idle') {
         <button class="btn btn-primary" (click)="iniciar()">Iniciar</button>

@@ -6,7 +6,9 @@ import { EstadoIncidencia } from '../../core/interfaces/common';
 import { Empresa } from '../../core/interfaces/empresa';
 import { Incidencia } from '../../core/interfaces/incidencia';
 import { Trabajador } from '../../core/interfaces/trabajador';
-import { alBuscar } from '../../core/utils/buscar';
+import { alFiltrar } from '../../core/utils/buscar';
+import { colorEstado } from '../../core/utils/estado-color';
+import { rangoUltimaSemana } from '../../core/utils/fechas';
 import { AreaTrabajoService } from '../../service/area-trabajo';
 import { AuthService } from '../../service/auth';
 import { EmpresaService } from '../../service/empresa';
@@ -27,6 +29,8 @@ export class IncidenciasPage {
   private readonly auth = inject(AuthService);
 
   readonly esAdmin = this.auth.esAdmin;
+  /** Puede cambiar el estado de una incidencia. */
+  readonly puedeEditar = computed(() => this.auth.puedeEscribir('incidencias'));
 
   readonly items = signal<Incidencia[]>([]);
   readonly trabajadores = signal<Map<number, Trabajador>>(new Map());
@@ -35,11 +39,26 @@ export class IncidenciasPage {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
 
+  readonly colorEstado = colorEstado;
   readonly estados: EstadoIncidencia[] = ['pendiente', 'revisada', 'justificada'];
+  readonly tipos = [
+    'salida_sin_registro',
+    'entrada_sin_registro',
+    'falta',
+    'retardo',
+    'fuera_de_area',
+  ];
 
   readonly filtroEmpresa = signal(0);
   readonly filtroArea = signal(0);
   readonly buscar = signal('');
+  private readonly rango = rangoUltimaSemana();
+  readonly fechaInicio = signal(this.rango.inicio);
+  readonly fechaFin = signal(this.rango.fin);
+  /** Filtro por estado de incidencia ('' = todas). */
+  readonly filtroEstado = signal('');
+  /** Filtro por tipo de incidencia ('' = todos). */
+  readonly filtroTipo = signal('');
 
   readonly areasFiltro = computed(() => {
     const emp = this.filtroEmpresa();
@@ -47,7 +66,8 @@ export class IncidenciasPage {
     return emp ? arr.filter((a) => a.id_empresa === emp) : arr;
   });
 
-  readonly itemsFiltrados = computed(() => {
+  /** Incidencias filtradas por empresa/área (sin estado), base para conteos. */
+  readonly baseFiltrados = computed(() => {
     const emp = this.filtroEmpresa();
     const area = this.filtroArea();
     return this.items().filter((inc) => {
@@ -61,15 +81,45 @@ export class IncidenciasPage {
     });
   });
 
+  /** Conteo por estado (sobre la base, ignorando el filtro de estado). */
+  readonly conteos = computed<Record<string, number>>(() => {
+    const base = this.baseFiltrados();
+    return {
+      pendiente: base.filter((i) => i.estado === 'pendiente').length,
+      revisada: base.filter((i) => i.estado === 'revisada').length,
+      justificada: base.filter((i) => i.estado === 'justificada').length,
+    };
+  });
+
+  /** Conteo por tipo de incidencia (sobre la base). */
+  readonly conteosTipo = computed<Record<string, number>>(() => {
+    const acc: Record<string, number> = {};
+    for (const t of this.tipos) acc[t] = 0;
+    for (const i of this.baseFiltrados()) acc[i.tipo_incidencia] = (acc[i.tipo_incidencia] ?? 0) + 1;
+    return acc;
+  });
+
+  readonly itemsFiltrados = computed(() => {
+    const estado = this.filtroEstado();
+    const tipo = this.filtroTipo();
+    let base = this.baseFiltrados();
+    if (estado) base = base.filter((i) => i.estado === estado);
+    if (tipo) base = base.filter((i) => i.tipo_incidencia === tipo);
+    return base;
+  });
+
   constructor() {
-    this.trabajadorService.list().subscribe({
+    // El nombre del trabajador lo trae cada incidencia (trabajador_nombre). Estos
+    // listados son respaldo/atribución del filtro admin; se gatean por su propio
+    // permiso (un rol sin ellos no los pide y la tabla se muestra igual).
+    this.auth.listarSiPuede('trabajadores', this.trabajadorService.list()).subscribe({
       next: (data) =>
         this.trabajadores.set(new Map(data.map((t) => [t.id_trabajador, t]))),
-      error: (e) => this.error.set(this.msg(e)),
+      error: () => {},
     });
-    this.areaService.list().subscribe({
+    this.auth.listarSiPuede('areas', this.areaService.list()).subscribe({
       next: (data) => this.areas.set(new Map(data.map((a) => [a.id_area, a]))),
-      error: (e) => this.error.set(this.msg(e)),
+      error: () => {},
     });
     if (this.esAdmin()) {
       this.empresaService.list().subscribe({
@@ -77,14 +127,20 @@ export class IncidenciasPage {
         error: (e) => this.error.set(this.msg(e)),
       });
     }
-    alBuscar(this.buscar, () => this.load());
+    alFiltrar([this.buscar, this.fechaInicio, this.fechaFin], () => this.load());
     this.load();
   }
 
   load(): void {
     this.loading.set(true);
     this.error.set(null);
-    this.service.list({ nombre: this.buscar() }).subscribe({
+    this.service
+      .list({
+        nombre: this.buscar(),
+        fechaInicio: this.fechaInicio(),
+        fechaFin: this.fechaFin(),
+      })
+      .subscribe({
       next: (data) => {
         this.items.set(data);
         this.loading.set(false);
@@ -96,9 +152,10 @@ export class IncidenciasPage {
     });
   }
 
-  trabajadorNombre(id: number): string {
-    const t = this.trabajadores().get(id);
-    return t ? `${t.nombre} ${t.apellido}` : `#${id}`;
+  trabajadorNombre(inc: Incidencia): string {
+    if (inc.trabajador_nombre) return inc.trabajador_nombre;
+    const t = this.trabajadores().get(inc.id_trabajador);
+    return t ? `${t.nombre} ${t.apellido}` : `#${inc.id_trabajador}`;
   }
 
   cambiarEstado(inc: Incidencia, event: Event): void {

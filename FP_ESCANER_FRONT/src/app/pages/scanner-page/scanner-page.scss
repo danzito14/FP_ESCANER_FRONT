@@ -3,18 +3,29 @@
   margin: 0 auto;
 }
 
-.scanner-config {
+.scanner-resumen {
   display: flex;
-  gap: 1rem;
   flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 1.25rem;
   margin-bottom: 1.25rem;
+  padding: 0.7rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  font-size: 0.9rem;
+  color: var(--text-secondary);
 
-  .form-field {
-    flex: 1;
-    min-width: 180px;
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
+  strong {
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+
+  .scanner-config-link {
+    margin-left: auto;
+    color: var(--accent);
+    font-weight: 600;
+    text-decoration: none;
   }
 }
 
@@ -52,6 +63,19 @@
 
   .overlay {
     pointer-events: none;
+  }
+
+  /* Cámara abierta: ocupa toda la pantalla. */
+  &.fullscreen {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    z-index: 1000;
+    border: 0;
+    border-radius: 0;
+    aspect-ratio: auto;
   }
 }
 
@@ -138,6 +162,33 @@
 .scanner-actions {
   display: flex;
   justify-content: center;
+  gap: 0.6rem;
+
+  /* Botón redondo para el ícono de voz. */
+  .btn-voz {
+    padding: 0.5rem 0.7rem;
+  }
+
+  /* Con la cámara en pantalla completa, el botón flota arriba a la derecha. */
+  &.flotante {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    left: auto;
+    z-index: 1001;
+
+    .btn {
+      background: rgba(15, 17, 21, 0.7);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      backdrop-filter: blur(4px);
+
+      &:not([disabled]):hover {
+        background: rgba(220, 38, 38, 0.9);
+        border-color: transparent;
+      }
+    }
+  }
 }
 
 /* Notificaciones de depuración (temporales, sin diseño). */

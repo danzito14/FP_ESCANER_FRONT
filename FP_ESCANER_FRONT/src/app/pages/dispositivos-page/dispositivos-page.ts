@@ -23,10 +23,11 @@ import { AreaTrabajoService } from '../../service/area-trabajo';
 import { AuthService } from '../../service/auth';
 import { DispositivoService } from '../../service/dispositivo';
 import { EmpresaService } from '../../service/empresa';
+import { PuedeDirective } from '../../core/directives/puede';
 
 @Component({
   selector: 'app-dispositivos-page',
-  imports: [DispositivoForm, MapView, FiltrosTabla],
+  imports: [DispositivoForm, MapView, FiltrosTabla, PuedeDirective],
   templateUrl: './dispositivos-page.html',
   styleUrl: './dispositivos-page.scss',
 })
@@ -49,7 +50,9 @@ export class DispositivosPage {
 
   readonly filtroEmpresa = signal(0);
   readonly filtroArea = signal(0);
+  readonly filtroEstado = signal('');
   readonly buscar = signal('');
+  readonly estados = ['activo', 'inactivo', 'mantenimiento'];
 
   readonly areasFiltro = computed(() => {
     const emp = this.filtroEmpresa();
@@ -59,14 +62,17 @@ export class DispositivosPage {
   readonly itemsFiltrados = computed(() => {
     const emp = this.filtroEmpresa();
     const area = this.filtroArea();
-    const lista = this.items();
-    if (area) return lista.filter((d) => d.id_area === area);
-    if (emp) {
+    const estado = this.filtroEstado();
+    let lista = this.items();
+    if (area) {
+      lista = lista.filter((d) => d.id_area === area);
+    } else if (emp) {
       const idsArea = new Set(
         this.areas().filter((a) => a.id_empresa === emp).map((a) => a.id_area),
       );
-      return lista.filter((d) => d.id_area != null && idsArea.has(d.id_area));
+      lista = lista.filter((d) => d.id_area != null && idsArea.has(d.id_area));
     }
+    if (estado) lista = lista.filter((d) => d.estado === estado);
     return lista;
   });
 
@@ -102,16 +108,15 @@ export class DispositivosPage {
   }
 
   constructor() {
-    this.areaService.list().subscribe({
+    this.auth.listarSiPuede('areas', this.areaService.list()).subscribe({
       next: (data) => this.areas.set(data),
       error: (e) => this.error.set(this.msg(e)),
     });
-    if (this.esAdmin()) {
-      this.empresaService.list().subscribe({
-        next: (data) => this.empresas.set(data),
-        error: (e) => this.error.set(this.msg(e)),
-      });
-    }
+    // El formulario necesita las empresas para filtrar áreas (y el filtro admin las usa).
+    this.auth.listarSiPuede('empresas', this.empresaService.list()).subscribe({
+      next: (data) => this.empresas.set(data),
+      error: (e) => this.error.set(this.msg(e)),
+    });
     alBuscar(this.buscar, () => this.load());
     this.load();
   }

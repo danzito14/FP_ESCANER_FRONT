@@ -18,10 +18,11 @@ import { AuthService } from '../../service/auth';
 import { DispositivoService } from '../../service/dispositivo';
 import { EmpresaService } from '../../service/empresa';
 import { PuertaAccesoService } from '../../service/puerta-acceso';
+import { PuedeDirective } from '../../core/directives/puede';
 
 @Component({
   selector: 'app-puertas-page',
-  imports: [PuertaForm, MapView, FiltrosTabla],
+  imports: [PuertaForm, MapView, FiltrosTabla, PuedeDirective],
   templateUrl: './puertas-page.html',
   styleUrl: './puertas-page.scss',
 })
@@ -46,7 +47,9 @@ export class PuertasPage {
 
   readonly filtroEmpresa = signal(0);
   readonly filtroArea = signal(0);
+  readonly filtroEstado = signal('');
   readonly buscar = signal('');
+  readonly estados = ['activo', 'inactivo'];
 
   readonly areasFiltro = computed(() => {
     const emp = this.filtroEmpresa();
@@ -56,9 +59,11 @@ export class PuertasPage {
   readonly itemsFiltrados = computed(() => {
     const emp = this.filtroEmpresa();
     const area = this.filtroArea();
-    const lista = this.items();
-    if (area) return lista.filter((p) => p.id_area === area);
-    if (emp) return lista.filter((p) => p.id_empresa === emp);
+    const estado = this.filtroEstado();
+    let lista = this.items();
+    if (area) lista = lista.filter((p) => p.id_area === area);
+    else if (emp) lista = lista.filter((p) => p.id_empresa === emp);
+    if (estado) lista = lista.filter((p) => p.estado === estado);
     return lista;
   });
 
@@ -76,15 +81,15 @@ export class PuertasPage {
   );
 
   constructor() {
-    this.areaService.list().subscribe({
+    this.auth.listarSiPuede('areas', this.areaService.list()).subscribe({
       next: (data) => this.areas.set(data),
       error: (e) => this.error.set(this.msg(e)),
     });
-    this.empresaService.list().subscribe({
+    this.auth.listarSiPuede('empresas', this.empresaService.list()).subscribe({
       next: (data) => this.empresas.set(data),
       error: (e) => this.error.set(this.msg(e)),
     });
-    this.dispositivoService.list().subscribe({
+    this.auth.listarSiPuede('dispositivos', this.dispositivoService.list()).subscribe({
       next: (data) => this.dispositivos.set(data),
       error: (e) => this.error.set(this.msg(e)),
     });

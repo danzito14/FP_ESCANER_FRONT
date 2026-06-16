@@ -1,4 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { DatePipe, DecimalPipe } from '@angular/common';
+import { Observable } from 'rxjs';
 
 import { FiltrosTabla } from '../../components/filtros-tabla/filtros-tabla';
 import { MapFeature, MapView } from '../../components/map-view/map-view';
@@ -15,7 +17,9 @@ import {
   wktToCoords,
   wktToPoint,
 } from '../../core/utils/geo';
-import { alBuscar } from '../../core/utils/buscar';
+import { alFiltrar } from '../../core/utils/buscar';
+import { colorEstado } from '../../core/utils/estado-color';
+import { rangoUltimaSemana } from '../../core/utils/fechas';
 import { AreaTrabajoService } from '../../service/area-trabajo';
 import { AsistenciaService } from '../../service/asistencia';
 import { AuthService } from '../../service/auth';
@@ -26,7 +30,7 @@ import { TrabajadorService } from '../../service/trabajador';
 
 @Component({
   selector: 'app-asistencias-page',
-  imports: [MapView, FiltrosTabla],
+  imports: [MapView, FiltrosTabla, DatePipe, DecimalPipe],
   templateUrl: './asistencias-page.html',
   styleUrl: './asistencias-page.scss',
 })
@@ -51,9 +55,17 @@ export class AsistenciasPage {
   readonly error = signal<string | null>(null);
   readonly mapSelId = signal<number | null>(null);
 
+  readonly colorEstado = colorEstado;
   readonly filtroEmpresa = signal(0);
   readonly filtroArea = signal(0);
+  readonly filtroEstado = signal('');
+  readonly filtroTipo = signal('');
   readonly buscar = signal('');
+  private readonly rango = rangoUltimaSemana();
+  readonly fechaInicio = signal(this.rango.inicio);
+  readonly fechaFin = signal(this.rango.fin);
+  readonly estados = ['exitoso', 'rechazado', 'manual', 'fuera_de_area', 'cancelado'];
+  readonly tipos = ['entrada', 'salida'];
 
   /** Empresas/áreas como arreglo para los selectores. */
   readonly empresasArr = computed(() => [...this.empresas().values()]);
@@ -63,8 +75,8 @@ export class AsistenciasPage {
     return emp ? arr.filter((a) => a.id_empresa === emp) : arr;
   });
 
-  /** Asistencias tras empresa + área (la búsqueda por nombre es server-side). */
-  readonly itemsFiltrados = computed(() => {
+  /** Asistencias filtradas por empresa/área (base para conteos de estado). */
+  readonly baseFiltrados = computed(() => {
     const emp = this.filtroEmpresa();
     const area = this.filtroArea();
     return this.items().filter((a) => {
@@ -72,6 +84,33 @@ export class AsistenciasPage {
       if (emp) return this.idEmpresaDe(a) === emp;
       return true;
     });
+  });
+
+  /** Conteo por estado_registro (sobre la base). */
+  readonly conteos = computed<Record<string, number>>(() => {
+    const acc: Record<string, number> = {};
+    for (const e of this.estados) acc[e] = 0;
+    for (const a of this.baseFiltrados()) {
+      acc[a.estado_registro] = (acc[a.estado_registro] ?? 0) + 1;
+    }
+    return acc;
+  });
+
+  /** Conteo por tipo_registro (sobre la base). */
+  readonly conteosTipo = computed<Record<string, number>>(() => {
+    const acc: Record<string, number> = {};
+    for (const t of this.tipos) acc[t] = 0;
+    for (const a of this.baseFiltrados()) acc[a.tipo_registro] = (acc[a.tipo_registro] ?? 0) + 1;
+    return acc;
+  });
+
+  readonly itemsFiltrados = computed(() => {
+    const estado = this.filtroEstado();
+    const tipo = this.filtroTipo();
+    let base = this.baseFiltrados();
+    if (estado) base = base.filter((a) => a.estado_registro === estado);
+    if (tipo) base = base.filter((a) => a.tipo_registro === tipo);
+    return base;
   });
 
   readonly mapFeatures = computed<MapFeature[]>(() => {
@@ -98,7 +137,7 @@ export class AsistenciasPage {
       features.push({
         id: a.id_asistencia,
         wkt: a.ubicacion,
-        label: `${this.trabajadorNombre(a.id_trabajador)} · ${a.tipo_registro}`,
+        label: `${this.trabajadorNombre(a)} · ${a.tipo_registro}`,
         color: this.colorAsistencia(a),
       });
     }
@@ -107,30 +146,36 @@ export class AsistenciasPage {
   });
 
   constructor() {
-    this.trabajadorService.list().subscribe({
-      next: (data) =>
-        this.trabajadores.set(new Map(data.map((t) => [t.id_trabajador, t]))),
-      error: (e) => this.error.set(this.msg(e)),
-    });
-    this.dispositivoService.list().subscribe({
-      next: (data) =>
-        this.dispositivos.set(new Map(data.map((d) => [d.id_dispositivo, d]))),
-      error: (e) => this.error.set(this.msg(e)),
-    });
-    this.puertaService.list().subscribe({
-      next: (data) => this.puertas.set(new Map(data.map((p) => [p.id_puerta, p]))),
-      error: (e) => this.error.set(this.msg(e)),
-    });
-    this.areaService.list().subscribe({
-      next: (data) => this.areas.set(new Map(data.map((a) => [a.id_area, a]))),
-      error: (e) => this.error.set(this.msg(e)),
-    });
-    this.empresaService.list().subscribe({
-      next: (data) => this.empresas.set(new Map(data.map((e) => [e.id_empresa, e]))),
-      error: (e) => this.error.set(this.msg(e)),
-    });
-    alBuscar(this.buscar, () => this.load());
+    // La TABLA usa los nombres que ya trae cada registro (trabajador_nombre,
+    // empresa_nombre, …), así funciona con solo 'asistencias:read'. Estos
+    // listados auxiliares son SOLO para el mapa (polígonos de empresa/área y el
+    // color dentro/fuera de área), por eso se gatean por su propio permiso: un
+    // rol sin esos :read simplemente no los pide (sin 403) y ve la tabla igual.
+    this.cargarAux('trabajadores', this.trabajadorService.list(), (data) =>
+      this.trabajadores.set(new Map(data.map((t) => [t.id_trabajador, t]))),
+    );
+    this.cargarAux('dispositivos', this.dispositivoService.list(), (data) =>
+      this.dispositivos.set(new Map(data.map((d) => [d.id_dispositivo, d]))),
+    );
+    this.cargarAux('puertas', this.puertaService.list(), (data) =>
+      this.puertas.set(new Map(data.map((p) => [p.id_puerta, p]))),
+    );
+    this.cargarAux('areas', this.areaService.list(), (data) =>
+      this.areas.set(new Map(data.map((a) => [a.id_area, a]))),
+    );
+    this.cargarAux('empresas', this.empresaService.list(), (data) =>
+      this.empresas.set(new Map(data.map((e) => [e.id_empresa, e]))),
+    );
+    alFiltrar([this.buscar, this.fechaInicio, this.fechaFin], () => this.load());
     this.load();
+  }
+
+  /** Carga un listado auxiliar (para el mapa) si hay permiso; errores silenciosos. */
+  private cargarAux<T>(recurso: string, obs: Observable<T[]>, set: (data: T[]) => void): void {
+    this.auth.listarSiPuede(recurso, obs).subscribe({
+      next: (data) => set(data),
+      error: () => {},
+    });
   }
 
   /** Área a la que está designado el registro (vía su puerta o dispositivo). */
@@ -154,8 +199,9 @@ export class AsistenciasPage {
     return pointInPolygon(punto, ring) ? '#4ade80' : '#ef4444';
   }
 
-  /** Nombre del área designada del registro. */
+  /** Nombre del área del registro (lo trae el backend; si no, se deduce). */
   areaNombre(a: Asistencia): string {
+    if (a.area_nombre) return a.area_nombre;
     const idArea = this.idAreaDe(a);
     if (!idArea) return '—';
     return this.areas().get(idArea)?.nombre_area ?? `#${idArea}`;
@@ -170,8 +216,9 @@ export class AsistenciasPage {
     );
   }
 
-  /** Nombre de la empresa designada. */
+  /** Nombre de la empresa del registro (lo trae el backend; si no, se deduce). */
   empresaNombre(a: Asistencia): string {
+    if (a.empresa_nombre) return a.empresa_nombre;
     const idEmpresa = this.idEmpresaDe(a);
     if (!idEmpresa) return '—';
     return this.empresas().get(idEmpresa)?.nombre_empresa ?? `#${idEmpresa}`;
@@ -180,7 +227,13 @@ export class AsistenciasPage {
   load(): void {
     this.loading.set(true);
     this.error.set(null);
-    this.service.list({ nombre: this.buscar() }).subscribe({
+    this.service
+      .list({
+        nombre: this.buscar(),
+        fechaInicio: this.fechaInicio(),
+        fechaFin: this.fechaFin(),
+      })
+      .subscribe({
       next: (data) => {
         this.items.set(data);
         this.loading.set(false);
@@ -192,18 +245,21 @@ export class AsistenciasPage {
     });
   }
 
-  trabajadorNombre(id: number): string {
-    const t = this.trabajadores().get(id);
-    return t ? `${t.nombre} ${t.apellido}` : `#${id}`;
+  trabajadorNombre(a: Asistencia): string {
+    if (a.trabajador_nombre) return a.trabajador_nombre;
+    const t = this.trabajadores().get(a.id_trabajador);
+    return t ? `${t.nombre} ${t.apellido}` : `#${a.id_trabajador}`;
   }
 
-  dispositivoNombre(id: number | null | undefined): string {
-    if (!id) return '—';
-    return this.dispositivos().get(id)?.nombre_dispositivo ?? `#${id}`;
+  dispositivoNombre(a: Asistencia): string {
+    if (a.dispositivo_nombre) return a.dispositivo_nombre;
+    if (!a.id_dispositivo) return '—';
+    return this.dispositivos().get(a.id_dispositivo)?.nombre_dispositivo ?? `#${a.id_dispositivo}`;
   }
 
-  puertaNombre(id: number): string {
-    return this.puertas().get(id)?.nombre_puerta ?? `#${id}`;
+  puertaNombre(a: Asistencia): string {
+    if (a.puerta_nombre) return a.puerta_nombre;
+    return this.puertas().get(a.id_puerta)?.nombre_puerta ?? `#${a.id_puerta}`;
   }
 
   private msg(e: { error?: { detail?: string }; message?: string }): string {

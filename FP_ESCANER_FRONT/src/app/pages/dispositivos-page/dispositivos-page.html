@@ -1,7 +1,7 @@
 <section class="crud-page">
   <header class="crud-header">
     <h1>Dispositivos</h1>
-    <button class="btn btn-primary" (click)="nuevo()">+ Nuevo dispositivo</button>
+    <button *appPuede="'dispositivos:write'" class="btn btn-primary" (click)="nuevo()">+ Nuevo dispositivo</button>
   </header>
 
   @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
@@ -10,8 +10,10 @@
     [esAdmin]="esAdmin()"
     [empresas]="empresas()"
     [areas]="areasFiltro()"
+    [estados]="estados"
     [(empresa)]="filtroEmpresa"
     [(area)]="filtroArea"
+    [(estado)]="filtroEstado"
     [(texto)]="buscar"
   />
 
@@ -46,8 +48,8 @@
                   </span>
                 </td>
                 <td class="actions">
-                  <button class="btn btn-sm" (click)="editar(d)">Editar</button>
-                  <button class="btn btn-sm btn-danger" (click)="eliminar(d)">Desactivar</button>
+                  <button *appPuede="'dispositivos:write'" class="btn btn-sm" (click)="editar(d)">Editar</button>
+                  <button *appPuede="'dispositivos:delete'" class="btn btn-sm btn-danger" (click)="eliminar(d)">Desactivar</button>
                 </td>
               </tr>
             } @empty {
@@ -69,6 +71,7 @@
         <h2>{{ selected() ? 'Editar dispositivo' : 'Nuevo dispositivo' }}</h2>
         <app-dispositivo-form
           [dispositivo]="selected()"
+          [empresas]="empresas()"
           [areas]="areas()"
           (save)="guardar($event)"
           (cancel)="cerrar()"

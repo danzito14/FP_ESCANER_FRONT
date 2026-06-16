@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 
-import { authGuard } from './core/guards/auth';
+import { authGuard, guestGuard, scopeGuard } from './core/guards/auth';
 
 export const routes: Routes = [
   {
@@ -10,18 +10,25 @@ export const routes: Routes = [
   },
   {
     path: 'login',
+    canActivate: [guestGuard],
     loadComponent: () =>
       import('./pages/login-page/login-page').then((m) => m.LoginPage),
   },
   {
     path: 'usuarios',
-    canActivate: [authGuard],
+    canActivate: [scopeGuard('usuarios:read')],
     loadComponent: () =>
       import('./pages/usuarios-page/usuarios-page').then((m) => m.UsuariosPage),
   },
   {
+    path: 'roles',
+    canActivate: [scopeGuard('roles:read')],
+    loadComponent: () =>
+      import('./pages/roles-page/roles-page').then((m) => m.RolesPage),
+  },
+  {
     path: 'trabajadores',
-    canActivate: [authGuard],
+    canActivate: [scopeGuard('trabajadores:read')],
     loadComponent: () =>
       import('./pages/trabajadores-page/trabajadores-page').then(
         (m) => m.TrabajadoresPage,
@@ -29,19 +36,19 @@ export const routes: Routes = [
   },
   {
     path: 'empresas',
-    canActivate: [authGuard],
+    canActivate: [scopeGuard('empresas:read')],
     loadComponent: () =>
       import('./pages/empresas-page/empresas-page').then((m) => m.EmpresasPage),
   },
   {
     path: 'areas',
-    canActivate: [authGuard],
+    canActivate: [scopeGuard('areas:read')],
     loadComponent: () =>
       import('./pages/areas-page/areas-page').then((m) => m.AreasPage),
   },
   {
     path: 'dispositivos',
-    canActivate: [authGuard],
+    canActivate: [scopeGuard('dispositivos:read')],
     loadComponent: () =>
       import('./pages/dispositivos-page/dispositivos-page').then(
         (m) => m.DispositivosPage,
@@ -49,13 +56,13 @@ export const routes: Routes = [
   },
   {
     path: 'puertas',
-    canActivate: [authGuard],
+    canActivate: [scopeGuard('puertas:read')],
     loadComponent: () =>
       import('./pages/puertas-page/puertas-page').then((m) => m.PuertasPage),
   },
   {
     path: 'asistencias',
-    canActivate: [authGuard],
+    canActivate: [scopeGuard('asistencias:read')],
     loadComponent: () =>
       import('./pages/asistencias-page/asistencias-page').then(
         (m) => m.AsistenciasPage,
@@ -63,7 +70,7 @@ export const routes: Routes = [
   },
   {
     path: 'incidencias',
-    canActivate: [authGuard],
+    canActivate: [scopeGuard('incidencias:read')],
     loadComponent: () =>
       import('./pages/incidencias-page/incidencias-page').then(
         (m) => m.IncidenciasPage,
@@ -71,9 +78,17 @@ export const routes: Routes = [
   },
   {
     path: 'scanner',
-    canActivate: [authGuard],
+    canActivate: [scopeGuard('scanner:use')],
     loadComponent: () =>
       import('./pages/scanner-page/scanner-page').then((m) => m.ScannerPage),
+  },
+  {
+    path: 'configuracion',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/configuracion-page/configuracion-page').then(
+        (m) => m.ConfiguracionPage,
+      ),
   },
   { path: '**', redirectTo: '' },
 ];

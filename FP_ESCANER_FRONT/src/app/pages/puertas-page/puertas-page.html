@@ -1,7 +1,7 @@
 <section class="crud-page">
   <header class="crud-header">
     <h1>Puertas de acceso</h1>
-    <button class="btn btn-primary" (click)="nuevo()">+ Nueva puerta</button>
+    <button *appPuede="'puertas:write'" class="btn btn-primary" (click)="nuevo()">+ Nueva puerta</button>
   </header>
 
   @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
@@ -10,8 +10,10 @@
     [esAdmin]="esAdmin()"
     [empresas]="empresas()"
     [areas]="areasFiltro()"
+    [estados]="estados"
     [(empresa)]="filtroEmpresa"
     [(area)]="filtroArea"
+    [(estado)]="filtroEstado"
     [(texto)]="buscar"
   />
 
@@ -50,8 +52,8 @@
                   </span>
                 </td>
                 <td class="actions">
-                  <button class="btn btn-sm" (click)="editar(p)">Editar</button>
-                  <button class="btn btn-sm btn-danger" (click)="eliminar(p)">Desactivar</button>
+                  <button *appPuede="'puertas:write'" class="btn btn-sm" (click)="editar(p)">Editar</button>
+                  <button *appPuede="'puertas:delete'" class="btn btn-sm btn-danger" (click)="eliminar(p)">Desactivar</button>
                 </td>
               </tr>
             } @empty {

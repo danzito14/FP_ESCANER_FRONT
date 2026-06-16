@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
 
 import { BaseCrud } from './base-crud';
-import { Rol } from '../core/interfaces/rol';
+import { Rol, RolCreate, RolUpdate } from '../core/interfaces/rol';
 
 @Injectable({ providedIn: 'root' })
-export class RolService extends BaseCrud<Rol> {
+export class RolService extends BaseCrud<Rol, RolCreate, RolUpdate> {
   protected readonly resource = 'roles';
 }

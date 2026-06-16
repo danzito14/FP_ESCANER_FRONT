@@ -10,10 +10,11 @@ import { AuthService } from '../../service/auth';
 import { EmpresaService } from '../../service/empresa';
 import { RolService } from '../../service/rol';
 import { UsuarioService } from '../../service/usuario';
+import { PuedeDirective } from '../../core/directives/puede';
 
 @Component({
   selector: 'app-usuarios-page',
-  imports: [UsuarioForm, FiltrosTabla],
+  imports: [UsuarioForm, FiltrosTabla, PuedeDirective],
   templateUrl: './usuarios-page.html',
   styleUrl: './usuarios-page.scss',
 })
@@ -34,20 +35,25 @@ export class UsuariosPage {
   readonly selected = signal<Usuario | null>(null);
 
   readonly filtroEmpresa = signal(0);
+  readonly filtroEstado = signal('');
   readonly buscar = signal('');
+  readonly estados = ['activo', 'inactivo'];
 
   readonly itemsFiltrados = computed(() => {
     const emp = this.filtroEmpresa();
-    const lista = this.items();
-    return emp ? lista.filter((u) => u.empresa === emp) : lista;
+    const estado = this.filtroEstado();
+    let lista = this.items();
+    if (emp) lista = lista.filter((u) => u.empresa === emp);
+    if (estado) lista = lista.filter((u) => u.estado === estado);
+    return lista;
   });
 
   constructor() {
-    this.rolService.list().subscribe({
+    this.auth.listarSiPuede('roles', this.rolService.list()).subscribe({
       next: (data) => this.roles.set(data),
       error: (e) => this.error.set(this.msg(e)),
     });
-    this.empresaService.list().subscribe({
+    this.auth.listarSiPuede('empresas', this.empresaService.list()).subscribe({
       next: (data) => this.empresas.set(data),
       error: (e) => this.error.set(this.msg(e)),
     });
@@ -71,7 +77,7 @@ export class UsuariosPage {
   }
 
   rolNombre(id: number): string {
-    return this.roles().find((r) => r.id_rol === id)?.nombre ?? `#${id}`;
+    return this.roles().find((r) => r.id_rol === id)?.nombre_rol ?? `#${id}`;
   }
 
   empresaNombre(id: number): string {

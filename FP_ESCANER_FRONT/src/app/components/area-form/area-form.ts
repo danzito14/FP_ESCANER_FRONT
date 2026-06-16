@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, output } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import {
@@ -17,11 +17,12 @@ import {
   wktToCoords,
 } from '../../core/utils/geo';
 import { areaHectareasValidator } from '../../core/utils/validators';
+import { MapFeature, MapView } from '../map-view/map-view';
 import { MapPicker } from '../map-picker/map-picker';
 
 @Component({
   selector: 'app-area-form',
-  imports: [ReactiveFormsModule, MapPicker],
+  imports: [ReactiveFormsModule, MapPicker, MapView],
   templateUrl: './area-form.html',
   styleUrl: './area-form.scss',
 })
@@ -36,6 +37,14 @@ export class AreaForm {
   readonly cancel = output<void>();
 
   readonly isEdit = computed(() => this.area() !== null);
+  /** Si el área es "administrativa": toma las coordenadas de la empresa. */
+  readonly administrativa = signal(false);
+  /** WKT del polígono de la empresa elegida (para el mapa en modo administrativa). */
+  readonly adminWkt = signal<string | undefined>(undefined);
+  readonly mapAdminFeatures = computed<MapFeature[]>(() => {
+    const wkt = this.adminWkt();
+    return wkt ? [{ id: 'empresa', wkt, label: 'Área de la empresa', color: '#3b82f6' }] : [];
+  });
   /** Geometría inicial para el mapa (acepta WKT o arreglo de coordenadas). */
   readonly mapWkt = computed(() => {
     const a = this.area();
@@ -89,6 +98,36 @@ export class AreaForm {
   onMapCoords(coords: Coordenada[]): void {
     this.coordenadas.clear();
     coords.forEach((c) => this.coordenadas.push(this.buildCoord(c.lat, c.lng)));
+  }
+
+  /** Switch "área administrativa": copia las coordenadas de la empresa y relaja la validación de tamaño. */
+  onAdministrativa(e: Event): void {
+    const on = (e.target as HTMLInputElement).checked;
+    this.administrativa.set(on);
+    if (on) {
+      this.coordenadas.clearValidators();
+      this.copiarCoordsEmpresa();
+    } else {
+      // Reinicia las coordenadas para dibujar manualmente desde cero.
+      this.coordenadas.clear();
+      this.adminWkt.set(undefined);
+      this.coordenadas.setValidators(areaHectareasValidator(5, 150));
+    }
+    this.coordenadas.updateValueAndValidity();
+  }
+
+  /** Al cambiar la empresa en modo administrativa, recopia sus coordenadas. */
+  onEmpresaChange(): void {
+    if (this.administrativa()) this.copiarCoordsEmpresa();
+  }
+
+  private copiarCoordsEmpresa(): void {
+    const id = this.form.controls.id_empresa.value;
+    const emp = this.empresas().find((e) => e.id_empresa === id);
+    const pts = emp?.ubicacion ? wktToCoords(emp.ubicacion) : lngLatToCoords(emp?.coordenadas);
+    this.coordenadas.clear();
+    pts.forEach((c) => this.coordenadas.push(this.buildCoord(c.lat, c.lng)));
+    this.adminWkt.set(emp?.ubicacion ?? lngLatToWkt(emp?.coordenadas));
   }
 
   addCoordenada(): void {

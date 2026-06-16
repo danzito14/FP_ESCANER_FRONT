@@ -1,12 +1,18 @@
 <section class="crud-page">
   <header class="crud-header">
     <h1>Empresas</h1>
-    <button class="btn btn-primary" (click)="nuevo()">+ Nueva empresa</button>
+    <button *appPuede="'empresas:write'" class="btn btn-primary" (click)="nuevo()">+ Nueva empresa</button>
   </header>
 
   @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
 
-  <app-filtros-tabla [esAdmin]="false" [mostrarArea]="false" [(texto)]="buscar" />
+  <app-filtros-tabla
+    [esAdmin]="false"
+    [mostrarArea]="false"
+    [estados]="estados"
+    [(estado)]="filtroEstado"
+    [(texto)]="buscar"
+  />
 
   @if (loading()) {
     <p class="loading">Cargando…</p>
@@ -25,7 +31,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (e of items(); track e.id_empresa) {
+            @for (e of itemsFiltrados(); track e.id_empresa) {
               <tr [class.is-selected]="mapSelId() === e.id_empresa" (click)="mapSelId.set(e.id_empresa)">
                 <td>{{ e.id_empresa }}</td>
                 <td>{{ e.nombre_empresa }}</td>
@@ -37,8 +43,8 @@
                   </span>
                 </td>
                 <td class="actions">
-                  <button class="btn btn-sm" (click)="editar(e)">Editar</button>
-                  <button class="btn btn-sm btn-danger" (click)="eliminar(e)">Desactivar</button>
+                  <button *appPuede="'empresas:write'" class="btn btn-sm" (click)="editar(e)">Editar</button>
+                  <button *appPuede="'empresas:delete'" class="btn btn-sm btn-danger" (click)="eliminar(e)">Desactivar</button>
                 </td>
               </tr>
             } @empty {

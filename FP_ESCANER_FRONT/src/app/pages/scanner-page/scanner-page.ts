@@ -8,12 +8,15 @@ import {
   viewChild,
 } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
+import { RouterLink } from '@angular/router';
+import { FaIconComponent } from '@fortawesome/angular-fontawesome';
+import { faVolumeHigh, faVolumeXmark } from '@fortawesome/free-solid-svg-icons';
 import { firstValueFrom } from 'rxjs';
 
-import { TipoRegistro } from '../../core/interfaces/common';
 import { Dispositivo } from '../../core/interfaces/dispositivo';
 import { AccesoParams, AccesoResponse } from '../../core/interfaces/escaneo';
 import { PuertaAcceso } from '../../core/interfaces/puerta-acceso';
+import { AuthService } from '../../service/auth';
 import { CameraService, dataUrlToBlob } from '../../service/camera';
 import { DispositivoService } from '../../service/dispositivo';
 import { ScannerService } from '../../service/escaneo';
@@ -21,6 +24,8 @@ import { FaceBox, FaceDetectionService } from '../../service/face-detection';
 import { GeolocationService } from '../../service/geolocation';
 import { PlatformService } from '../../service/platform';
 import { PuertaAccesoService } from '../../service/puerta-acceso';
+import { ScannerConfigService } from '../../service/scanner-config';
+import { VozService } from '../../service/voz';
 
 type Estado = 'idle' | 'cargando' | 'detectando' | 'error';
 type EstadoCara = 'detectando' | 'capturando' | 'enviando' | 'ok' | 'rechazado';
@@ -57,7 +62,7 @@ interface Toast {
 
 @Component({
   selector: 'app-scanner-page',
-  imports: [DecimalPipe],
+  imports: [DecimalPipe, RouterLink, FaIconComponent],
   templateUrl: './scanner-page.html',
   styleUrl: './scanner-page.scss',
 })
@@ -69,6 +74,12 @@ export class ScannerPage implements OnDestroy {
   private readonly scanner = inject(ScannerService);
   private readonly puertaService = inject(PuertaAccesoService);
   private readonly dispositivoService = inject(DispositivoService);
+  private readonly auth = inject(AuthService);
+  protected readonly voz = inject(VozService);
+  protected readonly cfg = inject(ScannerConfigService);
+
+  readonly iconVoz = faVolumeHigh;
+  readonly iconMute = faVolumeXmark;
 
   private readonly video = viewChild<ElementRef<HTMLVideoElement>>('video');
   private readonly overlay = viewChild<ElementRef<HTMLCanvasElement>>('overlay');
@@ -76,9 +87,6 @@ export class ScannerPage implements OnDestroy {
   readonly isBrowser = this.platform.isBrowser;
   readonly puertas = signal<PuertaAcceso[]>([]);
   readonly dispositivos = signal<Dispositivo[]>([]);
-  readonly idPuerta = signal(0);
-  readonly idDispositivo = signal(0);
-  readonly tipoRegistro = signal<TipoRegistro>('entrada');
 
   readonly status = signal<Estado>('idle');
   readonly error = signal<string | null>(null);
@@ -92,6 +100,10 @@ export class ScannerPage implements OnDestroy {
   readonly notis = signal<string[]>([]);
 
   readonly activo = computed(() => this.status() === 'detectando');
+  /** Cámara abierta (cargando o detectando): el video ocupa toda la pantalla. */
+  readonly camaraAbierta = computed(
+    () => this.status() === 'cargando' || this.status() === 'detectando',
+  );
 
   /** Si es false: solo detecta en vivo (no escanea). */
   private readonly CAPTURAR_AUTO: boolean = true;
@@ -106,31 +118,33 @@ export class ScannerPage implements OnDestroy {
   private running = false;
 
   constructor() {
-    this.puertaService.list().subscribe({
+    this.auth.listarSiPuede('puertas', this.puertaService.list()).subscribe({
       next: (data) => this.puertas.set(data),
       error: (e) => this.error.set(this.msg(e)),
     });
-    this.dispositivoService.list().subscribe({
+    this.auth.listarSiPuede('dispositivos', this.dispositivoService.list()).subscribe({
       next: (data) => this.dispositivos.set(data),
       error: (e) => this.error.set(this.msg(e)),
     });
   }
 
-  onPuerta(e: Event): void {
-    this.idPuerta.set(+(e.target as HTMLSelectElement).value);
+  /** Nombre de la puerta configurada (para el resumen). */
+  puertaNombre(): string {
+    const id = this.cfg.idPuerta();
+    if (!id) return '';
+    return this.puertas().find((p) => p.id_puerta === id)?.nombre_puerta ?? `#${id}`;
   }
 
-  onDispositivo(e: Event): void {
-    this.idDispositivo.set(+(e.target as HTMLSelectElement).value);
-  }
-
-  onTipo(e: Event): void {
-    this.tipoRegistro.set((e.target as HTMLSelectElement).value as TipoRegistro);
+  /** Nombre del dispositivo configurado (para el resumen). */
+  dispositivoNombre(): string {
+    const id = this.cfg.idDispositivo();
+    if (!id) return '';
+    return this.dispositivos().find((d) => d.id_dispositivo === id)?.nombre_dispositivo ?? `#${id}`;
   }
 
   async iniciar(): Promise<void> {
-    if (!this.idPuerta()) {
-      this.error.set('Selecciona una puerta antes de iniciar.');
+    if (!this.cfg.idPuerta()) {
+      this.error.set('Configura una puerta en Configuración antes de iniciar.');
       return;
     }
     if (!this.camera.isSupported) {
@@ -160,6 +174,7 @@ export class ScannerPage implements OnDestroy {
     this.running = false;
     cancelAnimationFrame(this.raf);
     this.camera.stop();
+    this.voz.callar();
     this.tracks = [];
     this.status.set('idle');
   }
@@ -340,9 +355,9 @@ export class ScannerPage implements OnDestroy {
     t.estado = 'enviando';
     try {
       const params: AccesoParams = {
-        id_puerta: this.idPuerta(),
-        tipo_registro: this.tipoRegistro(),
-        id_dispositivo: this.idDispositivo() || undefined,
+        id_puerta: this.cfg.idPuerta(),
+        tipo_registro: this.cfg.tipoRegistro(),
+        id_dispositivo: this.cfg.idDispositivo() || undefined,
         latitud: this.lat,
         longitud: this.lng,
       };
@@ -385,6 +400,20 @@ export class ScannerPage implements OnDestroy {
     };
     this.toasts.update((arr) => [toast, ...arr]);
     setTimeout(() => this.toasts.update((arr) => arr.filter((x) => x.id !== id)), 5000);
+
+    const frase = res.acceso
+      ? `Acceso concedido, ${nombre}.`
+      : res.trabajador
+        ? `Acceso denegado, ${nombre}.`
+        : 'Acceso denegado. Rostro no reconocido.';
+    this.voz.decir(frase); // no-op si la voz está silenciada
+  }
+
+  /** Activa/silencia la voz; al silenciar corta lo que se esté diciendo. */
+  toggleVoz(): void {
+    const activa = !this.voz.activa();
+    this.voz.activa.set(activa);
+    if (!activa) this.voz.callar();
   }
 
   private delay(ms: number): Promise<void> {

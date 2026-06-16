@@ -7,10 +7,11 @@ import { Empresa, EmpresaCreate, EmpresaUpdate } from '../../core/interfaces/emp
 import { alBuscar } from '../../core/utils/buscar';
 import { lngLatToWkt } from '../../core/utils/geo';
 import { EmpresaService } from '../../service/empresa';
+import { PuedeDirective } from '../../core/directives/puede';
 
 @Component({
   selector: 'app-empresas-page',
-  imports: [EmpresaForm, MapView, FiltrosTabla],
+  imports: [EmpresaForm, MapView, FiltrosTabla, PuedeDirective],
   templateUrl: './empresas-page.html',
   styleUrl: './empresas-page.scss',
 })
@@ -24,9 +25,17 @@ export class EmpresasPage {
   readonly selected = signal<Empresa | null>(null);
   readonly mapSelId = signal<number | null>(null);
   readonly buscar = signal('');
+  readonly filtroEstado = signal('');
+  readonly estados = ['activo', 'inactivo'];
+
+  readonly itemsFiltrados = computed(() => {
+    const estado = this.filtroEstado();
+    const lista = this.items();
+    return estado ? lista.filter((e) => e.estado === estado) : lista;
+  });
 
   readonly mapFeatures = computed<MapFeature[]>(() =>
-    this.items().map((e) => ({
+    this.itemsFiltrados().map((e) => ({
       id: e.id_empresa,
       wkt: e.ubicacion ?? lngLatToWkt(e.coordenadas),
       label: e.nombre_empresa,

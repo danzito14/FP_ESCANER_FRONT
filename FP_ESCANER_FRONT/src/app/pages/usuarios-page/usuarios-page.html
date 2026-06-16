@@ -1,7 +1,7 @@
 <section class="crud-page">
   <header class="crud-header">
     <h1>Usuarios</h1>
-    <button class="btn btn-primary" (click)="nuevo()">+ Nuevo usuario</button>
+    <button *appPuede="'usuarios:write'" class="btn btn-primary" (click)="nuevo()">+ Nuevo usuario</button>
   </header>
 
   @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
@@ -10,7 +10,9 @@
     [esAdmin]="esAdmin()"
     [empresas]="empresas()"
     [mostrarArea]="false"
+    [estados]="estados"
     [(empresa)]="filtroEmpresa"
+    [(estado)]="filtroEstado"
     [(texto)]="buscar"
   />
 
@@ -41,8 +43,8 @@
               </span>
             </td>
             <td class="actions">
-              <button class="btn btn-sm" (click)="editar(u)">Editar</button>
-              <button class="btn btn-sm btn-danger" (click)="eliminar(u)">Desactivar</button>
+              <button *appPuede="'usuarios:write'" class="btn btn-sm" (click)="editar(u)">Editar</button>
+              <button *appPuede="'usuarios:delete'" class="btn btn-sm btn-danger" (click)="eliminar(u)">Desactivar</button>
             </td>
           </tr>
         } @empty {

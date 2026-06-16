@@ -116,11 +116,21 @@ export class MapView {
   }
 
   private fit(points: [number, number][]): void {
-    if (!this.map || !points.length) return;
-    if (points.length === 1) {
-      this.map.setView(points[0], 16);
-    } else {
-      this.map.fitBounds(latLngBounds(points), { padding: [28, 28], maxZoom: 17 });
+    if (!this.map) return;
+    // animate:false evita el bug de Leaflet "_leaflet_pos undefined" al reencuadrar
+    // mientras el mapa se recalcula (cambios de filtro/estado).
+    try {
+      if (points.length === 1) {
+        this.map.setView(points[0], 16, { animate: false });
+      } else if (points.length > 1) {
+        this.map.fitBounds(latLngBounds(points), {
+          padding: [28, 28],
+          maxZoom: 17,
+          animate: false,
+        });
+      }
+    } catch {
+      // El mapa puede no estar listo en ciertos reflows; se ignora con seguridad.
     }
   }
 }

@@ -16,10 +16,11 @@ import { AuthService } from '../../service/auth';
 import { EmbeddingService } from '../../service/embedding';
 import { EmpresaService } from '../../service/empresa';
 import { TrabajadorService } from '../../service/trabajador';
+import { PuedeDirective } from '../../core/directives/puede';
 
 @Component({
   selector: 'app-trabajadores-page',
-  imports: [TrabajadorForm, EmbeddingCapture, FiltrosTabla],
+  imports: [TrabajadorForm, EmbeddingCapture, FiltrosTabla, PuedeDirective],
   templateUrl: './trabajadores-page.html',
   styleUrl: './trabajadores-page.scss',
 })
@@ -46,7 +47,9 @@ export class TrabajadoresPage {
   /** Filtros. 0 = todos. */
   readonly filtroEmpresa = signal(0);
   readonly filtroArea = signal(0);
+  readonly filtroEstado = signal('');
   readonly buscar = signal('');
+  readonly estados = ['activo', 'inactivo', 'suspendido'];
 
   /** Áreas disponibles en el selector de área, acotadas por la empresa elegida. */
   readonly areasFiltro = computed(() => {
@@ -54,32 +57,34 @@ export class TrabajadoresPage {
     return emp ? this.areas().filter((a) => a.id_empresa === emp) : this.areas();
   });
 
-  /** Trabajadores tras aplicar empresa + área (la búsqueda por nombre es server-side). */
+  /** Trabajadores tras empresa + área + estado (la búsqueda por nombre es server-side). */
   readonly itemsFiltrados = computed(() => {
     const emp = this.filtroEmpresa();
     const area = this.filtroArea();
-    const lista = this.items();
-    if (area) return lista.filter((t) => t.id_area === area);
-    if (emp) {
+    const estado = this.filtroEstado();
+    let lista = this.items();
+    if (area) {
+      lista = lista.filter((t) => t.id_area === area);
+    } else if (emp) {
       const idsArea = new Set(
         this.areas().filter((a) => a.id_empresa === emp).map((a) => a.id_area),
       );
-      return lista.filter((t) => idsArea.has(t.id_area));
+      lista = lista.filter((t) => idsArea.has(t.id_area));
     }
+    if (estado) lista = lista.filter((t) => t.estado === estado);
     return lista;
   });
 
   constructor() {
-    this.areaService.list().subscribe({
+    this.auth.listarSiPuede('areas', this.areaService.list()).subscribe({
       next: (data) => this.areas.set(data),
       error: (e) => this.error.set(this.msg(e)),
     });
-    if (this.esAdmin()) {
-      this.empresaService.list().subscribe({
-        next: (data) => this.empresas.set(data),
-        error: (e) => this.error.set(this.msg(e)),
-      });
-    }
+    // El formulario necesita las empresas para filtrar áreas (y el filtro admin las usa).
+    this.auth.listarSiPuede('empresas', this.empresaService.list()).subscribe({
+      next: (data) => this.empresas.set(data),
+      error: (e) => this.error.set(this.msg(e)),
+    });
     alBuscar(this.buscar, () => this.load());
     this.load();
   }

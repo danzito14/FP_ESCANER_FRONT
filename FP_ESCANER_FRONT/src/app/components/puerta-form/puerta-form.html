@@ -12,7 +12,7 @@
       <div class="form-row">
         <div class="form-field">
           <label for="id_empresa">Empresa</label>
-          <select id="id_empresa" formControlName="id_empresa">
+          <select id="id_empresa" formControlName="id_empresa" (change)="onEmpresa()">
             <option [ngValue]="0">Sin empresa</option>
             @for (emp of empresas(); track emp.id_empresa) {
               <option [ngValue]="emp.id_empresa">{{ emp.nombre_empresa }}</option>
@@ -22,9 +22,9 @@
 
         <div class="form-field">
           <label for="id_area">Área</label>
-          <select id="id_area" formControlName="id_area">
+          <select id="id_area" formControlName="id_area" (change)="onArea()">
             <option [ngValue]="0">Sin área</option>
-            @for (area of areas(); track area.id_area) {
+            @for (area of areasFiltradas(); track area.id_area) {
               <option [ngValue]="area.id_area">{{ area.nombre_area }}</option>
             }
           </select>
@@ -83,6 +83,7 @@
       <app-map-picker
         mode="point"
         [wkt]="mapWkt()"
+        [contexto]="areaContextoWkt()"
         (coordsChange)="onMapCoords($event)"
       />
     </aside>

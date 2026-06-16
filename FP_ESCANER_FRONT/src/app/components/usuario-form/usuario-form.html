@@ -23,7 +23,7 @@
     <select id="id_rol" formControlName="id_rol">
       <option [ngValue]="0" disabled>Selecciona un rol…</option>
       @for (rol of roles(); track rol.id_rol) {
-        <option [ngValue]="rol.id_rol">{{ rol.nombre }}</option>
+        <option [ngValue]="rol.id_rol">{{ rol.nombre_rol }}</option>
       }
     </select>
     @if (form.controls.id_rol.touched && form.controls.id_rol.invalid) {

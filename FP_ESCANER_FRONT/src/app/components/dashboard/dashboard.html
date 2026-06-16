@@ -1,0 +1,99 @@
+<div class="dash">
+  <header class="dash-head">
+    <div>
+      <h2>Informe general</h2>
+      <p>Resumen de asistencias e incidencias del período seleccionado.</p>
+    </div>
+    <div class="dash-filtros">
+      @if (esAdmin()) {
+        <div class="form-field">
+          <label>Empresa</label>
+          <select [value]="filtroEmpresa()" (change)="onEmpresa($event)">
+            <option [value]="0">Todas</option>
+            @for (e of empresas(); track e.id_empresa) {
+              <option [value]="e.id_empresa">{{ e.nombre_empresa }}</option>
+            }
+          </select>
+        </div>
+      }
+      <div class="form-field">
+        <label>Desde</label>
+        <input type="date" [value]="fechaInicio()" (change)="onFechaInicio($event)" />
+      </div>
+      <div class="form-field">
+        <label>Hasta</label>
+        <input type="date" [value]="fechaFin()" (change)="onFechaFin($event)" />
+      </div>
+    </div>
+  </header>
+
+  @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
+
+  @if (loading()) {
+    <p class="loading">Cargando informe…</p>
+  } @else {
+    <!-- Asistencias -->
+    <section class="dash-group">
+      <h3><fa-icon [icon]="icons.asistencias" /> Asistencias <span class="muted">({{ kpiAsistencias().total }})</span></h3>
+      <div class="kpi-grid">
+        <div class="kpi" style="--c: #ff6427">
+          <fa-icon [icon]="icons.asistencias" class="kpi-ico" />
+          <span class="kpi-num">{{ kpiAsistencias().total }}</span>
+          <span class="kpi-lbl">Total registros</span>
+        </div>
+        <div class="kpi" style="--c: #16a34a">
+          <fa-icon [icon]="icons.entrada" class="kpi-ico" />
+          <span class="kpi-num">{{ kpiAsistencias().entradas }}</span>
+          <span class="kpi-lbl">Entradas</span>
+        </div>
+        <div class="kpi" style="--c: #3b82f6">
+          <fa-icon [icon]="icons.salida" class="kpi-ico" />
+          <span class="kpi-num">{{ kpiAsistencias().salidas }}</span>
+          <span class="kpi-lbl">Salidas</span>
+        </div>
+        <div class="kpi" style="--c: #16a34a">
+          <fa-icon [icon]="icons.exitoso" class="kpi-ico" />
+          <span class="kpi-num">{{ kpiAsistencias().exitosas }}</span>
+          <span class="kpi-lbl">Exitosas</span>
+        </div>
+        <div class="kpi" style="--c: #ef4444">
+          <fa-icon [icon]="icons.rechazado" class="kpi-ico" />
+          <span class="kpi-num">{{ kpiAsistencias().rechazadas }}</span>
+          <span class="kpi-lbl">Rechazadas</span>
+        </div>
+        <div class="kpi" style="--c: #ef4444">
+          <fa-icon [icon]="icons.fuera" class="kpi-ico" />
+          <span class="kpi-num">{{ kpiAsistencias().fueraArea }}</span>
+          <span class="kpi-lbl">Fuera de área</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Incidencias -->
+    <section class="dash-group">
+      <h3><fa-icon [icon]="icons.incidencias" /> Incidencias <span class="muted">({{ kpiIncidencias().total }})</span></h3>
+      <div class="kpi-grid">
+        <div class="kpi" style="--c: #ff6427">
+          <fa-icon [icon]="icons.incidencias" class="kpi-ico" />
+          <span class="kpi-num">{{ kpiIncidencias().total }}</span>
+          <span class="kpi-lbl">Total</span>
+        </div>
+        <div class="kpi" style="--c: #eab308">
+          <fa-icon [icon]="icons.pendiente" class="kpi-ico" />
+          <span class="kpi-num">{{ kpiIncidencias().pendientes }}</span>
+          <span class="kpi-lbl">Pendientes</span>
+        </div>
+        <div class="kpi" style="--c: #3b82f6">
+          <fa-icon [icon]="icons.exitoso" class="kpi-ico" />
+          <span class="kpi-num">{{ kpiIncidencias().revisadas }}</span>
+          <span class="kpi-lbl">Revisadas</span>
+        </div>
+        <div class="kpi" style="--c: #16a34a">
+          <fa-icon [icon]="icons.exitoso" class="kpi-ico" />
+          <span class="kpi-num">{{ kpiIncidencias().justificadas }}</span>
+          <span class="kpi-lbl">Justificadas</span>
+        </div>
+      </div>
+    </section>
+  }
+</div>

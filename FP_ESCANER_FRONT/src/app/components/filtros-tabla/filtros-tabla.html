@@ -23,9 +23,69 @@
     }
   }
 
+  @if (estados().length && !chips()) {
+    <div class="form-field">
+      <label>Estado</label>
+      <select [value]="estado()" (change)="onEstado($event)">
+        <option [value]="''">Todos{{ total() != null ? ' (' + total() + ')' : '' }}</option>
+        @for (e of estados(); track e) {
+          <option [value]="e">{{ e }}{{ conteos() ? ' (' + conteoDe(e) + ')' : '' }}</option>
+        }
+      </select>
+    </div>
+  }
+
+  @if (fechas()) {
+    <div class="form-field">
+      <label>Desde</label>
+      <input type="date" [value]="fechaInicio()" (change)="onFechaInicio($event)" />
+    </div>
+    <div class="form-field">
+      <label>Hasta</label>
+      <input type="date" [value]="fechaFin()" (change)="onFechaFin($event)" />
+    </div>
+  }
+
   <div class="form-field filtro-buscar">
     <label>Buscar</label>
     <input type="search" placeholder="Buscar en la tabla…" [value]="texto()" (input)="onBuscar($event)" />
   </div>
 </div>
+
+@if (chips() && (estados().length || tipos().length)) {
+  <div class="chips-fila">
+    @if (estados().length) {
+      <div class="chips-grupo">
+        <span class="chips-label">Estado</span>
+        <button type="button" class="chip" [class.activa]="estado() === ''" (click)="estado.set('')">
+          Todas
+          @if (total() != null) { <span class="chip-num">{{ total() }}</span> }
+        </button>
+        @for (e of estados(); track e) {
+          <button type="button" class="chip" [class.activa]="estado() === e" (click)="toggleEstado(e)">
+            <span class="dot" [style.background]="colorEstado(e)"></span>
+            {{ e }}
+            @if (conteos()) { <span class="chip-num">{{ conteoDe(e) }}</span> }
+          </button>
+        }
+      </div>
+    }
+
+    @if (tipos().length) {
+      <div class="chips-grupo">
+        <span class="chips-label">Tipo</span>
+        <button type="button" class="chip" [class.activa]="tipo() === ''" (click)="tipo.set('')">
+          Todos
+        </button>
+        @for (t of tipos(); track t) {
+          <button type="button" class="chip" [class.activa]="tipo() === t" (click)="toggleTipo(t)">
+            <span class="dot" [style.background]="colorEstado(t)"></span>
+            {{ t }}
+            @if (conteosTipo()) { <span class="chip-num">{{ conteoTipoDe(t) }}</span> }
+          </button>
+        }
+      </div>
+    }
+  </div>
+}
 

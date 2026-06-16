@@ -1,7 +1,12 @@
 <app-header />
 
-<main class="app-main">
-  <router-outlet />
-</main>
+<div class="app-body">
+  @if (auth.isAuthenticated()) {
+    <app-sidebar />
+  }
+  <main class="app-main">
+    <router-outlet />
+  </main>
+</div>
 
 <app-footer />
