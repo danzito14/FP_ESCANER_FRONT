@@ -100,6 +100,11 @@ export class AuthService {
     return this.puedeLeer(recurso) ? obs : of<T[]>([]);
   }
 
+  /** Como listarSiPuede pero pasa si tiene CUALQUIERA de los scopes dados. */
+  listarSiAlguno<T>(scopes: string[], obs: Observable<T[]>): Observable<T[]> {
+    return scopes.some((s) => this.tieneScope(s)) ? obs : of<T[]>([]);
+  }
+
   get token(): string | null {
     return this.isBrowser ? localStorage.getItem(TOKEN_KEY) : null;
   }

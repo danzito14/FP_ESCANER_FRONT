@@ -20,7 +20,7 @@
   </div>
 
   <div class="scanner-stage">
-    <div class="video-wrap" [class.fullscreen]="camaraAbierta()">
+    <div class="video-wrap" [class.fullscreen]="camaraAbierta()" (click)="mostrarControles()">
       <video #video playsinline muted></video>
       <canvas #overlay class="overlay"></canvas>
 
@@ -74,7 +74,11 @@
     </div>
   }
 
-  <div class="scanner-actions" [class.flotante]="camaraAbierta()">
+  <div
+    class="scanner-actions"
+    [class.flotante]="camaraAbierta()"
+    [class.oculto]="camaraAbierta() && !controlesVisibles()"
+  >
     <button
       class="btn btn-ghost btn-voz"
       type="button"

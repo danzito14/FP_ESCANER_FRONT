@@ -1,2 +1,4 @@
-/** URL base del backend FastAPI. */
-export const API_URL = 'http://localhost:8000';
+import { environment } from '../../../environments/environment';
+
+/** URL base del backend FastAPI (según el entorno: dev = localhost, prod = dominio). */
+export const API_URL = environment.apiUrl;

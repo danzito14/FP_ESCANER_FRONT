@@ -31,14 +31,14 @@ export class ConfiguracionPage {
   readonly dispositivos = signal<Dispositivo[]>([]);
 
   constructor() {
-    this.auth.listarSiPuede('puertas', this.puertaService.list()).subscribe({
-      next: (data) => this.puertas.set(data),
-      error: () => {},
-    });
-    this.auth.listarSiPuede('dispositivos', this.dispositivoService.list()).subscribe({
-      next: (data) => this.dispositivos.set(data),
-      error: () => {},
-    });
+    // Quien configura el scanner puede tener 'puertas:read'/'dispositivos:read'
+    // (admin/config) o solo 'scanner:use' (kiosko). Carga con cualquiera.
+    this.auth
+      .listarSiAlguno(['puertas:read', 'scanner:use'], this.puertaService.list())
+      .subscribe({ next: (data) => this.puertas.set(data), error: () => {} });
+    this.auth
+      .listarSiAlguno(['dispositivos:read', 'scanner:use'], this.dispositivoService.list())
+      .subscribe({ next: (data) => this.dispositivos.set(data), error: () => {} });
   }
 
   /** Activa/silencia la voz; al silenciar corta lo que se esté diciendo. */

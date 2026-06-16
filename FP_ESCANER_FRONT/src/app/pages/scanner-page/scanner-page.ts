@@ -104,6 +104,9 @@ export class ScannerPage implements OnDestroy {
   readonly camaraAbierta = computed(
     () => this.status() === 'cargando' || this.status() === 'detectando',
   );
+  /** En pantalla completa, los controles se ocultan solos y reaparecen al tocar. */
+  readonly controlesVisibles = signal(true);
+  private controlesTimer: ReturnType<typeof setTimeout> | undefined;
 
   /** Si es false: solo detecta en vivo (no escanea). */
   private readonly CAPTURAR_AUTO: boolean = true;
@@ -118,14 +121,13 @@ export class ScannerPage implements OnDestroy {
   private running = false;
 
   constructor() {
-    this.auth.listarSiPuede('puertas', this.puertaService.list()).subscribe({
-      next: (data) => this.puertas.set(data),
-      error: (e) => this.error.set(this.msg(e)),
-    });
-    this.auth.listarSiPuede('dispositivos', this.dispositivoService.list()).subscribe({
-      next: (data) => this.dispositivos.set(data),
-      error: (e) => this.error.set(this.msg(e)),
-    });
+    // Solo para el resumen (nombres). Carga con :read o con scanner:use.
+    this.auth
+      .listarSiAlguno(['puertas:read', 'scanner:use'], this.puertaService.list())
+      .subscribe({ next: (data) => this.puertas.set(data), error: () => {} });
+    this.auth
+      .listarSiAlguno(['dispositivos:read', 'scanner:use'], this.dispositivoService.list())
+      .subscribe({ next: (data) => this.dispositivos.set(data), error: () => {} });
   }
 
   /** Nombre de la puerta configurada (para el resumen). */
@@ -163,6 +165,7 @@ export class ScannerPage implements OnDestroy {
       await this.cargarUbicacion();
       this.status.set('detectando');
       this.running = true;
+      this.mostrarControles(); // muestra y arranca el auto-ocultado
       this.raf = requestAnimationFrame(this.loop);
     } catch (e) {
       this.error.set(this.msg(e));
@@ -175,6 +178,8 @@ export class ScannerPage implements OnDestroy {
     cancelAnimationFrame(this.raf);
     this.camera.stop();
     this.voz.callar();
+    clearTimeout(this.controlesTimer);
+    this.controlesVisibles.set(true);
     this.tracks = [];
     this.status.set('idle');
   }
@@ -416,6 +421,18 @@ export class ScannerPage implements OnDestroy {
     if (!activa) this.voz.callar();
   }
 
+  /**
+   * Muestra los controles y reinicia el temporizador para volver a ocultarlos
+   * (solo en pantalla completa). Se llama al tocar el video.
+   */
+  mostrarControles(): void {
+    this.controlesVisibles.set(true);
+    clearTimeout(this.controlesTimer);
+    if (this.camaraAbierta()) {
+      this.controlesTimer = setTimeout(() => this.controlesVisibles.set(false), 3500);
+    }
+  }
+
   private delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
@@ -429,6 +446,7 @@ export class ScannerPage implements OnDestroy {
     this.running = false;
     cancelAnimationFrame(this.raf);
     this.camera.stop();
+    clearTimeout(this.controlesTimer);
   }
 
   private msg(e: unknown): string {

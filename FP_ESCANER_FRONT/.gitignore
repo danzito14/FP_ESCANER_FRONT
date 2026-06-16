@@ -6,6 +6,9 @@
 /out-tsc
 /bazel-out
 
+# Capacitor (carpeta SPA generada para el APK)
+/www
+
 # Node
 /node_modules
 npm-debug.log
