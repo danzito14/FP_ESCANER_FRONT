@@ -36,8 +36,6 @@ export class MapPicker {
   private map: L.Map | null = null;
   private drawn: L.FeatureGroup | null = null;
   private contextoLayer: L.Polygon | null = null;
-  private drawControl: L.Control.Draw | null = null;
-  private dibujoHandler: { enable(): void; disable(): void } | null = null;
 
   constructor() {
     // Redibuja/centra en el contexto (área) cuando cambia.
@@ -84,18 +82,18 @@ export class MapPicker {
       },
       edit: { featureGroup: drawn, remove: true },
     });
-    this.drawControl = drawControl;
     map.addControl(drawControl);
 
-    map.on(L.Draw.Event.CREATED, (e) => {
+    // Nombres de evento como string: NO dependen de L.Draw (que en el bundle de
+    // producción puede quedar undefined y romper el enganche del listener).
+    map.on('draw:created', (e) => {
       // Solo una geometría: reemplaza la anterior.
       drawn.clearLayers();
       drawn.addLayer((e as L.DrawEvents.Created).layer);
-      this.dibujoHandler = null;
       this.emit();
     });
-    map.on(L.Draw.Event.EDITED, () => this.emit());
-    map.on(L.Draw.Event.DELETED, () => this.emit());
+    map.on('draw:edited', () => this.emit());
+    map.on('draw:deleted', () => this.emit());
 
     this.pintarContexto(this.contexto());
 
@@ -107,15 +105,16 @@ export class MapPicker {
     }
   }
 
-  /** Activa la herramienta de dibujo de polígono (o reinicia el dibujo). */
+  /**
+   * Activa la herramienta de dibujo de polígono "haciendo clic" en el botón del
+   * toolbar de leaflet-draw (robusto: no depende de L.Draw, que puede quedar
+   * undefined en el bundle de producción).
+   */
   iniciarDibujo(): void {
-    if (this.mode() === 'point' || !this.map || !this.drawControl) return;
-    this.dibujoHandler?.disable();
-    const opciones = (this.drawControl.options as { draw?: { polygon?: unknown } }).draw?.polygon;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const Poligono = (L as any).Draw.Polygon;
-    this.dibujoHandler = new Poligono(this.map, opciones);
-    this.dibujoHandler!.enable();
+    const btn = this.map
+      ?.getContainer()
+      .querySelector<HTMLElement>('.leaflet-draw-draw-polygon');
+    btn?.click();
   }
 
   /** Dibuja el polígono de contexto (área) como guía y centra el mapa en él. */
