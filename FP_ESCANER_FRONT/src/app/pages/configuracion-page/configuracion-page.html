@@ -51,6 +51,16 @@
         </select>
       </label>
 
+      <label>
+        <span>Calidad</span>
+        <select [value]="cfg.calidad()" (change)="cfg.calidad.set($any($event.target).value)">
+          <option value="sd">Baja (640×480)</option>
+          <option value="hd">HD (1280×720)</option>
+          <option value="fhd">Full HD (1920×1080)</option>
+          <option value="max">Máxima (la de la cámara)</option>
+        </select>
+      </label>
+
       <div class="config-cam-acciones">
         <button type="button" class="btn btn-sm" (click)="detectarCamaras()" [disabled]="detectandoCam()">
           {{ detectandoCam() ? 'Detectando…' : 'Detectar cámaras' }}

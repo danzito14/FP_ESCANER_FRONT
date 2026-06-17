@@ -5,11 +5,15 @@ import { TipoRegistro } from '../core/interfaces/common';
 
 const KEY = 'scanner_config';
 
+/** Calidad/resolución de la cámara. */
+export type CalidadCamara = 'sd' | 'hd' | 'fhd' | 'max';
+
 interface ScannerCfg {
   idPuerta: number;
   idDispositivo: number;
   tipoRegistro: TipoRegistro;
   camaraId: string;
+  calidad: CalidadCamara;
 }
 
 /**
@@ -25,6 +29,8 @@ export class ScannerConfigService {
   readonly tipoRegistro = signal<TipoRegistro>('entrada');
   /** deviceId de la cámara elegida ('' = predeterminada / frontal). */
   readonly camaraId = signal('');
+  /** Resolución pedida a la cámara (por defecto HD 720p). */
+  readonly calidad = signal<CalidadCamara>('hd');
 
   constructor() {
     this.cargar();
@@ -35,6 +41,7 @@ export class ScannerConfigService {
           idDispositivo: this.idDispositivo(),
           tipoRegistro: this.tipoRegistro(),
           camaraId: this.camaraId(),
+          calidad: this.calidad(),
         };
         localStorage.setItem(KEY, JSON.stringify(cfg));
       });
@@ -53,6 +60,9 @@ export class ScannerConfigService {
         this.tipoRegistro.set(c.tipoRegistro);
       }
       if (typeof c.camaraId === 'string') this.camaraId.set(c.camaraId);
+      if (c.calidad && ['sd', 'hd', 'fhd', 'max'].includes(c.calidad)) {
+        this.calidad.set(c.calidad);
+      }
     } catch {
       // Config corrupta: se ignora.
     }

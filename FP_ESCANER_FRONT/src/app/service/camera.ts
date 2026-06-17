@@ -30,7 +30,8 @@ export class CameraService {
     }
     this.stop();
     const id = deviceId || this.cfg.camaraId();
-    const tamano = { width: { ideal: 640 }, height: { ideal: 480 } };
+    const { width, height } = this.resolucionIdeal();
+    const tamano = { width: { ideal: width }, height: { ideal: height } };
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({
         video: id ? { deviceId: { exact: id }, ...tamano } : { facingMode: 'user', ...tamano },
@@ -109,6 +110,21 @@ export class CameraService {
   stop(): void {
     this.stream?.getTracks().forEach((t) => t.stop());
     this.stream = null;
+  }
+
+  /** Resolución (ideal) según la calidad elegida en Configuración. */
+  private resolucionIdeal(): { width: number; height: number } {
+    switch (this.cfg.calidad()) {
+      case 'sd':
+        return { width: 640, height: 480 };
+      case 'fhd':
+        return { width: 1920, height: 1080 };
+      case 'max':
+        return { width: 3840, height: 2160 }; // pide lo más alto; el navegador da el máx soportado
+      case 'hd':
+      default:
+        return { width: 1280, height: 720 };
+    }
   }
 }
 
