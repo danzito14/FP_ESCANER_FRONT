@@ -5,7 +5,7 @@
 
   <div class="config-card">
     <div class="config-titulo">
-      <fa-icon [icon]="iconVoz" />
+      <fa-icon [icon]="iconCamara" />
       <div>
         <h2>Scanner</h2>
         <p>Puerta, tipo de registro y dispositivo que usará el scanner (se guarda en este equipo).</p>
@@ -66,6 +66,15 @@
         <select [value]="cfg.alcance()" (change)="cfg.alcance.set($any($event.target).value)">
           <option value="corto">Corto (cercano, más estricto)</option>
           <option value="largo">Largo (detecta más lejos)</option>
+        </select>
+      </label>
+
+      <label>
+        <span>Rostros simultáneos</span>
+        <select [value]="cfg.maxRostros()" (change)="cfg.maxRostros.set(+$any($event.target).value)">
+          @for (n of opcionesRostros; track n) {
+            <option [value]="n">{{ n }}</option>
+          }
         </select>
       </label>
 

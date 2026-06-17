@@ -17,7 +17,12 @@ interface ScannerCfg {
   camaraId: string;
   calidad: CalidadCamara;
   alcance: AlcanceDeteccion;
+  maxRostros: number;
 }
+
+/** Límites de rostros simultáneos. */
+export const MIN_ROSTROS = 3;
+export const MAX_ROSTROS = 10;
 
 /**
  * Configuración del scanner (puerta, tipo de registro, dispositivo) compartida
@@ -36,6 +41,8 @@ export class ScannerConfigService {
   readonly calidad = signal<CalidadCamara>('hd');
   /** Alcance de detección de rostros (por defecto largo, acorde a HD). */
   readonly alcance = signal<AlcanceDeteccion>('largo');
+  /** Rostros que se detectan/escanean a la vez (entre MIN_ROSTROS y MAX_ROSTROS). */
+  readonly maxRostros = signal(MIN_ROSTROS);
 
   constructor() {
     this.cargar();
@@ -48,6 +55,7 @@ export class ScannerConfigService {
           camaraId: this.camaraId(),
           calidad: this.calidad(),
           alcance: this.alcance(),
+          maxRostros: this.maxRostros(),
         };
         localStorage.setItem(KEY, JSON.stringify(cfg));
       });
@@ -70,6 +78,9 @@ export class ScannerConfigService {
         this.calidad.set(c.calidad);
       }
       if (c.alcance === 'corto' || c.alcance === 'largo') this.alcance.set(c.alcance);
+      if (typeof c.maxRostros === 'number') {
+        this.maxRostros.set(Math.min(MAX_ROSTROS, Math.max(MIN_ROSTROS, Math.round(c.maxRostros))));
+      }
     } catch {
       // Config corrupta: se ignora.
     }

@@ -32,7 +32,6 @@ type EstadoCara = 'detectando' | 'capturando' | 'enviando' | 'ok' | 'rechazado';
 
 const ESTABLE_MS = 1200;
 const SCORE_MIN = 0.75;
-const MAX_ROSTROS = 3;
 const TOTAL_CAPTURAS = 5;
 const MIN_CAPTURAS = 3;
 const INTERVALO_MS = 100;
@@ -41,7 +40,7 @@ const MAX_MISSES = 12;
 
 /** Rostro con identidad estable a lo largo de los frames. */
 interface Track {
-  id: number; // número de cara (1..MAX_ROSTROS), estable
+  id: number; // número de cara (1..máx configurado), estable
   box: FaceBox;
   cx: number;
   cy: number;
@@ -200,7 +199,7 @@ export class ScannerPage implements OnDestroy {
     const v = this.video()?.nativeElement;
 
     if (v && v.readyState >= 2) {
-      const boxes = this.faceDet.detect(v, performance.now()).slice(0, MAX_ROSTROS + 2);
+      const boxes = this.faceDet.detect(v, performance.now()).slice(0, this.cfg.maxRostros() + 2);
       this.actualizarTracks(boxes);
       this.dibujar(v);
 
@@ -259,7 +258,7 @@ export class ScannerPage implements OnDestroy {
 
     boxes.forEach((b, i) => {
       if (usados.has(i)) return;
-      if (this.tracks.length >= MAX_ROSTROS) return;
+      if (this.tracks.length >= this.cfg.maxRostros()) return;
       this.tracks.push({
         id: this.siguienteSlot(),
         box: b,
@@ -273,7 +272,7 @@ export class ScannerPage implements OnDestroy {
   }
 
   private siguienteSlot(): number {
-    for (let n = 1; n <= MAX_ROSTROS; n++) {
+    for (let n = 1; n <= this.cfg.maxRostros(); n++) {
       if (!this.tracks.some((t) => t.id === n)) return n;
     }
     return this.tracks.length + 1;
@@ -406,10 +405,12 @@ export class ScannerPage implements OnDestroy {
     this.toasts.update((arr) => [toast, ...arr]);
     setTimeout(() => this.toasts.update((arr) => arr.filter((x) => x.id !== id)), 5000);
 
+    
+
     const frase = res.acceso
-      ? `Acceso concedido, ${nombre}.`
+      ? `Aprobado, ${nombre}.`
       : res.trabajador
-        ? `Acceso denegado, ${nombre}.`
+        ? `Denegado, ${nombre}.`
         : 'Acceso denegado. Rostro no reconocido.';
     this.voz.decir(frase); // no-op si la voz está silenciada
   }

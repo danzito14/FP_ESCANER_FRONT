@@ -1,7 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FaIconComponent } from '@fortawesome/angular-fontawesome';
-import { faVolumeHigh, faVolumeXmark } from '@fortawesome/free-solid-svg-icons';
+import { faCamera, faVolumeHigh, faVolumeXmark } from '@fortawesome/free-solid-svg-icons';
 
 import { Dispositivo } from '../../core/interfaces/dispositivo';
 import { PuertaAcceso } from '../../core/interfaces/puerta-acceso';
@@ -9,7 +9,12 @@ import { AuthService } from '../../service/auth';
 import { CameraService, etiquetaCamara } from '../../service/camera';
 import { DispositivoService } from '../../service/dispositivo';
 import { PuertaAccesoService } from '../../service/puerta-acceso';
-import { CalidadCamara, ScannerConfigService } from '../../service/scanner-config';
+import {
+  CalidadCamara,
+  MAX_ROSTROS,
+  MIN_ROSTROS,
+  ScannerConfigService,
+} from '../../service/scanner-config';
 import { VozService } from '../../service/voz';
 
 @Component({
@@ -28,6 +33,13 @@ export class ConfiguracionPage {
 
   readonly iconVoz = faVolumeHigh;
   readonly iconMute = faVolumeXmark;
+  readonly iconCamara = faCamera;
+
+  /** Opciones de rostros simultáneos (MIN_ROSTROS..MAX_ROSTROS). */
+  readonly opcionesRostros = Array.from(
+    { length: MAX_ROSTROS - MIN_ROSTROS + 1 },
+    (_, i) => MIN_ROSTROS + i,
+  );
 
   readonly puertas = signal<PuertaAcceso[]>([]);
   readonly dispositivos = signal<Dispositivo[]>([]);
