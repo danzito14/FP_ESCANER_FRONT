@@ -36,6 +36,8 @@ export class MapPicker {
   private map: L.Map | null = null;
   private drawn: L.FeatureGroup | null = null;
   private contextoLayer: L.Polygon | null = null;
+  private drawControl: L.Control.Draw | null = null;
+  private dibujoHandler: { enable(): void; disable(): void } | null = null;
 
   constructor() {
     // Redibuja/centra en el contexto (área) cuando cambia.
@@ -82,19 +84,38 @@ export class MapPicker {
       },
       edit: { featureGroup: drawn, remove: true },
     });
+    this.drawControl = drawControl;
     map.addControl(drawControl);
 
     map.on(L.Draw.Event.CREATED, (e) => {
       // Solo una geometría: reemplaza la anterior.
       drawn.clearLayers();
       drawn.addLayer((e as L.DrawEvents.Created).layer);
+      this.dibujoHandler = null;
       this.emit();
     });
     map.on(L.Draw.Event.EDITED, () => this.emit());
     map.on(L.Draw.Event.DELETED, () => this.emit());
 
     this.pintarContexto(this.contexto());
-    setTimeout(() => map.invalidateSize(), 0);
+
+    // El mapa suele inicializar con tamaño 0 dentro de un modal (animación):
+    // recalcula varias veces y, si es polígono nuevo, arranca el dibujo solo.
+    for (const ms of [0, 200, 450]) setTimeout(() => map.invalidateSize(), ms);
+    if (!isPoint && !this.wkt()) {
+      setTimeout(() => this.iniciarDibujo(), 500);
+    }
+  }
+
+  /** Activa la herramienta de dibujo de polígono (o reinicia el dibujo). */
+  iniciarDibujo(): void {
+    if (this.mode() === 'point' || !this.map || !this.drawControl) return;
+    this.dibujoHandler?.disable();
+    const opciones = (this.drawControl.options as { draw?: { polygon?: unknown } }).draw?.polygon;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const Poligono = (L as any).Draw.Polygon;
+    this.dibujoHandler = new Poligono(this.map, opciones);
+    this.dibujoHandler!.enable();
   }
 
   /** Dibuja el polígono de contexto (área) como guía y centra el mapa en él. */
@@ -178,7 +199,9 @@ export class MapPicker {
 
     this.drawn.eachLayer((layer) => {
       if (layer instanceof L.Polygon) {
-        const ring = layer.getLatLngs()[0] as L.LatLng[];
+        // getLatLngs puede venir como LatLng[] o LatLng[][] según la versión.
+        const latlngs = layer.getLatLngs() as L.LatLng[] | L.LatLng[][];
+        const ring = (Array.isArray(latlngs[0]) ? latlngs[0] : latlngs) as L.LatLng[];
         for (const ll of ring) coords.push({ lat: ll.lat, lng: ll.lng });
       } else if (layer instanceof L.CircleMarker || layer instanceof L.Marker) {
         const ll = layer.getLatLng();

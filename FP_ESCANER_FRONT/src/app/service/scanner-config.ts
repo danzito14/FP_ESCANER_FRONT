@@ -7,6 +7,8 @@ const KEY = 'scanner_config';
 
 /** Calidad/resolución de la cámara. */
 export type CalidadCamara = 'sd' | 'hd' | 'fhd' | 'max';
+/** Alcance de detección (corto = cercano/estricto, largo = más sensible/lejano). */
+export type AlcanceDeteccion = 'corto' | 'largo';
 
 interface ScannerCfg {
   idPuerta: number;
@@ -14,6 +16,7 @@ interface ScannerCfg {
   tipoRegistro: TipoRegistro;
   camaraId: string;
   calidad: CalidadCamara;
+  alcance: AlcanceDeteccion;
 }
 
 /**
@@ -31,6 +34,8 @@ export class ScannerConfigService {
   readonly camaraId = signal('');
   /** Resolución pedida a la cámara (por defecto HD 720p). */
   readonly calidad = signal<CalidadCamara>('hd');
+  /** Alcance de detección de rostros (por defecto largo, acorde a HD). */
+  readonly alcance = signal<AlcanceDeteccion>('largo');
 
   constructor() {
     this.cargar();
@@ -42,6 +47,7 @@ export class ScannerConfigService {
           tipoRegistro: this.tipoRegistro(),
           camaraId: this.camaraId(),
           calidad: this.calidad(),
+          alcance: this.alcance(),
         };
         localStorage.setItem(KEY, JSON.stringify(cfg));
       });
@@ -63,6 +69,7 @@ export class ScannerConfigService {
       if (c.calidad && ['sd', 'hd', 'fhd', 'max'].includes(c.calidad)) {
         this.calidad.set(c.calidad);
       }
+      if (c.alcance === 'corto' || c.alcance === 'largo') this.alcance.set(c.alcance);
     } catch {
       // Config corrupta: se ignora.
     }

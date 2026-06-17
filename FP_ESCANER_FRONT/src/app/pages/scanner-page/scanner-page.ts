@@ -69,7 +69,7 @@ interface Toast {
 export class ScannerPage implements OnDestroy {
   private readonly platform = inject(PlatformService);
   private readonly camera = inject(CameraService);
-  private readonly faceDet = inject(FaceDetectionService);
+  protected readonly faceDet = inject(FaceDetectionService);
   private readonly geo = inject(GeolocationService);
   private readonly scanner = inject(ScannerService);
   private readonly puertaService = inject(PuertaAccesoService);
@@ -206,14 +206,14 @@ export class ScannerPage implements OnDestroy {
 
       this.numRostros.set(this.tracks.length);
       this.mejorScore.set(Math.max(0, ...this.tracks.map((t) => t.box.score)));
-      this.detectado.set(this.tracks.some((t) => t.box.score >= SCORE_MIN));
+      this.detectado.set(this.tracks.some((t) => t.box.score >= this.scoreMin()));
       this.capturando.set(this.tracks.some((t) => t.estado === 'capturando'));
       this.enviando.set(this.tracks.some((t) => t.estado === 'enviando'));
 
       // Dispara el escaneo de cada cara estable de forma independiente.
       for (const t of this.tracks) {
         if (t.estado !== 'detectando') continue;
-        if (t.box.score >= SCORE_MIN) {
+        if (t.box.score >= this.scoreMin()) {
           if (!t.estableDesde) t.estableDesde = performance.now();
           if (this.CAPTURAR_AUTO && performance.now() - t.estableDesde >= ESTABLE_MS) {
             this.escanearCara(t);
@@ -316,7 +316,7 @@ export class ScannerPage implements OnDestroy {
   private colorCara(t: Track): string {
     if (t.estado === 'ok') return '#16a34a';
     if (t.estado === 'rechazado') return '#dc2626';
-    return t.box.score >= SCORE_MIN ? '#ff6427' : '#9099a5';
+    return t.box.score >= this.scoreMin() ? '#ff6427' : '#9099a5';
   }
 
   /** Captura la ráfaga de una cara (recorte con margen) y la envía al liveness. */
@@ -412,6 +412,11 @@ export class ScannerPage implements OnDestroy {
         ? `Acceso denegado, ${nombre}.`
         : 'Acceso denegado. Rostro no reconocido.';
     this.voz.decir(frase); // no-op si la voz está silenciada
+  }
+
+  /** Score mínimo para aceptar un rostro: más bajo en alcance 'largo'. */
+  private scoreMin(): number {
+    return this.cfg.alcance() === 'largo' ? 0.55 : SCORE_MIN;
   }
 
   /** Activa/silencia la voz; al silenciar corta lo que se esté diciendo. */

@@ -12,6 +12,9 @@
       @if (cfg.idDispositivo()) {
         <span><strong>Dispositivo:</strong> {{ dispositivoNombre() }}</span>
       }
+      @if (camaraAbierta() && cfg.alcance() === 'largo') {
+        <span><strong>Modelo:</strong> {{ faceDet.modeloLargoActivo() ? 'largo alcance ✓' : 'corto (full-range no disponible)' }}</span>
+      }
       <a routerLink="/configuracion" class="scanner-config-link">Cambiar</a>
     } @else {
       <span>No hay puerta configurada.</span>

@@ -9,7 +9,7 @@ import { AuthService } from '../../service/auth';
 import { CameraService, etiquetaCamara } from '../../service/camera';
 import { DispositivoService } from '../../service/dispositivo';
 import { PuertaAccesoService } from '../../service/puerta-acceso';
-import { ScannerConfigService } from '../../service/scanner-config';
+import { CalidadCamara, ScannerConfigService } from '../../service/scanner-config';
 import { VozService } from '../../service/voz';
 
 @Component({
@@ -74,6 +74,12 @@ export class ConfiguracionPage {
     }
   }
 
+
+  /** Cambia la calidad y ajusta el alcance: HD+ → largo, SD → corto. */
+  onCalidad(v: CalidadCamara): void {
+    this.cfg.calidad.set(v);
+    this.cfg.alcance.set(v === 'sd' ? 'corto' : 'largo');
+  }
 
   /** Activa/silencia la voz; al silenciar corta lo que se esté diciendo. */
   toggleVoz(): void {

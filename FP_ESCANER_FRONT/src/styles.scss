@@ -157,6 +157,23 @@ h1, h2, h3 {
   align-items: stretch;
 }
 
+/* Fondo para cerrar el sidebar al tocar fuera. Solo en móvil (overlay);
+   en escritorio el sidebar es parte del layout, así que no se muestra. */
+.sidebar-backdrop {
+  display: none;
+}
+
+@media (max-width: 820px) {
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: var(--header-h, 58px) 0 0 0;
+    background: rgba(15, 18, 25, 0.45);
+    z-index: 44;
+    animation: fade-in 0.15s ease;
+  }
+}
+
 .app-main {
   flex: 1 1 auto;
   min-width: 0;

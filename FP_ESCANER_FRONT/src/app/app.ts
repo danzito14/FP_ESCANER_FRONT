@@ -5,6 +5,7 @@ import { Header } from './components/header/header';
 import { Footer } from './components/footer/footer';
 import { Sidebar } from './components/sidebar/sidebar';
 import { AuthService } from './service/auth';
+import { LayoutService } from './service/layout';
 
 @Component({
   selector: 'app-root',
@@ -14,5 +15,6 @@ import { AuthService } from './service/auth';
 })
 export class App {
   protected readonly auth = inject(AuthService);
+  protected readonly layout = inject(LayoutService);
   protected readonly title = signal('FP_ESCANER_FRONT');
 }
