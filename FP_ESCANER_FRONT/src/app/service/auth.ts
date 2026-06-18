@@ -4,6 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, map, of, switchMap, tap } from 'rxjs';
 
 import { API_URL } from '../core/constants/api';
+import { EMPRESA_SUPERADMIN } from '../core/constants/empresa';
 import { LoginRequest, LoginResponse } from '../core/interfaces/auth';
 import { Usuario, UsuarioMe } from '../core/interfaces/usuario';
 import { expandirScopes } from '../core/utils/scopes';
@@ -11,8 +12,6 @@ import { expandirScopes } from '../core/utils/scopes';
 const TOKEN_KEY = 'access_token';
 const USER_KEY = 'usuario';
 const SCOPES_KEY = 'scopes';
-/** Empresa reservada para el super-admin (ve todas las empresas). */
-const EMPRESA_SUPERADMIN = 99;
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
