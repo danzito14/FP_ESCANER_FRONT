@@ -14,6 +14,7 @@ import {
   faUserGear,
   faUsers,
   faExpand,
+  faChartColumn,
 } from '@fortawesome/free-solid-svg-icons';
 
 import { Dashboard } from '../../components/dashboard/dashboard';
@@ -50,6 +51,7 @@ export class LandingPage {
     { titulo: 'Puertas', descripcion: 'Puntos de acceso', ruta: '/puertas', icono: faDoorOpen, scope: 'puertas:read' },
     { titulo: 'Asistencias', descripcion: 'Registros de entrada/salida', ruta: '/asistencias', icono: faClipboardCheck, scope: 'asistencias:read' },
     { titulo: 'Incidencias', descripcion: 'Revisión y seguimiento', ruta: '/incidencias', icono: faTriangleExclamation, scope: 'incidencias:read' },
+    { titulo: 'Reportes', descripcion: 'Exportar a Excel/CSV', ruta: '/reportes', icono: faChartColumn, scope: 'reportes:read' },
     { titulo: 'Scanner', descripcion: 'Reconocimiento facial', ruta: '/scanner', icono: faExpand, scope: 'scanner:use' },
   ];
 

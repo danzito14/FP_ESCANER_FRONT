@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 
 import { EmbeddingCapture } from '../../components/embedding-capture/embedding-capture';
 import { FiltrosTabla } from '../../components/filtros-tabla/filtros-tabla';
+import { Paginacion, TAM_PAGINA } from '../../components/paginacion/paginacion';
 import { TrabajadorForm } from '../../components/trabajador-form/trabajador-form';
 import { AreaTrabajo } from '../../core/interfaces/area-trabajo';
 import { Empresa } from '../../core/interfaces/empresa';
@@ -20,7 +21,7 @@ import { PuedeDirective } from '../../core/directives/puede';
 
 @Component({
   selector: 'app-trabajadores-page',
-  imports: [TrabajadorForm, EmbeddingCapture, FiltrosTabla, PuedeDirective],
+  imports: [TrabajadorForm, EmbeddingCapture, FiltrosTabla, PuedeDirective, Paginacion],
   templateUrl: './trabajadores-page.html',
   styleUrl: './trabajadores-page.scss',
 })
@@ -73,6 +74,15 @@ export class TrabajadoresPage {
     }
     if (estado) lista = lista.filter((t) => t.estado === estado);
     return lista;
+  });
+
+  /** Paginación client-side sobre la lista filtrada. */
+  readonly pagina = signal(1);
+  readonly itemsPagina = computed(() => {
+    const lista = this.itemsFiltrados();
+    const maxPag = Math.max(1, Math.ceil(lista.length / TAM_PAGINA));
+    const p = Math.min(this.pagina(), maxPag);
+    return lista.slice((p - 1) * TAM_PAGINA, (p - 1) * TAM_PAGINA + TAM_PAGINA);
   });
 
   constructor() {

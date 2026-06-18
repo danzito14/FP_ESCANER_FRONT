@@ -47,7 +47,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (e of itemsFiltrados(); track e.origen + '-' + e.id) {
+          @for (e of itemsPagina(); track e.origen + '-' + e.id) {
             <tr>
               <td><span class="origen-badge" [class.es-intento]="e.origen === 'intento'">{{ e.origen }}</span></td>
               <td>{{ trabajadorNombre(e) }}</td>
@@ -89,6 +89,7 @@
         </tbody>
       </table>
     </div>
+    <app-paginacion [total]="itemsFiltrados().length" [(pagina)]="pagina" />
   }
 
   @if (eventoSel(); as e) {

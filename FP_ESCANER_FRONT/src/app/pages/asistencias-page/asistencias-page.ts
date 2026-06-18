@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 
 import { FiltrosTabla } from '../../components/filtros-tabla/filtros-tabla';
 import { MapFeature, MapView } from '../../components/map-view/map-view';
+import { Paginacion, TAM_PAGINA } from '../../components/paginacion/paginacion';
 import { AreaTrabajo } from '../../core/interfaces/area-trabajo';
 import { Asistencia } from '../../core/interfaces/asistencia';
 import { Dispositivo } from '../../core/interfaces/dispositivo';
@@ -30,7 +31,7 @@ import { TrabajadorService } from '../../service/trabajador';
 
 @Component({
   selector: 'app-asistencias-page',
-  imports: [MapView, FiltrosTabla, DatePipe, DecimalPipe],
+  imports: [MapView, FiltrosTabla, DatePipe, DecimalPipe, Paginacion],
   templateUrl: './asistencias-page.html',
   styleUrl: './asistencias-page.scss',
 })
@@ -111,6 +112,15 @@ export class AsistenciasPage {
     if (estado) base = base.filter((a) => a.estado_registro === estado);
     if (tipo) base = base.filter((a) => a.tipo_registro === tipo);
     return base;
+  });
+
+  /** Paginación client-side sobre la lista filtrada. */
+  readonly pagina = signal(1);
+  readonly itemsPagina = computed(() => {
+    const lista = this.itemsFiltrados();
+    const maxPag = Math.max(1, Math.ceil(lista.length / TAM_PAGINA));
+    const p = Math.min(this.pagina(), maxPag);
+    return lista.slice((p - 1) * TAM_PAGINA, (p - 1) * TAM_PAGINA + TAM_PAGINA);
   });
 
   readonly mapFeatures = computed<MapFeature[]>(() => {

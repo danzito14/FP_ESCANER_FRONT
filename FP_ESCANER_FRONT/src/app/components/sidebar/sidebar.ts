@@ -4,6 +4,7 @@ import { FaIconComponent } from '@fortawesome/angular-fontawesome';
 import { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import {
   faBuilding,
+  faChartColumn,
   faClipboardCheck,
   faDoorOpen,
   faExpand,
@@ -49,6 +50,7 @@ export class Sidebar {
     { titulo: 'Puertas', ruta: '/puertas', icono: faDoorOpen, scope: 'puertas:read' },
     { titulo: 'Asistencias', ruta: '/asistencias', icono: faClipboardCheck, scope: 'asistencias:read' },
     { titulo: 'Incidencias', ruta: '/incidencias', icono: faTriangleExclamation, scope: 'incidencias:read' },
+    { titulo: 'Reportes', ruta: '/reportes', icono: faChartColumn, scope: 'reportes:read' },
     { titulo: 'Scanner', ruta: '/scanner', icono: faExpand, scope: 'scanner:use' },
   ];
 

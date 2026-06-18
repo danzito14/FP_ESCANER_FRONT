@@ -4,6 +4,7 @@ import { HttpClient } from '@angular/common/http';
 
 import { API_URL } from '../../core/constants/api';
 import { FiltrosTabla } from '../../components/filtros-tabla/filtros-tabla';
+import { Paginacion, TAM_PAGINA } from '../../components/paginacion/paginacion';
 import { EstadoIncidencia } from '../../core/interfaces/common';
 import { EventoCombinado, OrigenEvento } from '../../core/interfaces/evento-combinado';
 import { alFiltrar } from '../../core/utils/buscar';
@@ -15,7 +16,7 @@ import { IncidenciaService } from '../../service/incidencia';
 
 @Component({
   selector: 'app-incidencias-page',
-  imports: [FiltrosTabla, DatePipe, DecimalPipe],
+  imports: [FiltrosTabla, DatePipe, DecimalPipe, Paginacion],
   templateUrl: './incidencias-page.html',
   styleUrl: './incidencias-page.scss',
 })
@@ -95,6 +96,15 @@ export class IncidenciasPage implements OnDestroy {
     if (estado) base = base.filter((e) => e.estado === estado);
     if (tipo) base = base.filter((e) => e.tipo === tipo);
     return base;
+  });
+
+  /** Paginación client-side sobre la lista filtrada. */
+  readonly pagina = signal(1);
+  readonly itemsPagina = computed(() => {
+    const lista = this.itemsFiltrados();
+    const maxPag = Math.max(1, Math.ceil(lista.length / TAM_PAGINA));
+    const p = Math.min(this.pagina(), maxPag);
+    return lista.slice((p - 1) * TAM_PAGINA, (p - 1) * TAM_PAGINA + TAM_PAGINA);
   });
 
   constructor() {

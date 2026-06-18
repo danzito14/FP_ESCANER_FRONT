@@ -34,7 +34,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (a of itemsFiltrados(); track a.id_area) {
+            @for (a of itemsPagina(); track a.id_area) {
               <tr [class.is-selected]="mapSelId() === a.id_area" (click)="mapSelId.set(a.id_area)">
                 <td>{{ a.id_area }}</td>
                 <td>{{ a.nombre_area }}</td>
@@ -62,6 +62,7 @@
         <app-map-view [features]="mapFeatures()" [selectedId]="mapSelId()" />
       </aside>
     </div>
+    <app-paginacion [total]="itemsFiltrados().length" [(pagina)]="pagina" />
   }
 
   @if (showForm()) {

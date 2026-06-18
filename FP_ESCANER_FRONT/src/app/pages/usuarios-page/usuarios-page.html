@@ -32,7 +32,7 @@
         </tr>
       </thead>
       <tbody>
-        @for (u of itemsFiltrados(); track u.id_usuario) {
+        @for (u of itemsPagina(); track u.id_usuario) {
           <tr>
             <td>{{ u.id_usuario }}</td>
             <td>{{ u.nombre_usuario }}</td>
@@ -54,6 +54,7 @@
       </tbody>
     </table>
     </div>
+    <app-paginacion [total]="itemsFiltrados().length" [(pagina)]="pagina" />
   }
 
   @if (showForm()) {

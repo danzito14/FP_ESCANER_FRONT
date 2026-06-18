@@ -83,6 +83,12 @@ export const routes: Routes = [
       import('./pages/scanner-page/scanner-page').then((m) => m.ScannerPage),
   },
   {
+    path: 'reportes',
+    canActivate: [scopeGuard('reportes:read')],
+    loadComponent: () =>
+      import('./pages/reportes-page/reportes-page').then((m) => m.ReportesPage),
+  },
+  {
     path: 'configuracion',
     canActivate: [authGuard],
     loadComponent: () =>

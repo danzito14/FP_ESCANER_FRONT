@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 
 import { FiltrosTabla } from '../../components/filtros-tabla/filtros-tabla';
+import { Paginacion, TAM_PAGINA } from '../../components/paginacion/paginacion';
 import { UsuarioForm } from '../../components/usuario-form/usuario-form';
 import { Empresa } from '../../core/interfaces/empresa';
 import { Rol } from '../../core/interfaces/rol';
@@ -14,7 +15,7 @@ import { PuedeDirective } from '../../core/directives/puede';
 
 @Component({
   selector: 'app-usuarios-page',
-  imports: [UsuarioForm, FiltrosTabla, PuedeDirective],
+  imports: [UsuarioForm, FiltrosTabla, PuedeDirective, Paginacion],
   templateUrl: './usuarios-page.html',
   styleUrl: './usuarios-page.scss',
 })
@@ -46,6 +47,15 @@ export class UsuariosPage {
     if (emp) lista = lista.filter((u) => u.empresa === emp);
     if (estado) lista = lista.filter((u) => u.estado === estado);
     return lista;
+  });
+
+  /** Paginación client-side sobre la lista filtrada. */
+  readonly pagina = signal(1);
+  readonly itemsPagina = computed(() => {
+    const lista = this.itemsFiltrados();
+    const maxPag = Math.max(1, Math.ceil(lista.length / TAM_PAGINA));
+    const p = Math.min(this.pagina(), maxPag);
+    return lista.slice((p - 1) * TAM_PAGINA, (p - 1) * TAM_PAGINA + TAM_PAGINA);
   });
 
   constructor() {

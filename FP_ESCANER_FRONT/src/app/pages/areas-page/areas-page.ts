@@ -3,6 +3,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { AreaForm } from '../../components/area-form/area-form';
 import { FiltrosTabla } from '../../components/filtros-tabla/filtros-tabla';
 import { MapFeature, MapView } from '../../components/map-view/map-view';
+import { Paginacion, TAM_PAGINA } from '../../components/paginacion/paginacion';
 import {
   AreaTrabajo,
   AreaTrabajoCreate,
@@ -18,7 +19,7 @@ import { PuedeDirective } from '../../core/directives/puede';
 
 @Component({
   selector: 'app-areas-page',
-  imports: [AreaForm, MapView, FiltrosTabla, PuedeDirective],
+  imports: [AreaForm, MapView, FiltrosTabla, PuedeDirective, Paginacion],
   templateUrl: './areas-page.html',
   styleUrl: './areas-page.scss',
 })
@@ -49,6 +50,15 @@ export class AreasPage {
     if (emp) lista = lista.filter((a) => a.id_empresa === emp);
     if (estado) lista = lista.filter((a) => a.estado === estado);
     return lista;
+  });
+
+  /** Paginación client-side sobre la lista filtrada. */
+  readonly pagina = signal(1);
+  readonly itemsPagina = computed(() => {
+    const lista = this.itemsFiltrados();
+    const maxPag = Math.max(1, Math.ceil(lista.length / TAM_PAGINA));
+    const p = Math.min(this.pagina(), maxPag);
+    return lista.slice((p - 1) * TAM_PAGINA, (p - 1) * TAM_PAGINA + TAM_PAGINA);
   });
 
   readonly mapFeatures = computed<MapFeature[]>(() =>

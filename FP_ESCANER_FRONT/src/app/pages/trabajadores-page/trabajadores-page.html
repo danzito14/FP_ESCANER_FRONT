@@ -33,7 +33,7 @@
         </tr>
       </thead>
       <tbody>
-        @for (t of itemsFiltrados(); track t.id_trabajador) {
+        @for (t of itemsPagina(); track t.id_trabajador) {
           <tr>
             <td>{{ t.id_trabajador }}</td>
             <td>{{ t.nombre }} {{ t.apellido }}</td>
@@ -64,6 +64,7 @@
       </tbody>
     </table>
     </div>
+    <app-paginacion [total]="itemsFiltrados().length" [(pagina)]="pagina" />
   }
 
   @if (showForm() || enrolling()) {

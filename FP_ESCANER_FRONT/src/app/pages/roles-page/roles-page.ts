@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 
 import { FiltrosTabla } from '../../components/filtros-tabla/filtros-tabla';
+import { Paginacion, TAM_PAGINA } from '../../components/paginacion/paginacion';
 import { RolForm } from '../../components/rol-form/rol-form';
 import { Rol, RolCreate, RolUpdate } from '../../core/interfaces/rol';
 import { incluyeTexto } from '../../core/utils/texto';
@@ -9,7 +10,7 @@ import { PuedeDirective } from '../../core/directives/puede';
 
 @Component({
   selector: 'app-roles-page',
-  imports: [RolForm, FiltrosTabla, PuedeDirective],
+  imports: [RolForm, FiltrosTabla, PuedeDirective, Paginacion],
   templateUrl: './roles-page.html',
   styleUrl: './roles-page.scss',
 })
@@ -35,6 +36,15 @@ export class RolesPage {
     return lista.filter((r) =>
       incluyeTexto(q, r.nombre_rol, r.descripcion, r.permisos.scopes.join(' ')),
     );
+  });
+
+  /** Paginación client-side sobre la lista filtrada. */
+  readonly pagina = signal(1);
+  readonly itemsPagina = computed(() => {
+    const lista = this.itemsFiltrados();
+    const maxPag = Math.max(1, Math.ceil(lista.length / TAM_PAGINA));
+    const p = Math.min(this.pagina(), maxPag);
+    return lista.slice((p - 1) * TAM_PAGINA, (p - 1) * TAM_PAGINA + TAM_PAGINA);
   });
 
   constructor() {

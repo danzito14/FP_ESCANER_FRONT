@@ -1,0 +1,120 @@
+<section class="crud-page">
+  <header class="crud-header">
+    <h1>Reportes</h1>
+  </header>
+
+  <p class="reportes-intro">Elige un reporte para ver una vista previa y descargarlo en Excel o CSV.</p>
+
+  <div class="reportes-grid">
+    @for (r of reportes; track r.tipo) {
+      <button type="button" class="reporte-card" (click)="abrir(r)">
+        <span class="reporte-icono"><fa-icon [icon]="r.icono" /></span>
+        <span class="reporte-info">
+          <strong>{{ r.titulo }}</strong>
+          <small>{{ r.descripcion }}</small>
+        </span>
+      </button>
+    }
+  </div>
+
+  @if (reporteSel(); as def) {
+    <div class="modal-backdrop" (click)="cerrar()">
+      <div class="modal modal-wide" (click)="$event.stopPropagation()">
+        <h2><fa-icon [icon]="def.icono" /> {{ def.titulo }}</h2>
+
+        <div class="reporte-fechas">
+          @if (def.usaFechas) {
+            <div class="form-field">
+              <label>Desde</label>
+              <input type="date" [value]="fechaInicio()" (change)="onFechaInicio($event)" />
+            </div>
+            <div class="form-field">
+              <label>Hasta</label>
+              <input type="date" [value]="fechaFin()" (change)="onFechaFin($event)" />
+            </div>
+          }
+          @if (def.usaTrabajador) {
+            <div class="form-field trab-field">
+              <label>Trabajador (ID o nombre)</label>
+              <div class="trab-buscar">
+                <input
+                  type="text"
+                  placeholder="Todos · escribe ID o nombre"
+                  [value]="busquedaTrab()"
+                  (input)="onBuscarTrab($event)"
+                  (focus)="mostrarResTrab.set(true)"
+                />
+                @if (busquedaTrab() || idTrabajador()) {
+                  <button type="button" class="trab-clear" (click)="limpiarTrab()" aria-label="Quitar filtro">×</button>
+                }
+                @if (mostrarResTrab() && resultadosTrab().length) {
+                  <ul class="trab-resultados">
+                    @for (t of resultadosTrab(); track t.id_trabajador) {
+                      <li>
+                        <button type="button" (click)="elegirTrab(t)">
+                          <strong>#{{ t.id_trabajador }}</strong> {{ t.nombre }} {{ t.apellido }}
+                        </button>
+                      </li>
+                    }
+                  </ul>
+                }
+              </div>
+            </div>
+          }
+          @if (def.usaTipo) {
+            <div class="form-field">
+              <label>Tipo</label>
+              <select [value]="tipoIncidencia()" (change)="onTipoIncidencia($event)">
+                <option value="">Todos</option>
+                @for (ti of tiposIncidencia; track ti) {
+                  <option [value]="ti">{{ ti }}</option>
+                }
+              </select>
+            </div>
+          }
+        </div>
+
+        <!-- Vista previa -->
+        <div class="reporte-preview">
+          @if (cargandoPreview()) {
+            <p class="loading">Cargando vista previa…</p>
+          } @else if (previewError()) {
+            <div class="alert alert-error">{{ previewError() }}</div>
+          } @else {
+            <div class="crud-table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    @for (c of def.columnas; track c) { <th>{{ c }}</th> }
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (fila of preview(); track $index) {
+                    <tr>
+                      @for (celda of fila; track $index) { <td>{{ celda }}</td> }
+                    </tr>
+                  } @empty {
+                    <tr><td [attr.colspan]="def.columnas.length" class="empty">Sin datos en el período.</td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            @if (preview().length >= LIMITE_PREVIEW) {
+              <small class="hint">Vista previa de las primeras {{ LIMITE_PREVIEW }} filas. La descarga incluye todo.</small>
+            }
+          }
+        </div>
+
+        <div class="form-actions reporte-acciones">
+          <button type="button" class="btn btn-ghost" (click)="cerrar()">Cerrar</button>
+          <button type="button" class="btn" (click)="descargar('csv')" [disabled]="descargando()">
+            <fa-icon [icon]="iconCsv" /> {{ descargando() === 'csv' ? 'Generando…' : 'CSV' }}
+          </button>
+          <button type="button" class="btn btn-primary" (click)="descargar('xlsx')" [disabled]="descargando()">
+            <fa-icon [icon]="iconXlsx" /> {{ descargando() === 'xlsx' ? 'Generando…' : 'Excel (XLSX)' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</section>

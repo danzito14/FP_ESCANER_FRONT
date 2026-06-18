@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 
 import { FiltrosTabla } from '../../components/filtros-tabla/filtros-tabla';
 import { MapFeature, MapView } from '../../components/map-view/map-view';
+import { Paginacion, TAM_PAGINA } from '../../components/paginacion/paginacion';
 import { PuertaForm } from '../../components/puerta-form/puerta-form';
 import { AreaTrabajo } from '../../core/interfaces/area-trabajo';
 import { Dispositivo } from '../../core/interfaces/dispositivo';
@@ -22,7 +23,7 @@ import { PuedeDirective } from '../../core/directives/puede';
 
 @Component({
   selector: 'app-puertas-page',
-  imports: [PuertaForm, MapView, FiltrosTabla, PuedeDirective],
+  imports: [PuertaForm, MapView, FiltrosTabla, PuedeDirective, Paginacion],
   templateUrl: './puertas-page.html',
   styleUrl: './puertas-page.scss',
 })
@@ -65,6 +66,15 @@ export class PuertasPage {
     else if (emp) lista = lista.filter((p) => p.id_empresa === emp);
     if (estado) lista = lista.filter((p) => p.estado === estado);
     return lista;
+  });
+
+  /** Paginación client-side sobre la lista filtrada. */
+  readonly pagina = signal(1);
+  readonly itemsPagina = computed(() => {
+    const lista = this.itemsFiltrados();
+    const maxPag = Math.max(1, Math.ceil(lista.length / TAM_PAGINA));
+    const p = Math.min(this.pagina(), maxPag);
+    return lista.slice((p - 1) * TAM_PAGINA, (p - 1) * TAM_PAGINA + TAM_PAGINA);
   });
 
   readonly mapFeatures = computed<MapFeature[]>(() =>
