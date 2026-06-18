@@ -35,6 +35,7 @@ const RECURSOS: RecursoDef[] = [
   { key: 'incidencias', label: 'Incidencias', acciones: ['read', 'write'] },
   { key: 'asistencias', label: 'Asistencias', acciones: ['read'] },
   { key: 'escaneos', label: 'Escaneos', acciones: ['read'] },
+  { key: 'reportes', label: 'Reportes', acciones: ['read'] },
 ];
 
 @Component({
