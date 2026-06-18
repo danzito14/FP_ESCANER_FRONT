@@ -21,7 +21,7 @@
     <div class="form-field">
       <label for="empresa_sel">Empresa</label>
       <select id="empresa_sel" [value]="empresaSel()" (change)="onEmpresa($event)">
-        <option [value]="0" disabled>Selecciona una empresa…</option>
+        <option [value]="0">Selecciona una empresa…</option>
         @for (emp of empresas(); track emp.id_empresa) {
           <option [value]="emp.id_empresa">{{ emp.nombre_empresa }}</option>
         }
