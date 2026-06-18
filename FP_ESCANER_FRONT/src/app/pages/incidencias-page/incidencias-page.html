@@ -1,15 +1,20 @@
 <section class="crud-page">
   <header class="crud-header">
     <h1>Incidencias</h1>
-    <button class="btn btn-sm" (click)="load()">Actualizar</button>
+    <div class="crud-header-actions">
+      <select class="origen-filtro" [value]="filtroOrigen()" (change)="onOrigen($event)">
+        <option value="">Todos los orígenes</option>
+        <option value="incidencia">Incidencias</option>
+        <option value="intento">Intentos</option>
+      </select>
+      <button class="btn btn-sm" (click)="load()">Actualizar</button>
+    </div>
   </header>
 
   @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
 
   <app-filtros-tabla
-    [esAdmin]="esAdmin()"
-    [empresas]="empresas()"
-    [areas]="areasFiltro()"
+    [esAdmin]="false"
     [estados]="estados"
     [conteos]="conteos()"
     [total]="baseFiltrados().length"
@@ -17,8 +22,6 @@
     [tipos]="tipos"
     [conteosTipo]="conteosTipo()"
     [fechas]="true"
-    [(empresa)]="filtroEmpresa"
-    [(area)]="filtroArea"
     [(texto)]="buscar"
     [(estado)]="filtroEstado"
     [(tipo)]="filtroTipo"
@@ -30,41 +33,88 @@
     <p class="loading">Cargando…</p>
   } @else {
     <div class="crud-table-wrap">
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Trabajador</th>
-          <th>Tipo</th>
-          <th>Fecha</th>
-          <th>Descripción</th>
-          <th>Estado</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (inc of itemsFiltrados(); track inc.id_incidencia) {
+      <table class="data-table">
+        <thead>
           <tr>
-            <td>{{ inc.id_trabajador }}</td>
-            <td>{{ trabajadorNombre(inc) }}</td>
-            <td><span class="tag" [style.--c]="colorEstado(inc.tipo_incidencia)">{{ inc.tipo_incidencia }}</span></td>
-            <td>{{ inc.fecha }}</td>
-            <td>{{ inc.descripcion || '—' }}</td>
-            <td>
-              <span class="estado-cell" [class]="'est-' + inc.estado">
-                <span class="dot"></span>
-                <select class="estado-select" [disabled]="!puedeEditar()" (change)="cambiarEstado(inc, $event)">
-                  @for (e of estados; track e) {
-                    <option [value]="e" [selected]="e === inc.estado">{{ e }}</option>
-                  }
-                </select>
-              </span>
-            </td>
+            <th>Origen</th>
+            <th>Trabajador</th>
+            <th>Tipo</th>
+            <th>Fecha / hora</th>
+            <th>Descripción</th>
+            <th>Similitud</th>
+            <th>Estado</th>
+            <th>Foto</th>
           </tr>
-        } @empty {
-          <tr><td colspan="6" class="empty">Sin registros.</td></tr>
+        </thead>
+        <tbody>
+          @for (e of itemsFiltrados(); track e.origen + '-' + e.id) {
+            <tr>
+              <td><span class="origen-badge" [class.es-intento]="e.origen === 'intento'">{{ e.origen }}</span></td>
+              <td>{{ trabajadorNombre(e) }}</td>
+              <td><span class="tag" [style.--c]="colorEstado(e.tipo)">{{ e.tipo }}</span></td>
+              <td>{{ e.fecha_hora | date: 'dd/MM/yyyy HH:mm' }}</td>
+              <td>{{ e.descripcion || '—' }}</td>
+              <td>
+                @if (e.similitud != null) {
+                  {{ e.similitud * 100 | number: '1.0-0' }}%
+                } @else {
+                  —
+                }
+              </td>
+              <td>
+                @if (e.origen === 'incidencia' && e.estado) {
+                  <span class="estado-cell" [class]="'est-' + e.estado">
+                    <span class="dot"></span>
+                    <select class="estado-select" [disabled]="!puedeEditar()" (change)="cambiarEstado(e, $event)">
+                      @for (s of estados; track s) {
+                        <option [value]="s" [selected]="s === e.estado">{{ s }}</option>
+                      }
+                    </select>
+                  </span>
+                } @else {
+                  —
+                }
+              </td>
+              <td>
+                @if (e.tiene_foto) {
+                  <button type="button" class="btn btn-sm" (click)="verFoto(e)">Ver</button>
+                } @else {
+                  —
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="8" class="empty">Sin registros.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  @if (eventoSel(); as e) {
+    <div class="modal-backdrop" (click)="cerrarFoto()">
+      <div class="modal" (click)="$event.stopPropagation()">
+        <h2>Foto del evento</h2>
+        <p class="foto-meta">
+          <span class="origen-badge" [class.es-intento]="e.origen === 'intento'">{{ e.origen }}</span>
+          <span class="tag" [style.--c]="colorEstado(e.tipo)">{{ e.tipo }}</span>
+          · {{ trabajadorNombre(e) }} · {{ e.fecha_hora | date: 'dd/MM/yyyy HH:mm' }}
+          @if (e.similitud != null) { · {{ e.similitud * 100 | number: '1.0-0' }}% }
+        </p>
+        @if (e.descripcion) { <p>{{ e.descripcion }}</p> }
+
+        @if (fotoCargando()) {
+          <p class="loading">Cargando foto…</p>
+        } @else if (fotoUrl(); as url) {
+          <img class="foto-incidencia" [src]="url" alt="Foto del evento" />
+        } @else {
+          <p class="hint">Sin foto.</p>
         }
-      </tbody>
-    </table>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-primary" (click)="cerrarFoto()">Cerrar</button>
+        </div>
+      </div>
     </div>
   }
 </section>

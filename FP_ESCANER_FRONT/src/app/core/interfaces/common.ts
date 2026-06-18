@@ -30,7 +30,8 @@ export type TipoIncidencia =
   | 'entrada_sin_registro'
   | 'falta'
   | 'retardo'
-  | 'fuera_de_area';
+  | 'fuera_de_area'
+  | 'acceso_otra_empresa';
 
 /** Estado de una incidencia (flujo de revisión). */
 export type EstadoIncidencia = 'pendiente' | 'revisada' | 'justificada';

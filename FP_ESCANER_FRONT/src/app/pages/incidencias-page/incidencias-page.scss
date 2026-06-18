@@ -44,3 +44,53 @@
 }
 
 /* Los chips de estado ahora viven en el componente FiltrosTabla (estilos globales en styles.scss). */
+
+.foto-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin: 0 0 0.75rem;
+}
+
+.foto-incidencia {
+  width: 100%;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  display: block;
+}
+
+.crud-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.origen-filtro {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: inherit;
+  font: inherit;
+}
+
+/* Badge de origen: incidencia (azul) vs intento (rojo). */
+.origen-badge {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  background: color-mix(in srgb, #3b82f6 15%, transparent);
+  color: #2563eb;
+
+  &.es-intento {
+    background: color-mix(in srgb, #dc2626 15%, transparent);
+    color: #dc2626;
+  }
+}

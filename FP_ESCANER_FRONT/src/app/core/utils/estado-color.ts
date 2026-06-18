@@ -14,6 +14,7 @@ export function colorEstado(valor: string): string {
     case 'mantenimiento':
     case 'salida_sin_registro':
     case 'entrada_sin_registro':
+    case 'desconocido':
       return '#f97316'; // naranja
     case 'salida':
       return '#3b82f6'; // azul
@@ -21,6 +22,8 @@ export function colorEstado(valor: string): string {
     case 'suspendido':
     case 'rechazado':
     case 'fuera_de_area':
+    case 'acceso_otra_empresa':
+    case 'spoofing':
     case 'falta':
     case 'cancelado':
       return '#dc2626'; // rojo
