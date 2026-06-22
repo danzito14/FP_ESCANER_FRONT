@@ -315,7 +315,7 @@ export class ScannerPage implements OnDestroy {
   private colorCara(t: Track): string {
     if (t.estado === 'ok') return '#16a34a';
     if (t.estado === 'rechazado') return '#dc2626';
-    return t.box.score >= this.scoreMin() ? '#ff6427' : '#9099a5';
+    return t.box.score >= this.scoreMin() ? '#245640' : '#9099a5';
   }
 
   /** Captura la ráfaga de una cara (recorte con margen) y la envía al liveness. */

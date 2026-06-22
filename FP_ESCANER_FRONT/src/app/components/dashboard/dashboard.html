@@ -27,16 +27,21 @@
     </div>
   </header>
 
-  @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
+  @if (error()) {
+    <div class="alert alert-error">{{ error() }}</div>
+  }
 
   @if (loading()) {
     <p class="loading">Cargando informe…</p>
   } @else {
     <!-- Asistencias -->
     <section class="dash-group">
-      <h3><fa-icon [icon]="icons.asistencias" /> Asistencias <span class="muted">({{ kpiAsistencias().total }})</span></h3>
+      <h3>
+        <fa-icon [icon]="icons.asistencias" /> Asistencias
+        <span class="muted">({{ kpiAsistencias().total }})</span>
+      </h3>
       <div class="kpi-grid">
-        <div class="kpi" style="--c: #ff6427">
+        <div class="kpi" style="--c: #245640">
           <fa-icon [icon]="icons.asistencias" class="kpi-ico" />
           <span class="kpi-num">{{ kpiAsistencias().total }}</span>
           <span class="kpi-lbl">Total registros</span>
@@ -71,9 +76,12 @@
 
     <!-- Incidencias -->
     <section class="dash-group">
-      <h3><fa-icon [icon]="icons.incidencias" /> Incidencias <span class="muted">({{ kpiIncidencias().total }})</span></h3>
+      <h3>
+        <fa-icon [icon]="icons.incidencias" /> Incidencias
+        <span class="muted">({{ kpiIncidencias().total }})</span>
+      </h3>
       <div class="kpi-grid">
-        <div class="kpi" style="--c: #ff6427">
+        <div class="kpi" style="--c: #245640">
           <fa-icon [icon]="icons.incidencias" class="kpi-ico" />
           <span class="kpi-num">{{ kpiIncidencias().total }}</span>
           <span class="kpi-lbl">Total</span>

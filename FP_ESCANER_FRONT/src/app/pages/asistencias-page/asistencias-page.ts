@@ -130,7 +130,7 @@ export class AsistenciasPage {
     for (const e of this.empresas().values()) {
       const wkt = e.ubicacion ?? lngLatToWkt(e.coordenadas);
       if (wkt) {
-        features.push({ id: `empresa-${e.id_empresa}`, wkt, label: e.nombre_empresa, color: '#ff6427' });
+        features.push({ id: `empresa-${e.id_empresa}`, wkt, label: e.nombre_empresa, color: '#245640' });
       }
     }
 

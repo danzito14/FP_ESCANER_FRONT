@@ -71,7 +71,7 @@ export class MapPicker {
         rectangle: false,
         circle: false,
         marker: false,
-        circlemarker: isPoint ? ({ color: '#ff6427' } as L.CircleMarkerOptions) : false,
+        circlemarker: isPoint ? ({ color: '#245640' } as L.CircleMarkerOptions) : false,
         polygon: isPoint
           ? false
           : ({
@@ -150,7 +150,7 @@ export class MapPicker {
       this.drawn.clearLayers();
       this.drawn.addLayer(
         L.circleMarker([pos.lat, pos.lng], {
-          color: '#ff6427',
+          color: '#245640',
           radius: 8,
           weight: 3,
           fillOpacity: 0.6,
@@ -174,7 +174,7 @@ export class MapPicker {
       if (p) {
         drawn.addLayer(
           L.circleMarker([p.lat, p.lng], {
-            color: '#ff6427',
+            color: '#245640',
             radius: 8,
             weight: 3,
             fillOpacity: 0.6,
