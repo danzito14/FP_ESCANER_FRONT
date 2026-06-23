@@ -5,30 +5,29 @@ import { HttpClient } from '@angular/common/http';
 import { API_URL } from '../../core/constants/api';
 import { FiltrosTabla } from '../../components/filtros-tabla/filtros-tabla';
 import { Paginacion, TAM_PAGINA } from '../../components/paginacion/paginacion';
-import { EstadoIncidencia } from '../../core/interfaces/common';
-import { EventoCombinado, OrigenEvento } from '../../core/interfaces/evento-combinado';
+import { EventoCombinado } from '../../core/interfaces/evento-combinado';
 import { alFiltrar } from '../../core/utils/buscar';
 import { colorEstado } from '../../core/utils/estado-color';
 import { rangoUltimaSemana } from '../../core/utils/fechas';
 import { incluyeTexto } from '../../core/utils/texto';
-import { AuthService } from '../../service/auth';
 import { IncidenciaService } from '../../service/incidencia';
 
+/**
+ * Intentos fallidos (spoofing / desconocido / otra empresa), con foto.
+ * Reutiliza GET /incidencias/combinado filtrado a origen='intento' (scope
+ * incidencias:read). Vista de solo lectura: los intentos no tienen estado.
+ */
 @Component({
-  selector: 'app-incidencias-page',
+  selector: 'app-intentos-page',
   imports: [FiltrosTabla, DatePipe, DecimalPipe, Paginacion],
-  templateUrl: './incidencias-page.html',
-  styleUrl: './incidencias-page.scss',
+  templateUrl: './intentos-page.html',
+  styleUrl: './intentos-page.scss',
 })
-export class IncidenciasPage implements OnDestroy {
+export class IntentosPage implements OnDestroy {
   private readonly service = inject(IncidenciaService);
-  private readonly auth = inject(AuthService);
   private readonly http = inject(HttpClient);
 
-  /** Puede cambiar el estado de una incidencia. */
-  readonly puedeEditar = computed(() => this.auth.puedeEscribir('incidencias'));
-
-  /** Evento seleccionado para ver su foto (modal). */
+  /** Intento seleccionado para ver su foto (modal). */
   readonly eventoSel = signal<EventoCombinado | null>(null);
   readonly fotoUrl = signal<string | null>(null);
   readonly fotoCargando = signal(false);
@@ -38,49 +37,21 @@ export class IncidenciasPage implements OnDestroy {
   readonly error = signal<string | null>(null);
 
   readonly colorEstado = colorEstado;
-  /** Estados (solo aplican a incidencias; los intentos no tienen). */
-  readonly estados: EstadoIncidencia[] = ['pendiente', 'revisada', 'justificada'];
-  /** Tipos de incidencias + de intentos. */
-  readonly tipos = [
-    'salida_sin_registro',
-    'entrada_sin_registro',
-    'falta',
-    'retardo',
-    'fuera_de_area',
-    'acceso_otra_empresa',
-    'area_incorrecta',
-    'spoofing',
-    'desconocido',
-    'otra_empresa',
-  ];
+  /** Tipos de intento. */
+  readonly tipos = ['spoofing', 'desconocido', 'otra_empresa'];
 
   readonly buscar = signal('');
   private readonly rango = rangoUltimaSemana();
   readonly fechaInicio = signal(this.rango.inicio);
   readonly fechaFin = signal(this.rango.fin);
-  readonly filtroEstado = signal('');
   readonly filtroTipo = signal('');
-  /** Filtro por origen ('' = ambos). */
-  readonly filtroOrigen = signal<'' | OrigenEvento>('');
 
-  /** Eventos filtrados por origen + búsqueda (base para conteos). */
+  /** Intentos filtrados por búsqueda (base para conteos). */
   readonly baseFiltrados = computed(() => {
-    const origen = this.filtroOrigen();
     const q = this.buscar();
-    return this.items().filter((e) => {
-      if (origen && e.origen !== origen) return false;
-      return incluyeTexto(q, e.trabajador_nombre, e.descripcion, e.tipo);
-    });
-  });
-
-  /** Conteo por estado (sobre la base). */
-  readonly conteos = computed<Record<string, number>>(() => {
-    const base = this.baseFiltrados();
-    return {
-      pendiente: base.filter((e) => e.estado === 'pendiente').length,
-      revisada: base.filter((e) => e.estado === 'revisada').length,
-      justificada: base.filter((e) => e.estado === 'justificada').length,
-    };
+    return this.items().filter((e) =>
+      incluyeTexto(q, e.trabajador_nombre, e.descripcion, e.tipo),
+    );
   });
 
   /** Conteo por tipo (sobre la base). */
@@ -92,12 +63,9 @@ export class IncidenciasPage implements OnDestroy {
   });
 
   readonly itemsFiltrados = computed(() => {
-    const estado = this.filtroEstado();
     const tipo = this.filtroTipo();
-    let base = this.baseFiltrados();
-    if (estado) base = base.filter((e) => e.estado === estado);
-    if (tipo) base = base.filter((e) => e.tipo === tipo);
-    return base;
+    const base = this.baseFiltrados();
+    return tipo ? base.filter((e) => e.tipo === tipo) : base;
   });
 
   /** Paginación client-side sobre la lista filtrada. */
@@ -110,8 +78,7 @@ export class IncidenciasPage implements OnDestroy {
   });
 
   constructor() {
-    // El rango de fechas se filtra en el backend; el resto (origen/estado/tipo/
-    // búsqueda) es client-side sobre la lista combinada.
+    // El rango de fechas se filtra en el backend; búsqueda/tipo es client-side.
     alFiltrar([this.fechaInicio, this.fechaFin], () => this.load());
     this.load();
   }
@@ -120,7 +87,7 @@ export class IncidenciasPage implements OnDestroy {
     this.loading.set(true);
     this.error.set(null);
     this.service
-      .combinado({ fechaInicio: this.fechaInicio(), fechaFin: this.fechaFin() })
+      .combinado({ origen: 'intento', fechaInicio: this.fechaInicio(), fechaFin: this.fechaFin() })
       .subscribe({
         next: (data) => {
           this.items.set(data);
@@ -137,25 +104,7 @@ export class IncidenciasPage implements OnDestroy {
     return e.trabajador_nombre ?? 'Desconocido';
   }
 
-  onOrigen(ev: Event): void {
-    this.filtroOrigen.set((ev.target as HTMLSelectElement).value as '' | OrigenEvento);
-  }
-
-  /** Solo las incidencias (no los intentos) tienen estado editable. */
-  cambiarEstado(e: EventoCombinado, event: Event): void {
-    if (e.origen !== 'incidencia') return;
-    const estado = (event.target as HTMLSelectElement).value as EstadoIncidencia;
-    if (estado === e.estado) return;
-    this.service.update(e.id, { estado }).subscribe({
-      next: () => this.load(),
-      error: (err) => this.error.set(this.msg(err)),
-    });
-  }
-
-  /**
-   * Abre el modal y trae la foto como blob (el interceptor agrega el token).
-   * `foto_url` ya apunta al endpoint correcto (incidencias o intentos).
-   */
+  /** Abre el modal y trae la foto como blob (el interceptor agrega el token). */
   verFoto(e: EventoCombinado): void {
     this.eventoSel.set(e);
     this.revocarFoto();

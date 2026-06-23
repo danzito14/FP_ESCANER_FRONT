@@ -2,7 +2,13 @@ import { Component, computed, effect, inject, input, output, signal } from '@ang
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { AreaTrabajo } from '../../core/interfaces/area-trabajo';
-import { Estado, TipoAcceso } from '../../core/interfaces/common';
+import {
+  Estado,
+  FuncionPuerta,
+  NivelAccesoInterno,
+  TipoAcceso,
+  TipoPuerta,
+} from '../../core/interfaces/common';
 import { Dispositivo } from '../../core/interfaces/dispositivo';
 import { Empresa } from '../../core/interfaces/empresa';
 import {
@@ -35,6 +41,9 @@ export class PuertaForm {
   /** Mirrors de empresa/área para reactividad (cascada + contexto del mapa). */
   readonly idEmpresaSel = signal(0);
   readonly idAreaSel = signal(0);
+  /** Mirror de la función: la zona destino solo aplica en 'control_acceso'. */
+  readonly funcionSel = signal<FuncionPuerta>('asistencia');
+  readonly esControlAcceso = computed(() => this.funcionSel() === 'control_acceso');
 
   readonly areasFiltradas = computed(() => {
     const emp = this.idEmpresaSel();
@@ -63,6 +72,9 @@ export class PuertaForm {
     id_empresa: this.fb.nonNullable.control(0),
     id_dispositivo: this.fb.nonNullable.control(0),
     tipo_acceso: this.fb.nonNullable.control('bidireccional' as TipoAcceso),
+    tipo_puerta: this.fb.nonNullable.control('campo' as TipoPuerta),
+    funcion_puerta: this.fb.nonNullable.control('asistencia' as FuncionPuerta),
+    categoria_zona_destino: this.fb.nonNullable.control('oficina' as NivelAccesoInterno),
     requiere_autorizacion: this.fb.nonNullable.control(false),
     estado: this.fb.nonNullable.control('activo' as Estado),
     lat: this.fb.control<number | null>(null),
@@ -79,12 +91,16 @@ export class PuertaForm {
           : null;
       this.idEmpresaSel.set(p?.id_empresa ?? 0);
       this.idAreaSel.set(p?.id_area ?? 0);
+      this.funcionSel.set(p?.funcion_puerta ?? 'asistencia');
       this.form.reset({
         nombre_puerta: p?.nombre_puerta ?? '',
         id_area: p?.id_area ?? 0,
         id_empresa: p?.id_empresa ?? 0,
         id_dispositivo: p?.id_dispositivo ?? 0,
         tipo_acceso: p?.tipo_acceso ?? 'bidireccional',
+        tipo_puerta: p?.tipo_puerta ?? 'campo',
+        funcion_puerta: p?.funcion_puerta ?? 'asistencia',
+        categoria_zona_destino: p?.categoria_zona_destino ?? 'oficina',
         requiere_autorizacion: p?.requiere_autorizacion ?? false,
         estado: p?.estado ?? 'activo',
         lat: punto?.lat ?? null,
@@ -101,6 +117,10 @@ export class PuertaForm {
 
   onArea(): void {
     this.idAreaSel.set(this.form.controls.id_area.value);
+  }
+
+  onFuncion(): void {
+    this.funcionSel.set(this.form.controls.funcion_puerta.value);
   }
 
   onMapCoords(coords: Coordenada[]): void {
@@ -121,6 +141,11 @@ export class PuertaForm {
       id_empresa: v.id_empresa || undefined,
       id_dispositivo: v.id_dispositivo || undefined,
       tipo_acceso: v.tipo_acceso,
+      tipo_puerta: v.tipo_puerta,
+      funcion_puerta: v.funcion_puerta,
+      // La zona destino solo aplica en control de acceso; si no, va null.
+      categoria_zona_destino:
+        v.funcion_puerta === 'control_acceso' ? v.categoria_zona_destino : null,
       requiere_autorizacion: v.requiere_autorizacion,
       estado: v.estado,
       latitud: v.lat ?? undefined,

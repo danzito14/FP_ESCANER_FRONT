@@ -9,7 +9,8 @@ export type OrigenEvento = 'incidencia' | 'intento';
  */
 export interface EventoCombinado {
   origen: OrigenEvento;
-  id: number;
+  /** UUID (string) del evento (incidencia o intento). */
+  id: string;
   tipo: string;
   fecha: string;
   fecha_hora: string;

@@ -54,7 +54,7 @@ export class AsistenciasPage {
   readonly empresas = signal<Map<number, Empresa>>(new Map());
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
-  readonly mapSelId = signal<number | null>(null);
+  readonly mapSelId = signal<string | null>(null);
 
   readonly colorEstado = colorEstado;
   readonly filtroEmpresa = signal(0);

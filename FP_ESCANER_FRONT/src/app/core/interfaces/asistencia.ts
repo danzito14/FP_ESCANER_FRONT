@@ -1,7 +1,8 @@
 import { EstadoRegistro, TipoRegistro } from './common';
 
 export interface Asistencia {
-  id_asistencia: number;
+  /** UUID (string) — las tablas de eventos usan UUID. */
+  id_asistencia: string;
   id_trabajador: number;
   id_puerta: number;
   tipo_registro: TipoRegistro;

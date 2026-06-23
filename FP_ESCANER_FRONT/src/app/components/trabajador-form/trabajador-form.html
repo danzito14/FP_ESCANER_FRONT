@@ -44,6 +44,31 @@
     </div>
   </div>
 
+  <div class="form-row">
+    <div class="form-field">
+      <label for="permiso_escaneo">Permiso de escaneo</label>
+      <select id="permiso_escaneo" formControlName="permiso_escaneo" (change)="onPermiso()">
+        <option value="campo">Campo</option>
+        <option value="administrativo">Administrativo</option>
+        <option value="general">General</option>
+        <option value="super">Súper</option>
+      </select>
+    </div>
+
+    <div class="form-field">
+      <label for="nivel_acceso_interno">Nivel de acceso interno</label>
+      <select id="nivel_acceso_interno" formControlName="nivel_acceso_interno">
+        <option value="">Sin permisos</option>
+        <option value="oficina">Oficina</option>
+        <option value="empaque">Empaque</option>
+        <option value="mixto">Mixto</option>
+      </select>
+      @if (esCampo()) {
+        <small class="hint">Permiso "Campo" no tiene acceso interno (sin permisos).</small>
+      }
+    </div>
+  </div>
+
   @if (isEdit()) {
     <div class="form-field">
       <label for="estado">Estado</label>

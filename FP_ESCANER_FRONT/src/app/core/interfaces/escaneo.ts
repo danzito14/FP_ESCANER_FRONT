@@ -16,13 +16,25 @@ export interface AccesoTrabajador {
   estado: string;
 }
 
+/**
+ * Verdicto del reconocimiento facial con anti-spoof.
+ * - no_rostro: no se detectó un rostro válido en las capturas.
+ * - spoof: posible foto/pantalla (anti-suplantación).
+ * - no_match: rostro válido pero no coincide con ningún trabajador.
+ * - match: reconocido.
+ */
+export type ResultadoEscaneo = 'no_rostro' | 'spoof' | 'no_match' | 'match';
+
 /** Respuesta de POST /scanner/acceso/liveness. */
 export interface AccesoResponse {
   acceso: boolean;
   mensaje: string;
   trabajador: AccesoTrabajador | null;
-  id_escaneo: number | null;
+  /** UUID (string) del escaneo generado. */
+  id_escaneo: string | null;
   estado_registro: string;
+  /** Verdicto del reconocimiento (si el backend lo devuelve). */
+  resultado?: ResultadoEscaneo | null;
   /** Confianza/similitud del reconocimiento (0–1), si el backend la devuelve. */
   confianza?: number | null;
 }

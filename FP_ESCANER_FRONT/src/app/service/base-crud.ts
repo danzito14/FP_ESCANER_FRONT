@@ -50,8 +50,8 @@ export abstract class BaseCrud<T, TCreate = Partial<T>, TUpdate = Partial<T>> {
     return this.http.get<T[]>(this.baseUrl, { params });
   }
 
-  /** GET /recurso/{id} */
-  getById(id: number): Observable<T> {
+  /** GET /recurso/{id} (id int para catálogos, UUID string para eventos). */
+  getById(id: number | string): Observable<T> {
     return this.http.get<T>(`${this.baseUrl}/${id}`);
   }
 
@@ -61,12 +61,12 @@ export abstract class BaseCrud<T, TCreate = Partial<T>, TUpdate = Partial<T>> {
   }
 
   /** PUT /recurso/{id} */
-  update(id: number, data: TUpdate): Observable<T> {
+  update(id: number | string, data: TUpdate): Observable<T> {
     return this.http.put<T>(`${this.baseUrl}/${id}`, data);
   }
 
   /** DELETE /recurso/{id} (baja lógica) */
-  remove(id: number): Observable<T> {
+  remove(id: number | string): Observable<T> {
     return this.http.delete<T>(`${this.baseUrl}/${id}`);
   }
 }

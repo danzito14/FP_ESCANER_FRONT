@@ -352,7 +352,7 @@ export class ScannerPage implements OnDestroy {
 
     if (!this.ENVIAR_AL_BACKEND) {
       t.estado = 'ok';
-      this.toastPush(t.id, { acceso: true, mensaje: 'Modo prueba', trabajador: null, id_escaneo: 0, estado_registro: 'prueba' }, scoreMejor);
+      this.toastPush(t.id, { acceso: true, mensaje: 'Modo prueba', trabajador: null, id_escaneo: null, estado_registro: 'prueba' }, scoreMejor);
       return;
     }
 
@@ -394,25 +394,39 @@ export class ScannerPage implements OnDestroy {
       ? `${res.trabajador.nombre} ${res.trabajador.apellido}`
       : 'No reconocido';
     const conf = res.confianza != null ? res.confianza : scoreFallback;
+    // Motivo claro según el verdicto del backend (no_rostro/spoof/no_match).
+    const motivo = this.motivoRechazo(res);
     const toast: Toast = {
       id,
       exito: res.acceso,
       titulo: `Cara ${cara}: ${res.acceso ? 'Exitoso' : 'Rechazado'}`,
       nombre,
       pct: conf != null ? Math.round(conf * 100) : null,
-      mensaje: res.mensaje,
+      mensaje: motivo ?? res.mensaje,
     };
     this.toasts.update((arr) => [toast, ...arr]);
     setTimeout(() => this.toasts.update((arr) => arr.filter((x) => x.id !== id)), 5000);
 
-    
-
     const frase = res.acceso
       ? `Aprobado, ${nombre}.`
-      : res.trabajador
-        ? `Denegado, ${nombre}.`
-        : 'Acceso denegado. Rostro no reconocido.';
+      : (motivo ??
+        (res.trabajador ? `Denegado, ${nombre}.` : 'Acceso denegado. Rostro no reconocido.'));
     this.voz.decir(frase); // no-op si la voz está silenciada
+  }
+
+  /** Mensaje claro de rechazo según el verdicto del backend (si lo trae). */
+  private motivoRechazo(res: AccesoResponse): string | null {
+    if (res.acceso) return null;
+    switch (res.resultado) {
+      case 'no_rostro':
+        return 'No se detectó un rostro válido.';
+      case 'spoof':
+        return 'Posible foto o suplantación.';
+      case 'no_match':
+        return 'Rostro no reconocido.';
+      default:
+        return null;
+    }
   }
 
   /** Score mínimo para aceptar un rostro: más bajo en alcance 'largo'. */

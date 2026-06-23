@@ -39,6 +39,7 @@ const TIPOS_INCIDENCIA = [
   'salida_sin_registro',
   'entrada_sin_registro',
   'acceso_otra_empresa',
+  'area_incorrecta',
 ];
 
 function fmtFechaHora(s?: string | null): string {
