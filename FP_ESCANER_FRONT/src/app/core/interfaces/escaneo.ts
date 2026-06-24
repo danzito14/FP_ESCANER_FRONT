@@ -1,4 +1,27 @@
-import { TipoRegistro } from './common';
+import { EstadoRegistro, TipoRegistro } from './common';
+
+/**
+ * Lectura de GET /escaneos/{id_escaneo} — registro completo de un escaneo facial.
+ * Refleja la tabla `escaneos` (la API serializa `geography(Point)` como WKT).
+ */
+export interface EscaneoResponse {
+  /** UUID del escaneo. */
+  id_escaneo: string;
+  id_trabajador: number;
+  id_puerta: number;
+  id_empresa?: number | null;
+  tipo_registro: TipoRegistro;
+  fecha_hora: string;
+  confianza_biometrica?: number | null;
+  estado_registro: EstadoRegistro;
+  /** El backend ya calculó si el escaneo cayó dentro del área asignada. */
+  dentro_de_area?: boolean | null;
+  observaciones?: string | null;
+  id_dispositivo?: number | null;
+  /** Punto PostGIS en WKT, ej. "POINT (lng lat)"; null si no se capturó coordenada. */
+  ubicacion?: string | null;
+  fecha_creacion: string;
+}
 
 /** Parámetros (query string) de POST /scanner/acceso/liveness. */
 export interface AccesoParams {
