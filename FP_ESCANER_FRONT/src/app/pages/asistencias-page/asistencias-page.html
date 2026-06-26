@@ -34,7 +34,7 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th>ID</th>
+              <th>ID empleado</th>
               <th>Trabajador</th>
               <th>Empresa</th>
               <th>Área</th>
@@ -50,7 +50,7 @@
           <tbody>
             @for (a of itemsPagina(); track a.id_asistencia) {
               <tr [class.is-selected]="mapSelId() === a.id_asistencia" (click)="mapSelId.set(a.id_asistencia)">
-                <td>{{ a.id_trabajador }}</td>
+                <td>{{ a.id_emp || '—' }}</td>
                 <td>{{ trabajadorNombre(a) }}</td>
                 <td>{{ empresaNombre(a) }}</td>
                 <td>{{ areaNombre(a) }}</td>

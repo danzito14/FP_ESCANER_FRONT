@@ -1,4 +1,6 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subscription } from 'rxjs';
 
 import { EmbeddingCapture } from '../../components/embedding-capture/embedding-capture';
 import { FiltrosTabla } from '../../components/filtros-tabla/filtros-tabla';
@@ -31,6 +33,7 @@ export class TrabajadoresPage {
   private readonly embeddingService = inject(EmbeddingService);
   private readonly empresaService = inject(EmpresaService);
   private readonly auth = inject(AuthService);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly esAdmin = this.auth.esAdmin;
 
@@ -38,6 +41,10 @@ export class TrabajadoresPage {
   readonly areas = signal<AreaTrabajo[]>([]);
   readonly empresas = signal<Empresa[]>([]);
   readonly loading = signal(false);
+  /** true mientras siguen llegando lotes en segundo plano (tras mostrar el 1º). */
+  readonly cargandoMas = signal(false);
+  /** Suscripción de la carga por lotes en curso; se cancela al recargar. */
+  private cargaSub?: Subscription;
   readonly error = signal<string | null>(null);
   readonly showForm = signal(false);
   readonly selected = signal<Trabajador | null>(null);
@@ -100,18 +107,27 @@ export class TrabajadoresPage {
   }
 
   load(): void {
+    // Cancela una carga por lotes previa (búsqueda nueva, recarga tras editar…).
+    this.cargaSub?.unsubscribe();
     this.loading.set(true);
+    this.cargandoMas.set(true);
     this.error.set(null);
-    this.service.list({ nombre: this.buscar() }).subscribe({
-      next: (data) => {
-        this.items.set(data);
-        this.loading.set(false);
-      },
-      error: (e) => {
-        this.error.set(this.msg(e));
-        this.loading.set(false);
-      },
-    });
+    this.cargaSub = this.service
+      .listAll({ nombre: this.buscar() })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (data) => {
+          // Cada lote reemplaza el acumulado; el 1º quita el spinner principal.
+          this.items.set(data);
+          this.loading.set(false);
+        },
+        error: (e) => {
+          this.error.set(this.msg(e));
+          this.loading.set(false);
+          this.cargandoMas.set(false);
+        },
+        complete: () => this.cargandoMas.set(false),
+      });
   }
 
   areaNombre(id: number): string {

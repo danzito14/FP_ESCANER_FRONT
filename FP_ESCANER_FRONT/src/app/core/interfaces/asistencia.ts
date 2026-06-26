@@ -3,7 +3,10 @@ import { EstadoRegistro, TipoRegistro } from './common';
 export interface Asistencia {
   /** UUID (string) — las tablas de eventos usan UUID. */
   id_asistencia: string;
+  /** ID interno del trabajador (para operaciones/joins). */
   id_trabajador: number;
+  /** Número de empleado de nómina; lo que se muestra en la tabla. null si no aplica. */
+  id_emp?: string | null;
   id_puerta: number;
   tipo_registro: TipoRegistro;
   fecha_hora: string;

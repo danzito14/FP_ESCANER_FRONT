@@ -1,7 +1,17 @@
 import { EstadoTrabajador, NivelAccesoInterno, PermisoEscaneo } from './common';
 
 export interface Trabajador {
+  /** ID interno (PK) — se sigue usando para TODAS las operaciones (editar, borrar, rostro). */
   id_trabajador: number;
+  /**
+   * Número de empleado de la nómina (SYS21). Es el identificador "humano" que se
+   * muestra en las tablas. null en trabajadores creados manualmente.
+   */
+  id_emp?: string | null;
+  /** Origen de nómina (ej. 'agricola_com'); acompaña a id_emp. */
+  origen_nomina?: string | null;
+  /** Empresa (tenant) del trabajador; el backend la deriva del área. */
+  id_empresa?: number | null;
   nombre: string;
   apellido: string;
   id_area: number;
