@@ -77,6 +77,12 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'intentos',
+    canActivate: [scopeGuard('incidencias:read')],
+    loadComponent: () =>
+      import('./pages/intentos-page/intentos-page').then((m) => m.IntentosPage),
+  },
+  {
     path: 'scanner',
     canActivate: [scopeGuard('scanner:use')],
     loadComponent: () =>

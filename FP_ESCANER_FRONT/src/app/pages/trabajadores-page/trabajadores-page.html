@@ -24,7 +24,7 @@
     <table class="data-table">
       <thead>
         <tr>
-          <th>ID</th>
+          <th>ID empleado</th>
           <th>Nombre</th>
           <th>Área</th>
           <th>Estado</th>
@@ -35,7 +35,7 @@
       <tbody>
         @for (t of itemsPagina(); track t.id_trabajador) {
           <tr>
-            <td>{{ t.id_trabajador }}</td>
+            <td>{{ t.id_emp || '—' }}</td>
             <td>{{ t.nombre }} {{ t.apellido }}</td>
             <td>{{ areaNombre(t.id_area) }}</td>
             <td>
@@ -64,6 +64,9 @@
       </tbody>
     </table>
     </div>
+    @if (cargandoMas()) {
+      <p class="loading">Cargando más trabajadores… ({{ items().length }} cargados)</p>
+    }
     <app-paginacion [total]="itemsFiltrados().length" [(pagina)]="pagina" />
   }
 

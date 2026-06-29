@@ -1,4 +1,4 @@
-import { Estado, TipoAcceso } from './common';
+import { Estado, FuncionPuerta, NivelAccesoInterno, TipoAcceso, TipoPuerta } from './common';
 
 export interface PuertaAcceso {
   id_puerta: number;
@@ -11,6 +11,10 @@ export interface PuertaAcceso {
   id_empresa?: number | null;
   id_dispositivo?: number | null;
   tipo_acceso: TipoAcceso;
+  tipo_puerta: TipoPuerta;
+  funcion_puerta: FuncionPuerta;
+  /** Zona destino; solo aplica si funcion_puerta = 'control_acceso'. */
+  categoria_zona_destino?: NivelAccesoInterno | null;
   requiere_autorizacion: boolean;
   estado: Estado;
   fecha_creacion: string;
@@ -22,6 +26,9 @@ export interface PuertaAccesoCreate {
   id_empresa?: number;
   id_dispositivo?: number;
   tipo_acceso: TipoAcceso;
+  tipo_puerta: TipoPuerta;
+  funcion_puerta: FuncionPuerta;
+  categoria_zona_destino?: NivelAccesoInterno | null;
   requiere_autorizacion: boolean;
   estado: Estado;
   latitud?: number;
@@ -34,6 +41,9 @@ export interface PuertaAccesoUpdate {
   id_empresa?: number;
   id_dispositivo?: number;
   tipo_acceso?: TipoAcceso;
+  tipo_puerta?: TipoPuerta;
+  funcion_puerta?: FuncionPuerta;
+  categoria_zona_destino?: NivelAccesoInterno | null;
   requiere_autorizacion?: boolean;
   estado?: Estado;
   latitud?: number;

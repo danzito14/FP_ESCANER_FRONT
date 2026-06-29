@@ -56,10 +56,61 @@
 }
 
 .foto-incidencia {
-  width: 100%;
+  width: auto;
+  max-width: 100%;
+  max-height: 300px;
   border-radius: var(--radius);
   border: 1px solid var(--border);
   display: block;
+  margin: 0 auto;
+  object-fit: contain;
+}
+
+/* Cuerpo del modal: foto sola, o foto + mapa lado a lado (fuera_de_area). */
+.evento-cuerpo.con-mapa {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.evento-mapa {
+  display: flex;
+  flex-direction: column;
+  min-height: 320px;
+
+  app-map-view {
+    flex: 1 1 auto;
+    min-height: 280px;
+  }
+}
+
+.mapa-leyenda {
+  margin: 0.5rem 0 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+/* Estado de carga / sin coordenada del escaneo, ocupando el hueco del mapa. */
+.mapa-placeholder {
+  flex: 1 1 auto;
+  min-height: 280px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 1rem;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  background: var(--bg-muted);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+}
+
+/* En pantallas angostas el mapa pasa debajo de la foto. */
+@media (max-width: 700px) {
+  .evento-cuerpo.con-mapa {
+    grid-template-columns: 1fr;
+  }
 }
 
 .crud-header-actions {

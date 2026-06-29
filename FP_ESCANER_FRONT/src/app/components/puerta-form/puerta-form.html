@@ -54,6 +54,36 @@
 
       <div class="form-row">
         <div class="form-field">
+          <label for="tipo_puerta">Tipo de puerta</label>
+          <select id="tipo_puerta" formControlName="tipo_puerta">
+            <option value="campo">Campo</option>
+            <option value="administrativa">Administrativa</option>
+            <option value="mixta">Mixta</option>
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label for="funcion_puerta">Función</label>
+          <select id="funcion_puerta" formControlName="funcion_puerta" (change)="onFuncion()">
+            <option value="asistencia">Asistencia</option>
+            <option value="control_acceso">Control de acceso</option>
+          </select>
+        </div>
+      </div>
+
+      @if (esControlAcceso()) {
+        <div class="form-field">
+          <label for="categoria_zona_destino">Zona destino</label>
+          <select id="categoria_zona_destino" formControlName="categoria_zona_destino">
+            <option value="oficina">Oficina</option>
+            <option value="empaque">Empaque</option>
+            <option value="mixto">Mixto</option>
+          </select>
+        </div>
+      }
+
+      <div class="form-row">
+        <div class="form-field">
           <label for="estado">Estado</label>
           <select id="estado" formControlName="estado">
             <option value="activo">Activo</option>

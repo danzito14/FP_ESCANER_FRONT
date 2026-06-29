@@ -15,6 +15,7 @@ import {
   faUser,
   faUserGear,
   faUsers,
+  faUserShield,
 } from '@fortawesome/free-solid-svg-icons';
 
 import { AuthService } from '../../service/auth';
@@ -50,6 +51,7 @@ export class Sidebar {
     { titulo: 'Puertas', ruta: '/puertas', icono: faDoorOpen, scope: 'puertas:read' },
     { titulo: 'Asistencias', ruta: '/asistencias', icono: faClipboardCheck, scope: 'asistencias:read' },
     { titulo: 'Incidencias', ruta: '/incidencias', icono: faTriangleExclamation, scope: 'incidencias:read' },
+    { titulo: 'Intentos', ruta: '/intentos', icono: faUserShield, scope: 'incidencias:read' },
     { titulo: 'Reportes', ruta: '/reportes', icono: faChartColumn, scope: 'reportes:read' },
     { titulo: 'Scanner', ruta: '/scanner', icono: faExpand, scope: 'scanner:use' },
   ];

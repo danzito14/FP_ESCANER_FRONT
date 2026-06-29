@@ -3,7 +3,8 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 import { API_URL } from '../core/constants/api';
-import { AccesoParams, AccesoResponse } from '../core/interfaces/escaneo';
+import { AccesoParams, AccesoResponse, EscaneoResponse } from '../core/interfaces/escaneo';
+import { BaseCrud } from './base-crud';
 
 @Injectable({ providedIn: 'root' })
 export class ScannerService {
@@ -28,4 +29,14 @@ export class ScannerService {
       params: p,
     });
   }
+}
+
+/**
+ * Lectura de escaneos (GET /escaneos, GET /escaneos/{id}). Separado del
+ * ScannerService porque es un recurso REST normal (scope `escaneos:read`),
+ * no el flujo multipart del scanner.
+ */
+@Injectable({ providedIn: 'root' })
+export class EscaneoService extends BaseCrud<EscaneoResponse> {
+  protected readonly resource = 'escaneos';
 }

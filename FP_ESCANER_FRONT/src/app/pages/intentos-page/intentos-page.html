@@ -1,0 +1,95 @@
+<section class="crud-page">
+  <header class="crud-header">
+    <h1>Intentos</h1>
+    <div class="crud-header-actions">
+      <button class="btn btn-sm" (click)="load()">Actualizar</button>
+    </div>
+  </header>
+
+  @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
+
+  <app-filtros-tabla
+    [esAdmin]="false"
+    [tipos]="tipos"
+    [conteosTipo]="conteosTipo()"
+    [total]="baseFiltrados().length"
+    [chips]="true"
+    [fechas]="true"
+    [(texto)]="buscar"
+    [(tipo)]="filtroTipo"
+    [(fechaInicio)]="fechaInicio"
+    [(fechaFin)]="fechaFin"
+  />
+
+  @if (loading()) {
+    <p class="loading">Cargando…</p>
+  } @else {
+    <div class="crud-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Trabajador</th>
+            <th>Tipo</th>
+            <th>Fecha / hora</th>
+            <th>Descripción</th>
+            <th>Similitud</th>
+            <th>Foto</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (e of itemsPagina(); track e.id) {
+            <tr>
+              <td>{{ trabajadorNombre(e) }}</td>
+              <td><span class="tag" [style.--c]="colorEstado(e.tipo)">{{ e.tipo }}</span></td>
+              <td>{{ e.fecha_hora | date: 'dd/MM/yyyy HH:mm' }}</td>
+              <td>{{ e.descripcion || '—' }}</td>
+              <td>
+                @if (e.similitud != null) {
+                  {{ e.similitud * 100 | number: '1.0-0' }}%
+                } @else {
+                  —
+                }
+              </td>
+              <td>
+                @if (e.tiene_foto) {
+                  <button type="button" class="btn btn-sm" (click)="verFoto(e)">Ver</button>
+                } @else {
+                  —
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="6" class="empty">Sin intentos.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <app-paginacion [total]="itemsFiltrados().length" [(pagina)]="pagina" />
+  }
+
+  @if (eventoSel(); as e) {
+    <div class="modal-backdrop" (click)="cerrarFoto()">
+      <div class="modal" (click)="$event.stopPropagation()">
+        <h2>Foto del intento</h2>
+        <p class="foto-meta">
+          <span class="tag" [style.--c]="colorEstado(e.tipo)">{{ e.tipo }}</span>
+          · {{ trabajadorNombre(e) }} · {{ e.fecha_hora | date: 'dd/MM/yyyy HH:mm' }}
+          @if (e.similitud != null) { · {{ e.similitud * 100 | number: '1.0-0' }}% }
+        </p>
+        @if (e.descripcion) { <p>{{ e.descripcion }}</p> }
+
+        @if (fotoCargando()) {
+          <p class="loading">Cargando foto…</p>
+        } @else if (fotoUrl(); as url) {
+          <img class="foto-incidencia" [src]="url" alt="Foto del intento" />
+        } @else {
+          <p class="hint">Sin foto.</p>
+        }
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-primary" (click)="cerrarFoto()">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  }
+</section>

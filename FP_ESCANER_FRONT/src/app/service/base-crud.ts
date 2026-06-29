@@ -1,6 +1,6 @@
 import { inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { EMPTY, Observable, expand, scan } from 'rxjs';
 
 import { API_URL } from '../core/constants/api';
 
@@ -50,8 +50,34 @@ export abstract class BaseCrud<T, TCreate = Partial<T>, TUpdate = Partial<T>> {
     return this.http.get<T[]>(this.baseUrl, { params });
   }
 
-  /** GET /recurso/{id} */
-  getById(id: number): Observable<T> {
+  /**
+   * Carga progresiva de TODOS los registros en lotes (para tablas grandes, ej.
+   * +15k trabajadores, donde el `limit` por defecto solo traía 100).
+   *
+   * Pide /recurso por páginas de `tamLote` y EMITE el acumulado tras cada lote,
+   * así la tabla muestra el primer lote al instante y va creciendo sola. Termina
+   * cuando un lote vuelve incompleto (< tamLote filas) = ya no hay más.
+   *
+   * Conserva los mismos filtros server-side de list() (nombre, idEmpresa); el
+   * resto del filtrado (área/estado) sigue siendo client-side sobre el acumulado.
+   */
+  listAll(
+    opts: { nombre?: string; idEmpresa?: number; tamLote?: number } = {},
+  ): Observable<T[]> {
+    const tamLote = opts.tamLote ?? 500;
+    const lote = (skip: number) =>
+      this.list({ nombre: opts.nombre, idEmpresa: opts.idEmpresa, skip, limit: tamLote });
+
+    return lote(0).pipe(
+      // i = índice de iteración de expand: el lote ya emitido es la página i,
+      // así que el siguiente skip es (i + 1) * tamLote.
+      expand((filas, i) => (filas.length < tamLote ? EMPTY : lote((i + 1) * tamLote))),
+      scan((acc, filas) => acc.concat(filas), [] as T[]),
+    );
+  }
+
+  /** GET /recurso/{id} (id int para catálogos, UUID string para eventos). */
+  getById(id: number | string): Observable<T> {
     return this.http.get<T>(`${this.baseUrl}/${id}`);
   }
 
@@ -61,12 +87,12 @@ export abstract class BaseCrud<T, TCreate = Partial<T>, TUpdate = Partial<T>> {
   }
 
   /** PUT /recurso/{id} */
-  update(id: number, data: TUpdate): Observable<T> {
+  update(id: number | string, data: TUpdate): Observable<T> {
     return this.http.put<T>(`${this.baseUrl}/${id}`, data);
   }
 
   /** DELETE /recurso/{id} (baja lógica) */
-  remove(id: number): Observable<T> {
+  remove(id: number | string): Observable<T> {
     return this.http.delete<T>(`${this.baseUrl}/${id}`);
   }
 }

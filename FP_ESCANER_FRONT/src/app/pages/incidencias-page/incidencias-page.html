@@ -94,7 +94,7 @@
 
   @if (eventoSel(); as e) {
     <div class="modal-backdrop" (click)="cerrarFoto()">
-      <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal" [class.modal-wide]="mostrarMapa()" (click)="$event.stopPropagation()">
         <h2>Foto del evento</h2>
         <p class="foto-meta">
           <span class="origen-badge" [class.es-intento]="e.origen === 'intento'">{{ e.origen }}</span>
@@ -104,13 +104,30 @@
         </p>
         @if (e.descripcion) { <p>{{ e.descripcion }}</p> }
 
-        @if (fotoCargando()) {
-          <p class="loading">Cargando foto…</p>
-        } @else if (fotoUrl(); as url) {
-          <img class="foto-incidencia" [src]="url" alt="Foto del evento" />
-        } @else {
-          <p class="hint">Sin foto.</p>
-        }
+        <div class="evento-cuerpo" [class.con-mapa]="mostrarMapa()">
+          <div class="evento-foto">
+            @if (fotoCargando()) {
+              <p class="loading">Cargando foto…</p>
+            } @else if (fotoUrl(); as url) {
+              <img class="foto-incidencia" [src]="url" alt="Foto del evento" />
+            } @else {
+              <p class="hint">Sin foto.</p>
+            }
+          </div>
+
+          @if (mostrarMapa()) {
+            <div class="evento-mapa">
+              @if (escaneoCargando()) {
+                <div class="mapa-placeholder">Cargando ubicación…</div>
+              } @else if (mapFeatures().length) {
+                <app-map-view [features]="mapFeatures()" [selectedId]="escaneoSel()?.id_escaneo ?? null" />
+                <p class="mapa-leyenda">Ubicación registrada del escaneo (fuera del área asignada).</p>
+              } @else {
+                <div class="mapa-placeholder">Sin ubicación registrada para este escaneo.</div>
+              }
+            </div>
+          }
+        </div>
 
         <div class="form-actions">
           <button type="button" class="btn btn-primary" (click)="cerrarFoto()">Cerrar</button>

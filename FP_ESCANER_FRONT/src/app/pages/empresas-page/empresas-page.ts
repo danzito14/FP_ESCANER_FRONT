@@ -49,7 +49,7 @@ export class EmpresasPage {
       id: e.id_empresa,
       wkt: e.ubicacion ?? lngLatToWkt(e.coordenadas),
       label: e.nombre_empresa,
-      color: '#ff6427', // naranja
+      color: '#245640', // naranja
     })),
   );
 

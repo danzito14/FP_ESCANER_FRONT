@@ -62,7 +62,7 @@
     font-size: 1.05rem;
 
     fa-icon {
-      color: var(--accent, #ff6427);
+      color: var(--accent, #245640);
     }
 
     .muted {
@@ -95,14 +95,14 @@
     position: absolute;
     inset: 0 auto 0 0;
     width: 4px;
-    background: var(--c, #ff6427);
+    background: var(--c, #245640);
   }
 
   .kpi-ico {
     position: absolute;
     top: 0.9rem;
     right: 1rem;
-    color: var(--c, #ff6427);
+    color: var(--c, #245640);
     opacity: 0.35;
     font-size: 1.2rem;
   }
@@ -111,7 +111,7 @@
     font-size: 1.9rem;
     font-weight: 700;
     line-height: 1.1;
-    color: var(--c, #ff6427);
+    color: var(--c, #245640);
   }
 
   .kpi-lbl {

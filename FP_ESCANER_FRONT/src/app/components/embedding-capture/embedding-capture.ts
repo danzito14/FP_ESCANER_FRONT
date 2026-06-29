@@ -224,7 +224,7 @@ export class EmbeddingCapture implements OnDestroy {
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (!face) return;
-    const color = face.score >= SCORE_MIN ? '#ff6427' : '#9099a5';
+    const color = face.score >= SCORE_MIN ? '#245640' : '#9099a5';
     const mx = canvas.width - face.x - face.width; // espejo
     ctx.lineWidth = 3;
     ctx.strokeStyle = color;

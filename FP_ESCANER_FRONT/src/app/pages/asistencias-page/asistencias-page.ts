@@ -54,7 +54,7 @@ export class AsistenciasPage {
   readonly empresas = signal<Map<number, Empresa>>(new Map());
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
-  readonly mapSelId = signal<number | null>(null);
+  readonly mapSelId = signal<string | null>(null);
 
   readonly colorEstado = colorEstado;
   readonly filtroEmpresa = signal(0);
@@ -130,7 +130,7 @@ export class AsistenciasPage {
     for (const e of this.empresas().values()) {
       const wkt = e.ubicacion ?? lngLatToWkt(e.coordenadas);
       if (wkt) {
-        features.push({ id: `empresa-${e.id_empresa}`, wkt, label: e.nombre_empresa, color: '#ff6427' });
+        features.push({ id: `empresa-${e.id_empresa}`, wkt, label: e.nombre_empresa, color: '#245640' });
       }
     }
 

@@ -23,7 +23,9 @@ export function colorEstado(valor: string): string {
     case 'rechazado':
     case 'fuera_de_area':
     case 'acceso_otra_empresa':
+    case 'area_incorrecta':
     case 'spoofing':
+    case 'otra_empresa':
     case 'falta':
     case 'cancelado':
       return '#dc2626'; // rojo
