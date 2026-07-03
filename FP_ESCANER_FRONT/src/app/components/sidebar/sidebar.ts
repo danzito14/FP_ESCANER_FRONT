@@ -1,25 +1,30 @@
 import { Component, computed, inject } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { FaIconComponent } from '@fortawesome/angular-fontawesome';
 import { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import {
+  faArrowRightFromBracket,
   faBuilding,
   faChartColumn,
   faClipboardCheck,
   faDoorOpen,
   faExpand,
   faGear,
+  faHouse,
   faLocationDot,
   faMicrochip,
   faTriangleExclamation,
   faUser,
   faUserGear,
+  faUserPlus,
   faUsers,
   faUserShield,
+  faXmark,
 } from '@fortawesome/free-solid-svg-icons';
 
 import { AuthService } from '../../service/auth';
 import { LayoutService } from '../../service/layout';
+import { ConexionService } from '../../core/conexion.service';
 
 interface NavItem {
   titulo: string;
@@ -39,7 +44,9 @@ interface NavItem {
 })
 export class Sidebar {
   protected readonly layout = inject(LayoutService);
-  private readonly auth = inject(AuthService);
+  protected readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+  private readonly conexion = inject(ConexionService);
 
   private readonly todos: NavItem[] = [
     { titulo: 'Usuarios', ruta: '/usuarios', icono: faUser, scope: 'usuarios:read' },
@@ -56,9 +63,38 @@ export class Sidebar {
     { titulo: 'Scanner', ruta: '/scanner', icono: faExpand, scope: 'scanner:use' },
   ];
 
-  /** Solo los ítems que el usuario puede ver según sus scopes. */
-  readonly items = computed(() => this.todos.filter((i) => this.auth.tieneScope(i.scope)));
+  /** Kiosko puro = puede escanear pero no ver el panel. */
+  private readonly esKiosko = computed(
+    () => this.auth.puedeUsarScanner() && !this.auth.puedeVerDashboard(),
+  );
+
+  /**
+   * Ítems visibles: si es kiosko, solo Escáner (ruta según el modo de conexión:
+   * offline→/escaneo, online→/scanner) + Enrolar. Si no, los del admin según scopes.
+   */
+  readonly items = computed<NavItem[]>(() => {
+    if (this.esKiosko()) {
+      return [
+        {
+          titulo: 'Escáner',
+          ruta: this.conexion.offline() ? '/escaneo' : '/scanner',
+          icono: faExpand,
+          scope: 'scanner:use',
+        },
+        { titulo: 'Enrolar', ruta: '/enrolar', icono: faUserPlus, scope: 'scanner:use' },
+      ];
+    }
+    return this.todos.filter((i) => this.auth.tieneScope(i.scope));
+  });
 
   /** Configuración: disponible para cualquier usuario con sesión. */
   readonly iconConfig = faGear;
+  readonly iconHome = faHouse;
+  readonly iconClose = faXmark;
+  readonly iconLogout = faArrowRightFromBracket;
+
+  logout(): void {
+    this.auth.logout();
+    this.router.navigate(['/login']);
+  }
 }

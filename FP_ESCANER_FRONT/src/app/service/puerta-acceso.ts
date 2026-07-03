@@ -15,4 +15,5 @@ export class PuertaAccesoService extends BaseCrud<
 > {
   // OJO: la doc indica prefijo '/puertas'. Ajusta si tu API usa otro (p. ej. 'puertas_acceso').
   protected readonly resource = 'puertas';
+  protected override readonly idParam = 'id_puerta';
 }

@@ -28,6 +28,38 @@
 
   @if (loading()) {
     <p class="loading">Cargando…</p>
+  } @else if (modoRetardos()) {
+    <div class="crud-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Trabajador</th>
+            <th>Nº empleado</th>
+            <th>Área</th>
+            <th>Fecha</th>
+            <th>Hora esperada</th>
+            <th>Hora real</th>
+            <th>Retardo</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of retardosPagina(); track r.id_trabajador + '-' + r.fecha) {
+            <tr>
+              <td>{{ r.trabajador_nombre ?? '—' }}</td>
+              <td>{{ r.id_emp ?? '—' }}</td>
+              <td>{{ r.area_nombre ?? '—' }}</td>
+              <td>{{ fechaCorta(r.fecha) }}</td>
+              <td>{{ r.hora_esperada }}</td>
+              <td>{{ r.hora_real }}</td>
+              <td><span class="tag" [style.--c]="'#c2410c'">{{ fmtMin(r.minutos_retardo) }}</span></td>
+            </tr>
+          } @empty {
+            <tr><td colspan="7" class="empty">Sin retardos en el período.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <app-paginacion [total]="retardosFiltrados().length" [(pagina)]="pagina" />
   } @else {
     <div class="crud-layout with-map">
       <div class="crud-table-wrap">

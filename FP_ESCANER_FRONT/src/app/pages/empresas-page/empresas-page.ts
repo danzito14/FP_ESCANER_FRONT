@@ -5,7 +5,7 @@ import { FiltrosTabla } from '../../components/filtros-tabla/filtros-tabla';
 import { MapFeature, MapView } from '../../components/map-view/map-view';
 import { Paginacion, TAM_PAGINA } from '../../components/paginacion/paginacion';
 import { Empresa, EmpresaCreate, EmpresaUpdate } from '../../core/interfaces/empresa';
-import { alBuscar } from '../../core/utils/buscar';
+import { alBuscar, esNumerico } from '../../core/utils/buscar';
 import { lngLatToWkt } from '../../core/utils/geo';
 import { EmpresaService } from '../../service/empresa';
 import { PuedeDirective } from '../../core/directives/puede';
@@ -61,7 +61,12 @@ export class EmpresasPage {
   load(): void {
     this.loading.set(true);
     this.error.set(null);
-    this.service.list({ nombre: this.buscar() }).subscribe({
+    const term = this.buscar().trim();
+    // Solo dígitos → búsqueda por id (server); si no, por nombre.
+    const req = esNumerico(term)
+      ? this.service.buscarPorId(term)
+      : this.service.list({ nombre: term });
+    req.subscribe({
       next: (data) => {
         this.items.set(data);
         this.loading.set(false);

@@ -19,6 +19,14 @@
 
   <div class="form-row">
     <div class="form-field">
+      <label for="id_emp">Nº de empleado (id_emp)</label>
+      <input id="id_emp" type="text" formControlName="id_emp" placeholder="Ej. 012345" />
+      <small class="hint">Opcional — número de nómina. Vacío = alta manual.</small>
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div class="form-field">
       <label for="empresa_sel">Empresa</label>
       <select id="empresa_sel" [value]="empresaSel()" (change)="onEmpresa($event)">
         <option [value]="0">Selecciona una empresa…</option>

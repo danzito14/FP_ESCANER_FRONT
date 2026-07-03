@@ -21,3 +21,58 @@
   border: 1px solid var(--border);
   display: block;
 }
+
+// Celda de estado del intento (mismo patrón que incidencias).
+.estado-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  &.est-pendiente .dot { background: #eab308; }
+  &.est-revisada .dot { background: #f97316; }
+  &.est-justificada .dot { background: #16a34a; }
+}
+
+.estado-select {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.est-pendiente .estado-select {
+  border-color: #eab308;
+  color: #a16207;
+  background: #fefce8;
+}
+.est-revisada .estado-select {
+  border-color: #f97316;
+  color: #c2410c;
+  background: #fff7ed;
+}
+.est-justificada .estado-select {
+  border-color: #16a34a;
+  color: #15803d;
+  background: #f0fdf4;
+}
+
+// Estado de solo lectura (spoofing/fuera_de_area o ya justificado).
+.estado-text {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.est-pendiente .estado-text { color: #a16207; }
+.est-revisada .estado-text { color: #c2410c; }
+.est-justificada .estado-text { color: #15803d; }

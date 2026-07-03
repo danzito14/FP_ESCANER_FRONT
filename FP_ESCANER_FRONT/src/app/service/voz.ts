@@ -1,5 +1,7 @@
 import { Injectable, PLATFORM_ID, effect, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
+import { Capacitor } from '@capacitor/core';
+import { TextToSpeech } from '@capacitor-community/text-to-speech';
 
 const KEY = 'voz_config';
 
@@ -12,13 +14,15 @@ interface VozConfig {
 }
 
 /**
- * Voz artificial (texto a voz) con la Web Speech API del navegador.
- * Sin dependencias ni red; SSR-safe. Configuración (voz, volumen, velocidad,
- * tono, on/off) ajustable y persistida en localStorage.
+ * Voz artificial (texto a voz). En navegador usa la Web Speech API; en la app
+ * nativa (Capacitor) usa el motor TTS de Android vía @capacitor-community/text-to-speech,
+ * porque el WebView de Android no implementa speechSynthesis. SSR-safe.
+ * Configuración (voz, volumen, velocidad, tono, on/off) persistida en localStorage.
  */
 @Injectable({ providedIn: 'root' })
 export class VozService {
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
+  private readonly isNative = Capacitor.isNativePlatform();
 
   /** Voces disponibles en el sistema/navegador. */
   readonly voces = signal<SpeechSynthesisVoice[]>([]);
@@ -33,11 +37,15 @@ export class VozService {
 
   constructor() {
     this.cargarConfig();
-    const synth = this.synth;
-    if (synth) {
-      const cargar = () => this.voces.set(synth.getVoices());
-      cargar();
-      synth.addEventListener?.('voiceschanged', cargar);
+    if (this.isNative) {
+      this.cargarVocesNativas();
+    } else {
+      const synth = this.synth;
+      if (synth) {
+        const cargar = () => this.voces.set(synth.getVoices());
+        cargar();
+        synth.addEventListener?.('voiceschanged', cargar);
+      }
     }
     if (this.isBrowser) {
       effect(() => {
@@ -53,9 +61,9 @@ export class VozService {
     }
   }
 
-  /** ¿El navegador soporta síntesis de voz? */
+  /** ¿Hay síntesis de voz disponible? (motor nativo o Web Speech API). */
   get disponible(): boolean {
-    return !!this.synth;
+    return this.isNative || !!this.synth;
   }
 
   /** Dice el texto si la voz está activa (encola tras lo pendiente). */
@@ -71,6 +79,10 @@ export class VozService {
 
   /** Corta y vacía cualquier locución pendiente. */
   callar(): void {
+    if (this.isNative) {
+      TextToSpeech.stop().catch(() => {});
+      return;
+    }
     this.synth?.cancel();
   }
 
@@ -79,8 +91,13 @@ export class VozService {
   }
 
   private hablar(texto: string): void {
+    if (!texto.trim()) return;
+    if (this.isNative) {
+      this.hablarNativo(texto);
+      return;
+    }
     const synth = this.synth;
-    if (!synth || !texto.trim()) return;
+    if (!synth) return;
     const u = new SpeechSynthesisUtterance(texto);
     u.volume = this.volumen();
     u.rate = this.velocidad();
@@ -89,6 +106,31 @@ export class VozService {
     u.lang = voz?.lang ?? 'es-MX';
     if (voz) u.voice = voz;
     synth.speak(u);
+  }
+
+  /** Locución con el motor TTS nativo de Android. La voz se elige por índice. */
+  private hablarNativo(texto: string): void {
+    const voces = this.voces();
+    const idx = this.vozNombre() ? voces.findIndex((v) => v.name === this.vozNombre()) : -1;
+    const voz = idx >= 0 ? voces[idx] : voces.find((v) => v.lang?.toLowerCase().startsWith('es'));
+    TextToSpeech.speak({
+      text: texto,
+      lang: voz?.lang ?? 'es-MX',
+      rate: this.velocidad(),
+      pitch: this.tono(),
+      volume: this.volumen(),
+      ...(idx >= 0 ? { voice: idx } : {}),
+    }).catch(() => {});
+  }
+
+  /** Carga las voces del motor TTS nativo (puede no estar listo al arranque). */
+  private async cargarVocesNativas(): Promise<void> {
+    try {
+      const { voices } = await TextToSpeech.getSupportedVoices();
+      this.voces.set(voices as SpeechSynthesisVoice[]);
+    } catch {
+      // El motor TTS puede no estar inicializado todavía; se usa la voz por defecto.
+    }
   }
 
   /** Voz elegida por nombre; si no, la primera en español. */

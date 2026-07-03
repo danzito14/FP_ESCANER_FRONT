@@ -6,14 +6,13 @@
   }
 
   <a routerLink="/" class="brand">
-    <img class="brand-logo" src="favicon.ico" alt="FP Escáner" />
+    <img class="brand-logo" src="favicon.png" alt="SL Asistencias" />
     SL ASISTENCIAS
   </a>
 
   @if (auth.isAuthenticated()) {
     <div class="header-user">
       <span>{{ auth.currentUser()?.nombre_usuario }}</span>
-      <button class="btn btn-sm" (click)="logout()">Salir</button>
     </div>
   } @else {
     <a routerLink="/login" class="btn btn-sm btn-primary">Ingresar</a>

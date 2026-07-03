@@ -32,6 +32,15 @@
       </label>
 
       <label>
+        <span>Tipo de fichaje (offline)</span>
+        <select [value]="cfg.tipoFichaje()" (change)="cfg.tipoFichaje.set($any($event.target).value)">
+          <option value="oficina">Oficina</option>
+          <option value="campo">Campo</option>
+          <option value="empaque">Empaque</option>
+        </select>
+      </label>
+
+      <label>
         <span>Dispositivo (opcional)</span>
         <select [value]="cfg.idDispositivo()" (change)="cfg.idDispositivo.set(+$any($event.target).value)">
           <option [value]="0">Sin dispositivo</option>
@@ -84,6 +93,15 @@
         </button>
         <small class="hint">Dale permiso de cámara para ver los nombres y elegir la externa, trasera o frontal.</small>
       </div>
+
+      <label class="voz-toggle">
+        <input type="checkbox" [checked]="cfg.livenessOffline()"
+          (change)="cfg.livenessOffline.set($any($event.target).checked)" />
+        Prueba de vida (anti-foto) en escáner offline
+      </label>
+      <small class="hint">
+        Experimental: si rechaza caras reales, déjalo apagado. El score se ve en el log 🐞 para calibrar.
+      </small>
     </div>
   </div>
 
@@ -136,5 +154,99 @@
     } @else {
       <p class="config-aviso">Tu navegador no soporta voz artificial.</p>
     }
+  </div>
+
+  <div class="config-card">
+    <div class="config-titulo">
+      <fa-icon [icon]="iconDatos" />
+      <div>
+        <h2>Datos para escanear (offline)</h2>
+        <p>Verifica que el modelo y la información estén descargados en este equipo.</p>
+      </div>
+    </div>
+
+    @if (datos(); as d) {
+      <div class="voz-controls">
+        <div style="display:flex;align-items:center;gap:8px">
+          <fa-icon [icon]="d.modelo ? iconOk : iconNo" [style.color]="d.modelo ? '#16a34a' : '#dc2626'" />
+          Modelo de reconocimiento: {{ d.modelo ? 'descargado' : 'FALTA' }}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <fa-icon [icon]="d.trabajadores > 0 ? iconOk : iconNo" [style.color]="d.trabajadores > 0 ? '#16a34a' : '#dc2626'" />
+          Trabajadores: {{ d.trabajadores }}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <fa-icon [icon]="d.areas > 0 ? iconOk : iconNo" [style.color]="d.areas > 0 ? '#16a34a' : '#dc2626'" />
+          Áreas (zonas): {{ d.areas }}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <fa-icon [icon]="d.puertas > 0 ? iconOk : iconNo" [style.color]="d.puertas > 0 ? '#16a34a' : '#dc2626'" />
+          Puertas: {{ d.puertas }}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <fa-icon [icon]="puertaOk() ? iconOk : iconNo" [style.color]="puertaOk() ? '#16a34a' : '#dc2626'" />
+          Puerta del dispositivo: {{ puertaOk() ? 'configurada' : 'SIN configurar (arriba)' }}
+        </div>
+        <small class="hint">
+          Versión del roster: {{ d.rosterVersion ?? '—' }} · Eventos por subir: {{ d.pendientes }}
+        </small>
+
+        <p [style.font-weight]="600" [style.color]="datosListo() ? '#16a34a' : '#dc2626'">
+          {{ datosListo() ? '✓ Listo para escanear offline' : '✗ Faltan datos — re-sincroniza con internet' }}
+        </p>
+
+        <div class="config-cam-acciones">
+          <button type="button" class="btn btn-sm" (click)="verificar()" [disabled]="verificando()">
+            {{ verificando() ? 'Verificando…' : 'Verificar de nuevo' }}
+          </button>
+          <button type="button" class="btn btn-sm" (click)="resincronizar()" [disabled]="sincronizando()">
+            <fa-icon [icon]="iconSync" /> {{ sincronizando() ? 'Sincronizando…' : 'Re-sincronizar (necesita internet)' }}
+          </button>
+          <button type="button" class="btn btn-sm" (click)="subirAhora()"
+            [disabled]="subiendo() || d.pendientes === 0">
+            {{ subiendo() ? 'Subiendo…' : 'Subir ' + d.pendientes + ' pendiente(s) ahora' }}
+          </button>
+        </div>
+        @if (sincronizando()) {
+          <small class="hint">{{ sync.mensaje() }} — {{ sync.progreso() }}%</small>
+        }
+      </div>
+    } @else {
+      <p class="config-aviso">Verificando…</p>
+    }
+  </div>
+
+  <div class="config-card">
+    <div class="config-titulo">
+      <fa-icon [icon]="iconWifi" />
+      <div>
+        <h2>Modo de conexión</h2>
+        <p>Elige si el escáner usa el servidor (online) o el reconocimiento en el equipo (offline).</p>
+      </div>
+    </div>
+
+    <div class="voz-controls">
+      <div style="display:flex;align-items:center;gap:8px">
+        <fa-icon [icon]="conexion.hayInternet() ? iconOk : iconNo"
+          [style.color]="conexion.hayInternet() ? '#16a34a' : '#dc2626'" />
+        Internet: {{ conexion.hayInternet() ? 'disponible' : 'sin conexión' }}
+      </div>
+      <div>
+        Escáner activo:
+        <strong>{{ conexion.offline() ? 'OFFLINE (en el equipo)' : 'ONLINE (servidor)' }}</strong>
+      </div>
+
+      <label>
+        <span>Modo</span>
+        <select [value]="conexion.modo()" (change)="setModo($any($event.target).value)">
+          <option value="auto">Automático (según internet)</option>
+          <option value="online">Solo online</option>
+          <option value="offline">Solo offline</option>
+        </select>
+      </label>
+      <small class="hint">
+        En automático, si se cae internet cambia solo al escáner offline. En "solo offline" nunca usa el servidor.
+      </small>
+    </div>
   </div>
 </section>

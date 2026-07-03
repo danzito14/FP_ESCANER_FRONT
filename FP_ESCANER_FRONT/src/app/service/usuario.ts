@@ -6,4 +6,5 @@ import { Usuario, UsuarioCreate, UsuarioUpdate } from '../core/interfaces/usuari
 @Injectable({ providedIn: 'root' })
 export class UsuarioService extends BaseCrud<Usuario, UsuarioCreate, UsuarioUpdate> {
   protected readonly resource = 'usuarios';
+  protected override readonly idParam = 'id_usuario';
 }

@@ -6,13 +6,19 @@ import {
   Map as LeafletMap,
   MapOptions,
   circleMarker,
+  control,
   latLng,
   latLngBounds,
   polygon,
-  tileLayer,
 } from 'leaflet';
 
 import { wktToCoords, wktToPoint } from '../../core/utils/geo';
+import {
+  ETIQUETA_CALLE,
+  ETIQUETA_SATELITE,
+  capaCalle,
+  capaSatelite,
+} from '../../core/utils/map-layers';
 
 /** Elemento geográfico a dibujar en el mapa. */
 export interface MapFeature {
@@ -45,13 +51,12 @@ export class MapView {
   private map: LeafletMap | null = null;
   readonly layers = signal<Layer[]>([]);
 
+  // Capas base: calle (default) y satélite, alternables desde el control del mapa.
+  private readonly capaCalle = capaCalle();
+  private readonly capaSatelite = capaSatelite();
+
   readonly options: MapOptions = {
-    layers: [
-      tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap',
-      }),
-    ],
+    layers: [this.capaCalle],
     zoom: 13,
     center: latLng(25.7129, -108.7218),
   };
@@ -66,6 +71,14 @@ export class MapView {
 
   onMapReady(map: LeafletMap): void {
     this.map = map;
+    // Selector de capa base: Calle / Satélite (radios arriba a la derecha).
+    control
+      .layers(
+        { [ETIQUETA_CALLE]: this.capaCalle, [ETIQUETA_SATELITE]: this.capaSatelite },
+        undefined,
+        { position: 'topright' },
+      )
+      .addTo(map);
     // El contenedor puede montarse con tamaño 0; recalcular tras el render.
     setTimeout(() => map.invalidateSize(), 0);
     this.render(this.features(), this.selectedId());

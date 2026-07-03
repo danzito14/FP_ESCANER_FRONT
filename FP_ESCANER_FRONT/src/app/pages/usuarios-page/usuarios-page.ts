@@ -6,7 +6,7 @@ import { UsuarioForm } from '../../components/usuario-form/usuario-form';
 import { Empresa } from '../../core/interfaces/empresa';
 import { Rol } from '../../core/interfaces/rol';
 import { Usuario, UsuarioCreate, UsuarioUpdate } from '../../core/interfaces/usuario';
-import { alBuscar } from '../../core/utils/buscar';
+import { alBuscar, esNumerico } from '../../core/utils/buscar';
 import { AuthService } from '../../service/auth';
 import { EmpresaService } from '../../service/empresa';
 import { RolService } from '../../service/rol';
@@ -74,7 +74,12 @@ export class UsuariosPage {
   load(): void {
     this.loading.set(true);
     this.error.set(null);
-    this.service.list({ nombre: this.buscar() }).subscribe({
+    const term = this.buscar().trim();
+    // Solo dígitos → búsqueda por id (server); si no, por nombre.
+    const req = esNumerico(term)
+      ? this.service.buscarPorId(term)
+      : this.service.list({ nombre: term });
+    req.subscribe({
       next: (data) => {
         this.items.set(data);
         this.loading.set(false);

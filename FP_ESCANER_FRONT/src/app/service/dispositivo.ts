@@ -14,4 +14,5 @@ export class DispositivoService extends BaseCrud<
   DispositivoUpdate
 > {
   protected readonly resource = 'dispositivos';
+  protected override readonly idParam = 'id_dispositivo';
 }

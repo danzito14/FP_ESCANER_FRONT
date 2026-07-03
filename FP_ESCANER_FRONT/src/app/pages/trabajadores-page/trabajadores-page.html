@@ -6,6 +6,8 @@
 
   @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
 
+  @if (esAdmin()) { <app-emp-sync /> }
+
   <app-filtros-tabla
     [esAdmin]="esAdmin()"
     [empresas]="empresas()"
@@ -15,6 +17,7 @@
     [(area)]="filtroArea"
     [(estado)]="filtroEstado"
     [(texto)]="buscar"
+    [placeholderBuscar]="'Buscar por nombre o nº de empleado…'"
   />
 
   @if (loading()) {

@@ -1,7 +1,16 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FaIconComponent } from '@fortawesome/angular-fontawesome';
-import { faCamera, faVolumeHigh, faVolumeXmark } from '@fortawesome/free-solid-svg-icons';
+import {
+  faCamera,
+  faCircleCheck,
+  faCircleXmark,
+  faDatabase,
+  faRotate,
+  faVolumeHigh,
+  faVolumeXmark,
+  faWifi,
+} from '@fortawesome/free-solid-svg-icons';
 
 import { Dispositivo } from '../../core/interfaces/dispositivo';
 import { PuertaAcceso } from '../../core/interfaces/puerta-acceso';
@@ -16,6 +25,20 @@ import {
   ScannerConfigService,
 } from '../../service/scanner-config';
 import { VozService } from '../../service/voz';
+import { ConexionService, ModoConexion } from '../../core/conexion.service';
+import { DbService } from '../../core/db.service';
+import { ModeloService } from '../../core/modelo.service';
+import { SyncService } from '../../core/sync.service';
+import { SubidaService } from '../../core/subida.service';
+
+interface ResumenDatos {
+  modelo: boolean;
+  trabajadores: number;
+  areas: number;
+  puertas: number;
+  rosterVersion: string | null;
+  pendientes: number;
+}
 
 @Component({
   selector: 'app-configuracion-page',
@@ -30,10 +53,33 @@ export class ConfiguracionPage {
   private readonly camera = inject(CameraService);
   protected readonly voz = inject(VozService);
   protected readonly cfg = inject(ScannerConfigService);
+  protected readonly conexion = inject(ConexionService);
+  private readonly db = inject(DbService);
+  private readonly modelo = inject(ModeloService);
+  protected readonly sync = inject(SyncService);
+  private readonly subida = inject(SubidaService);
+  readonly subiendo = signal(false);
 
   readonly iconVoz = faVolumeHigh;
   readonly iconMute = faVolumeXmark;
   readonly iconCamara = faCamera;
+  readonly iconDatos = faDatabase;
+  readonly iconWifi = faWifi;
+  readonly iconOk = faCircleCheck;
+  readonly iconNo = faCircleXmark;
+  readonly iconSync = faRotate;
+
+  /** Verificación de datos para escanear offline. */
+  readonly datos = signal<ResumenDatos | null>(null);
+  readonly verificando = signal(false);
+  readonly sincronizando = signal(false);
+  /** true = está todo lo necesario para escanear offline. */
+  readonly datosListo = computed(() => {
+    const d = this.datos();
+    return !!d && d.modelo && d.trabajadores > 0 && d.areas > 0 && d.puertas > 0;
+  });
+  /** ¿La config del dispositivo (puerta) está puesta? */
+  readonly puertaOk = computed(() => this.cfg.idPuerta() > 0);
 
   /** Opciones de rostros simultáneos (MIN_ROSTROS..MAX_ROSTROS). */
   readonly opcionesRostros = Array.from(
@@ -74,6 +120,43 @@ export class ConfiguracionPage {
       .subscribe({ next: (data) => this.dispositivos.set(data), error: () => {} });
     // Enumera cámaras ya disponibles (etiquetas vacías hasta dar permiso).
     this.camera.listarCamaras().then((c) => this.camaras.set(c));
+    // Verifica los datos offline al abrir.
+    this.verificar();
+  }
+
+  /** Re-lee qué hay descargado (modelo + roster) para escanear offline. */
+  async verificar(): Promise<void> {
+    this.verificando.set(true);
+    try {
+      const [modelo, r] = await Promise.all([this.modelo.modeloEnDisco(), this.db.resumenDatos()]);
+      this.datos.set({ modelo, ...r });
+    } catch {
+      this.datos.set(null);
+    } finally {
+      this.verificando.set(false);
+    }
+  }
+
+  /** Fuerza la descarga/actualización de modelo + roster y re-verifica. */
+  async resincronizar(): Promise<void> {
+    this.sincronizando.set(true);
+    try {
+      await this.sync.bootstrap(this.cfg.tipoFichaje(), true);
+    } finally {
+      this.sincronizando.set(false);
+      await this.verificar();
+    }
+  }
+
+  /** Sube ahora los eventos pendientes (asistencias/intentos) al servidor. */
+  async subirAhora(): Promise<void> {
+    this.subiendo.set(true);
+    try { await this.subida.subirPendientes(); }
+    finally { this.subiendo.set(false); await this.verificar(); }
+  }
+
+  setModo(m: ModoConexion): void {
+    this.conexion.setModo(m);
   }
 
   /** Pide permiso de cámara para leer las etiquetas y lista las disponibles. */

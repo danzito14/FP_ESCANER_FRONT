@@ -14,4 +14,5 @@ export class AreaTrabajoService extends BaseCrud<
   AreaTrabajoUpdate
 > {
   protected readonly resource = 'areas';
+  protected override readonly idParam = 'id_area';
 }

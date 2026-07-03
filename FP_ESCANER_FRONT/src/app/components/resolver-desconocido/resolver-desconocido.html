@@ -1,0 +1,75 @@
+@if (puedeAsistencia()) {
+  <div class="resolver">
+    @if (flujo() === null) {
+      <div class="resolver-acciones">
+        @if (puedeRostro() && fotoBlob()) {
+          <button type="button" class="btn" (click)="abrir('rostro')">
+            Asignar este rostro a un trabajador
+          </button>
+        }
+        <button type="button" class="btn" (click)="abrir('conozco')">
+          Conozco al trabajador
+        </button>
+      </div>
+    } @else {
+      <div class="resolver-buscar">
+        <h3>
+          {{ flujo() === 'rostro'
+            ? 'Asignar rostro y registrar asistencia'
+            : 'Registrar asistencia manual' }}
+        </h3>
+
+        <input
+          type="search"
+          class="resolver-input"
+          placeholder="Buscar trabajador por nombre o nº de empleado…"
+          [value]="buscar()"
+          (input)="buscar.set($any($event.target).value)"
+        />
+
+        @if (buscando()) {
+          <p class="hint">Buscando…</p>
+        }
+
+        <ul class="resolver-resultados">
+          @for (t of resultados(); track t.id_trabajador) {
+            <li
+              [class.sel]="seleccionado()?.id_trabajador === t.id_trabajador"
+              (click)="seleccionar(t)"
+            >
+              <span>{{ t.nombre }} {{ t.apellido }}</span>
+              @if (t.id_emp) { <span class="meta">· {{ t.id_emp }}</span> }
+              @if (t.tiene_embedding) { <span class="con-rostro">con rostro</span> }
+            </li>
+          } @empty {
+            @if (buscar().trim()) { <li class="empty">Sin resultados.</li> }
+          }
+        </ul>
+
+        <label class="resolver-tipo">
+          <span>Tipo de registro</span>
+          <select [value]="tipoRegistro()" (change)="tipoRegistro.set($any($event.target).value)">
+            <option value="entrada">Entrada</option>
+            <option value="salida">Salida</option>
+          </select>
+        </label>
+
+        @if (error()) { <p class="alert alert-error">{{ error() }}</p> }
+
+        <div class="form-actions">
+          <button type="button" class="btn" (click)="cancelar()" [disabled]="guardando()">
+            Atrás
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            (click)="confirmar()"
+            [disabled]="!seleccionado() || guardando()"
+          >
+            {{ guardando() ? 'Guardando…' : 'Confirmar' }}
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+}
