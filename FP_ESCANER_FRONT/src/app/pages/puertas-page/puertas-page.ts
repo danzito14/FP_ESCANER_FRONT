@@ -12,7 +12,7 @@ import {
   PuertaAccesoCreate,
   PuertaAccesoUpdate,
 } from '../../core/interfaces/puerta-acceso';
-import { alBuscar } from '../../core/utils/buscar';
+import { alBuscar, esNumerico } from '../../core/utils/buscar';
 import { pointToWkt } from '../../core/utils/geo';
 import { AreaTrabajoService } from '../../service/area-trabajo';
 import { AuthService } from '../../service/auth';
@@ -110,7 +110,12 @@ export class PuertasPage {
   load(): void {
     this.loading.set(true);
     this.error.set(null);
-    this.service.list({ nombre: this.buscar() }).subscribe({
+    const term = this.buscar().trim();
+    // Solo dígitos → búsqueda por id (server); si no, por nombre.
+    const req = esNumerico(term)
+      ? this.service.buscarPorId(term)
+      : this.service.list({ nombre: term });
+    req.subscribe({
       next: (data) => {
         this.items.set(data);
         this.loading.set(false);

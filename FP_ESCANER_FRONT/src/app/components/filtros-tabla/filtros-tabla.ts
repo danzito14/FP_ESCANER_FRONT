@@ -31,6 +31,8 @@ export class FiltrosTabla {
   readonly conteosTipo = input<Record<string, number> | null>(null);
   /** Si es true, muestra el rango de fechas (Desde / Hasta). */
   readonly fechas = input(false);
+  /** Placeholder del buscador (las tablas con búsqueda por id sugieren "nombre o id"). */
+  readonly placeholderBuscar = input('Buscar en la tabla…');
 
   readonly colorEstado = colorEstado;
 

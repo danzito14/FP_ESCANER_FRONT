@@ -35,3 +35,19 @@ export const guestGuard: CanActivateFn = () => {
 
   return auth.isAuthenticated() ? router.createUrlTree(['/']) : true;
 };
+
+/**
+ * Ruta de inicio ('/'): si el usuario es kiosko puro (scanner:use sin acceso al panel),
+ * lo manda a su flujo offline (/descarga); el resto ve el landing normal. Cubre el
+ * relanzamiento del APK — el token de kiosko no expira, así que no repasa por el login.
+ * (Los scopes se leen de localStorage al construir AuthService, así que es fiable síncrono.)
+ */
+export const kioskoInicioGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+
+  if (auth.puedeUsarScanner() && !auth.puedeVerDashboard()) {
+    return router.createUrlTree(['/descarga']);
+  }
+  return true;
+};

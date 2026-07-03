@@ -43,6 +43,15 @@
   background: #f0fdf4;
 }
 
+// Estado de solo lectura (spoofing/fuera_de_area o ya justificado).
+.estado-text {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.est-pendiente .estado-text { color: #a16207; }
+.est-revisada .estado-text { color: #c2410c; }
+.est-justificada .estado-text { color: #15803d; }
+
 /* Los chips de estado ahora viven en el componente FiltrosTabla (estilos globales en styles.scss). */
 
 .foto-meta {

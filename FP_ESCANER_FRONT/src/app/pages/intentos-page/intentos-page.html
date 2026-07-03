@@ -33,6 +33,7 @@
             <th>Fecha / hora</th>
             <th>Descripción</th>
             <th>Similitud</th>
+            <th>Estado</th>
             <th>Foto</th>
           </tr>
         </thead>
@@ -51,6 +52,24 @@
                 }
               </td>
               <td>
+                @if (estadoDe(e); as est) {
+                  <span class="estado-cell" [class]="'est-' + est">
+                    <span class="dot"></span>
+                    @if (editable(e)) {
+                      <select class="estado-select" (change)="cambiarEstado(e, $event)">
+                        @for (s of estados; track s) {
+                          <option [value]="s" [selected]="s === est">{{ s }}</option>
+                        }
+                      </select>
+                    } @else {
+                      <span class="estado-text">{{ est }}</span>
+                    }
+                  </span>
+                } @else {
+                  —
+                }
+              </td>
+              <td>
                 @if (e.tiene_foto) {
                   <button type="button" class="btn btn-sm" (click)="verFoto(e)">Ver</button>
                 } @else {
@@ -59,7 +78,7 @@
               </td>
             </tr>
           } @empty {
-            <tr><td colspan="6" class="empty">Sin intentos.</td></tr>
+            <tr><td colspan="7" class="empty">Sin intentos.</td></tr>
           }
         </tbody>
       </table>
@@ -75,6 +94,7 @@
           <span class="tag" [style.--c]="colorEstado(e.tipo)">{{ e.tipo }}</span>
           · {{ trabajadorNombre(e) }} · {{ e.fecha_hora | date: 'dd/MM/yyyy HH:mm' }}
           @if (e.similitud != null) { · {{ e.similitud * 100 | number: '1.0-0' }}% }
+          @if (estadoDe(e); as est) { · <span [class]="'est-' + est">{{ est }}</span> }
         </p>
         @if (e.descripcion) { <p>{{ e.descripcion }}</p> }
 
@@ -84,6 +104,14 @@
           <img class="foto-incidencia" [src]="url" alt="Foto del intento" />
         } @else {
           <p class="hint">Sin foto.</p>
+        }
+
+        @if (e.tipo === 'desconocido') {
+          <app-resolver-desconocido
+            [evento]="e"
+            [fotoBlob]="fotoBlob()"
+            (resuelto)="onResuelto()"
+          />
         }
 
         <div class="form-actions">

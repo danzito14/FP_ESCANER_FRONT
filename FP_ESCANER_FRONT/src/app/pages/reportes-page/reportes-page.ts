@@ -3,6 +3,7 @@ import { FaIconComponent } from '@fortawesome/angular-fontawesome';
 import { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import {
   faClipboardCheck,
+  faClock,
   faFileCsv,
   faFileExcel,
   faTriangleExclamation,
@@ -12,6 +13,7 @@ import {
 
 import { Trabajador } from '../../core/interfaces/trabajador';
 import { rangoUltimaSemana } from '../../core/utils/fechas';
+import { fmtMinutosRetardo } from '../../core/utils/retardo';
 import { AsistenciaService } from '../../service/asistencia';
 import { AuthService } from '../../service/auth';
 import { IncidenciaService } from '../../service/incidencia';
@@ -103,6 +105,15 @@ export class ReportesPage {
       icono: faUserSecret,
       usaFechas: true,
       columnas: ['Persona', 'Tipo', 'Fecha / hora', 'Similitud'],
+    },
+    {
+      tipo: 'retardos',
+      titulo: 'Retardos',
+      descripcion: 'Entradas tardías (hora esperada vs. real) en el período.',
+      icono: faClock,
+      usaFechas: true,
+      usaTrabajador: true,
+      columnas: ['Trabajador', 'Área', 'Fecha', 'Hora esperada', 'Hora real', 'Retardo'],
     },
     {
       tipo: 'trabajadores',
@@ -272,6 +283,24 @@ export class ReportesPage {
             ok(t.map((x) => [x.nombre, x.apellido, x.estado, x.tiene_embedding ? 'Sí' : 'No'])),
           error: fail,
         });
+        break;
+      case 'retardos':
+        this.incidenciaService
+          .retardos({ ...fechas, idTrabajador: idTrab || undefined, limit })
+          .subscribe({
+            next: (r) =>
+              ok(
+                r.map((x) => [
+                  x.trabajador_nombre ?? `#${x.id_trabajador}`,
+                  x.area_nombre ?? '—',
+                  x.fecha,
+                  x.hora_esperada,
+                  x.hora_real,
+                  fmtMinutosRetardo(x.minutos_retardo),
+                ]),
+              ),
+            error: fail,
+          });
         break;
     }
   }

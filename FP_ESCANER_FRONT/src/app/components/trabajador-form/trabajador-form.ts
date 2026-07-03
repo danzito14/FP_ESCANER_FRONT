@@ -50,6 +50,7 @@ export class TrabajadorForm {
   readonly form = this.fb.nonNullable.group({
     nombre: ['', Validators.required],
     apellido: ['', Validators.required],
+    id_emp: [''],
     id_area: [0, Validators.min(1)],
     estado: ['activo' as EstadoTrabajador],
     permiso_escaneo: ['campo' as PermisoEscaneo],
@@ -70,6 +71,7 @@ export class TrabajadorForm {
       this.form.reset({
         nombre: t?.nombre ?? '',
         apellido: t?.apellido ?? '',
+        id_emp: t?.id_emp ?? '',
         id_area: t?.id_area ?? 0,
         estado: t?.estado ?? 'activo',
         permiso_escaneo: permiso,
@@ -109,15 +111,18 @@ export class TrabajadorForm {
       this.form.markAllAsTouched();
       return;
     }
-    const { nombre, apellido, id_area, estado, permiso_escaneo, nivel_acceso_interno } =
+    const { nombre, apellido, id_emp, id_area, estado, permiso_escaneo, nivel_acceso_interno } =
       this.form.getRawValue();
     // "Sin permisos" ('') se envía como null al backend.
     const nivel = nivel_acceso_interno || null;
+    // id_emp vacío → null (alta manual sin nº de nómina).
+    const emp = id_emp.trim() || null;
 
     if (this.isEdit()) {
       this.save.emit({
         nombre,
         apellido,
+        id_emp: emp,
         id_area,
         estado,
         permiso_escaneo,
@@ -127,6 +132,7 @@ export class TrabajadorForm {
       this.save.emit({
         nombre,
         apellido,
+        id_emp: emp,
         id_area,
         permiso_escaneo,
         nivel_acceso_interno: nivel,

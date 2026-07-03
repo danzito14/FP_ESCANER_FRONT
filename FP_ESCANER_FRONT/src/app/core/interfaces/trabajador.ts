@@ -30,6 +30,8 @@ export interface Trabajador {
 export interface TrabajadorCreate {
   nombre: string;
   apellido: string;
+  /** Nº de empleado (nómina). Opcional; null/omitido para altas manuales. */
+  id_emp?: string | null;
   /** El backend deriva la empresa del área; no se envía id_empresa. */
   id_area: number;
   permiso_escaneo: PermisoEscaneo;
@@ -40,6 +42,7 @@ export interface TrabajadorCreate {
 export interface TrabajadorUpdate {
   nombre?: string;
   apellido?: string;
+  id_emp?: string | null;
   id_area?: number;
   estado?: EstadoTrabajador;
   permiso_escaneo?: PermisoEscaneo;

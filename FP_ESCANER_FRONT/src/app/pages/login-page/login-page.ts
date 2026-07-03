@@ -32,7 +32,12 @@ export class LoginPage {
     this.error.set(null);
 
     this.auth.login(this.form.getRawValue()).subscribe({
-      next: () => this.router.navigate(['/usuarios']),
+      next: () => {
+        // Kiosko (solo scanner:use, sin acceso al panel) → flujo offline; el resto → panel.
+        const esKiosko =
+          this.auth.puedeUsarScanner() && !this.auth.puedeVerDashboard();
+        this.router.navigate([esKiosko ? '/descarga' : '/usuarios']);
+      },
       error: (e) => {
         this.error.set(e?.error?.detail ?? 'Usuario o contraseña incorrectos.');
         this.loading.set(false);

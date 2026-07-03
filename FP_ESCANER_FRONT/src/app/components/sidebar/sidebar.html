@@ -1,5 +1,21 @@
 <nav class="side-nav">
-  <span class="side-title">Navegación</span>
+  <div class="side-head">
+    <span class="side-title">Navegación</span>
+    <button class="side-close" type="button" (click)="layout.toggle()" aria-label="Cerrar menú">
+      <fa-icon [icon]="iconClose" />
+    </button>
+  </div>
+
+  <a
+    class="side-item"
+    routerLink="/"
+    routerLinkActive="active"
+    [routerLinkActiveOptions]="{ exact: true }"
+  >
+    <fa-icon [icon]="iconHome" />
+    <span class="side-label">Inicio</span>
+  </a>
+
   @for (m of items(); track m.ruta) {
     <a class="side-item" [routerLink]="m.ruta" routerLinkActive="active">
       <fa-icon [icon]="m.icono" />
@@ -11,4 +27,9 @@
     <fa-icon [icon]="iconConfig" />
     <span class="side-label">Configuración</span>
   </a>
+
+  <button class="side-item side-logout" type="button" (click)="logout()">
+    <fa-icon [icon]="iconLogout" />
+    <span class="side-label">Cerrar sesión</span>
+  </button>
 </nav>

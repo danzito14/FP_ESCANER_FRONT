@@ -48,7 +48,7 @@
 
   <div class="form-field filtro-buscar">
     <label>Buscar</label>
-    <input type="search" placeholder="Buscar en la tabla…" [value]="texto()" (input)="onBuscar($event)" />
+    <input type="search" [placeholder]="placeholderBuscar()" [value]="texto()" (input)="onBuscar($event)" />
   </div>
 </div>
 

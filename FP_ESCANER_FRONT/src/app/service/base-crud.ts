@@ -19,6 +19,12 @@ export abstract class BaseCrud<T, TCreate = Partial<T>, TUpdate = Partial<T>> {
   /** Prefijo de ruta del recurso, ej: 'usuarios'. */
   protected abstract readonly resource: string;
 
+  /**
+   * Nombre del query param del endpoint GET /recurso/buscar (búsqueda parcial por
+   * id como texto, p. ej. 'id_usuario'). null = el recurso no expone /buscar.
+   */
+  protected readonly idParam: string | null = null;
+
   protected get baseUrl(): string {
     return `${API_URL}/${this.resource}`;
   }
@@ -48,6 +54,21 @@ export abstract class BaseCrud<T, TCreate = Partial<T>, TUpdate = Partial<T>> {
     if (opts.fechaFin) params = params.set('fecha_fin', opts.fechaFin);
     if (opts.idEmpresa) params = params.set('id_empresa', opts.idEmpresa);
     return this.http.get<T[]>(this.baseUrl, { params });
+  }
+
+  /**
+   * GET /recurso/buscar?<idParam>=term — búsqueda parcial por id (ILIKE sobre el id
+   * como texto). Las páginas la usan cuando el término es solo dígitos; si el recurso
+   * no declara `idParam`, cae a list() normal.
+   */
+  buscarPorId(term: string, opts: { skip?: number; limit?: number } = {}): Observable<T[]> {
+    const param = this.idParam;
+    if (!param) return this.list({ skip: opts.skip, limit: opts.limit });
+    const params = new HttpParams()
+      .set('skip', opts.skip ?? 0)
+      .set('limit', opts.limit ?? 100)
+      .set(param, term.trim());
+    return this.http.get<T[]>(`${this.baseUrl}/buscar`, { params });
   }
 
   /**

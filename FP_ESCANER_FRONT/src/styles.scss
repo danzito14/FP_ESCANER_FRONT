@@ -711,3 +711,24 @@ h1, h2, h3 {
   from { opacity: 0; transform: translateY(8px) scale(0.98); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
+
+/* ===================== Cámara a pantalla completa (escáner / enrolar offline) =====================
+   CameraPreview con toBack:true va DETRÁS del WebView → el fondo debe ser transparente y sin
+   header/footer para que se vea la cámara. Se activa con body.camara-activa (lo pone el componente). */
+body.camara-activa {
+  background: transparent !important;
+}
+body.camara-activa app-root,
+body.camara-activa .app-body,
+body.camara-activa .app-main {
+  background: transparent !important;
+}
+body.camara-activa app-header,
+body.camara-activa app-footer {
+  display: none !important;
+}
+body.camara-activa .app-main {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}

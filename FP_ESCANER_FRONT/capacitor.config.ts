@@ -10,6 +10,11 @@ const config: CapacitorConfig = {
     CapacitorHttp: {
       enabled: true,
     },
+    // BD local cifrada (SQLCipher) para los embeddings biométricos del kiosko offline.
+    // Sin esto, DbService.init() truena en isSecretStored()/setEncryptionSecret().
+    CapacitorSQLite: {
+      androidIsEncryption: true,
+    },
   },
 };
 

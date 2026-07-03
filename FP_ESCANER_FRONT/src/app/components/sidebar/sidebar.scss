@@ -24,6 +24,13 @@
   width: 234px; /* fija el ancho del contenido para que no se reacomode al colapsar */
 }
 
+.side-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
 .side-title {
   padding: 0.3rem 0.7rem 0.55rem;
   font-size: 0.68rem;
@@ -34,11 +41,51 @@
   white-space: nowrap;
 }
 
+.side-close {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: background 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+  }
+}
+
 .side-config {
   margin-top: 0.4rem;
   padding-top: 0.7rem;
   border-top: 1px solid var(--border);
   border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+}
+
+/* Logout: es un <button>, hay que neutralizar los estilos por defecto. */
+.side-logout {
+  margin-top: 0.2rem;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--danger-soft);
+    color: var(--danger);
+
+    fa-icon { color: var(--danger); }
+  }
 }
 
 .side-item {

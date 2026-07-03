@@ -7,42 +7,55 @@ import { API_URL } from '../../core/constants/api';
 import { FiltrosTabla } from '../../components/filtros-tabla/filtros-tabla';
 import { MapFeature, MapView } from '../../components/map-view/map-view';
 import { Paginacion, TAM_PAGINA } from '../../components/paginacion/paginacion';
+import { ResolverDesconocido } from '../../components/resolver-desconocido/resolver-desconocido';
 import { AreaTrabajo } from '../../core/interfaces/area-trabajo';
 import { EstadoIncidencia } from '../../core/interfaces/common';
 import { EscaneoResponse } from '../../core/interfaces/escaneo';
 import { EventoCombinado, OrigenEvento } from '../../core/interfaces/evento-combinado';
 import { PuertaAcceso } from '../../core/interfaces/puerta-acceso';
+import { RetardoResponse } from '../../core/interfaces/retardo';
 import { alFiltrar } from '../../core/utils/buscar';
 import { colorEstado } from '../../core/utils/estado-color';
 import { rangoUltimaSemana } from '../../core/utils/fechas';
 import { lngLatToWkt, wktToPoint } from '../../core/utils/geo';
+import { fechaCortaLocal, fmtMinutosRetardo } from '../../core/utils/retardo';
 import { incluyeTexto } from '../../core/utils/texto';
 import { AreaTrabajoService } from '../../service/area-trabajo';
 import { AuthService } from '../../service/auth';
 import { EscaneoService } from '../../service/escaneo';
 import { IncidenciaService } from '../../service/incidencia';
+import { IntentoService } from '../../service/intento';
 import { PuertaAccesoService } from '../../service/puerta-acceso';
 
 @Component({
   selector: 'app-incidencias-page',
-  imports: [FiltrosTabla, MapView, DatePipe, DecimalPipe, Paginacion],
+  imports: [FiltrosTabla, MapView, DatePipe, DecimalPipe, Paginacion, ResolverDesconocido],
   templateUrl: './incidencias-page.html',
   styleUrl: './incidencias-page.scss',
 })
 export class IncidenciasPage implements OnDestroy {
   private readonly service = inject(IncidenciaService);
+  private readonly intentoService = inject(IntentoService);
   private readonly auth = inject(AuthService);
   private readonly http = inject(HttpClient);
   private readonly escaneoService = inject(EscaneoService);
   private readonly puertaService = inject(PuertaAccesoService);
   private readonly areaService = inject(AreaTrabajoService);
 
-  /** Puede cambiar el estado de una incidencia. */
+  /** Puede cambiar el estado de una incidencia o intento. */
   readonly puedeEditar = computed(() => this.auth.puedeEscribir('incidencias'));
+  /** Estado real por id de intento (GET /intentos); el combinado lo trae null. */
+  readonly estadosIntento = signal<Map<string, EstadoIncidencia>>(new Map());
+  /** Retardos del período (GET /incidencias/retardos); no viven en el combinado. */
+  readonly retardos = signal<RetardoResponse[]>([]);
+  /** Modo tabla de retardos: activo cuando el chip de tipo es 'retardo'. */
+  readonly modoRetardos = computed(() => this.filtroTipo() === 'retardo');
 
   /** Evento seleccionado para ver su foto (modal). */
   readonly eventoSel = signal<EventoCombinado | null>(null);
   readonly fotoUrl = signal<string | null>(null);
+  /** Blob de la foto (para asignarlo como rostro al resolver un desconocido). */
+  readonly fotoBlob = signal<Blob | null>(null);
   readonly fotoCargando = signal(false);
 
   /** Escaneo asociado al evento abierto (trae la ubicación registrada). */
@@ -132,21 +145,30 @@ export class IncidenciasPage implements OnDestroy {
     });
   });
 
-  /** Conteo por estado (sobre la base). */
+  /** Conteo por estado (sobre la base; usa el estado real, también de intentos). */
   readonly conteos = computed<Record<string, number>>(() => {
     const base = this.baseFiltrados();
     return {
-      pendiente: base.filter((e) => e.estado === 'pendiente').length,
-      revisada: base.filter((e) => e.estado === 'revisada').length,
-      justificada: base.filter((e) => e.estado === 'justificada').length,
+      pendiente: base.filter((e) => this.estadoDe(e) === 'pendiente').length,
+      revisada: base.filter((e) => this.estadoDe(e) === 'revisada').length,
+      justificada: base.filter((e) => this.estadoDe(e) === 'justificada').length,
     };
   });
 
-  /** Conteo por tipo (sobre la base). */
+  /** Retardos filtrados por la búsqueda (vienen de su propio endpoint). */
+  readonly retardosFiltrados = computed(() => {
+    const q = this.buscar();
+    return this.retardos().filter((r) =>
+      incluyeTexto(q, r.trabajador_nombre, r.id_emp, r.area_nombre),
+    );
+  });
+
+  /** Conteo por tipo (sobre la base). 'retardo' sale de su propio endpoint. */
   readonly conteosTipo = computed<Record<string, number>>(() => {
     const acc: Record<string, number> = {};
     for (const t of this.tipos) acc[t] = 0;
     for (const e of this.baseFiltrados()) acc[e.tipo] = (acc[e.tipo] ?? 0) + 1;
+    acc['retardo'] = this.retardosFiltrados().length;
     return acc;
   });
 
@@ -154,7 +176,7 @@ export class IncidenciasPage implements OnDestroy {
     const estado = this.filtroEstado();
     const tipo = this.filtroTipo();
     let base = this.baseFiltrados();
-    if (estado) base = base.filter((e) => e.estado === estado);
+    if (estado) base = base.filter((e) => this.estadoDe(e) === estado);
     if (tipo) base = base.filter((e) => e.tipo === tipo);
     return base;
   });
@@ -163,6 +185,14 @@ export class IncidenciasPage implements OnDestroy {
   readonly pagina = signal(1);
   readonly itemsPagina = computed(() => {
     const lista = this.itemsFiltrados();
+    const maxPag = Math.max(1, Math.ceil(lista.length / TAM_PAGINA));
+    const p = Math.min(this.pagina(), maxPag);
+    return lista.slice((p - 1) * TAM_PAGINA, (p - 1) * TAM_PAGINA + TAM_PAGINA);
+  });
+
+  /** Página actual de la tabla de retardos (misma señal `pagina`). */
+  readonly retardosPagina = computed(() => {
+    const lista = this.retardosFiltrados();
     const maxPag = Math.max(1, Math.ceil(lista.length / TAM_PAGINA));
     const p = Math.min(this.pagina(), maxPag);
     return lista.slice((p - 1) * TAM_PAGINA, (p - 1) * TAM_PAGINA + TAM_PAGINA);
@@ -220,6 +250,46 @@ export class IncidenciasPage implements OnDestroy {
           this.loading.set(false);
         },
       });
+    this.cargarEstados();
+    this.cargarRetardos();
+  }
+
+  /**
+   * Retardos del período desde GET /incidencias/retardos (para el contador del chip
+   * y la tabla del modo retardos). Silencioso: si falla, quedan en 0 sin romper la vista.
+   */
+  private cargarRetardos(): void {
+    this.service
+      .retardos({ fechaInicio: this.fechaInicio(), fechaFin: this.fechaFin(), limit: 500 })
+      .subscribe({
+        next: (data) => this.retardos.set(data),
+        error: () => this.retardos.set([]),
+      });
+  }
+
+  /** Formateadores del retardo (compartidos, para la plantilla). */
+  readonly fechaCorta = fechaCortaLocal;
+  readonly fmtMin = fmtMinutosRetardo;
+
+  /**
+   * Estado real de cada intento desde GET /intentos (el combinado los trae null).
+   * Silencioso: si falla, los intentos quedan sin estado/justificar pero la vista
+   * (e incidencias) siguen funcionando.
+   */
+  private cargarEstados(): void {
+    this.intentoService
+      .list({ fechaInicio: this.fechaInicio(), fechaFin: this.fechaFin(), limit: 500 })
+      .subscribe({
+        next: (data) =>
+          this.estadosIntento.set(new Map(data.map((i) => [i.id_intento, i.estado]))),
+        error: () => this.estadosIntento.set(new Map()),
+      });
+  }
+
+  /** Estado del evento: el de la incidencia o, para intentos, el de GET /intentos. */
+  estadoDe(e: EventoCombinado): EstadoIncidencia | null {
+    if (e.origen === 'incidencia') return e.estado;
+    return this.estadosIntento().get(e.id) ?? null;
   }
 
   trabajadorNombre(e: EventoCombinado): string {
@@ -230,12 +300,35 @@ export class IncidenciasPage implements OnDestroy {
     this.filtroOrigen.set((ev.target as HTMLSelectElement).value as '' | OrigenEvento);
   }
 
-  /** Solo las incidencias (no los intentos) tienen estado editable. */
+  /**
+   * ¿Se puede cambiar el estado de este evento? No para spoofing/fuera_de_area
+   * (por ahora) ni para los ya justificados (irreversible), y requiere permiso.
+   */
+  editable(e: EventoCombinado): boolean {
+    if (!this.puedeEditar()) return false;
+    if (e.tipo === 'spoofing' || e.tipo === 'fuera_de_area') return false;
+    return this.estadoDe(e) !== 'justificada';
+  }
+
+  /** Cambia el estado: PUT /incidencias/{id} o PUT /intentos/{id} según el origen. */
   cambiarEstado(e: EventoCombinado, event: Event): void {
-    if (e.origen !== 'incidencia') return;
-    const estado = (event.target as HTMLSelectElement).value as EstadoIncidencia;
-    if (estado === e.estado) return;
-    this.service.update(e.id, { estado }).subscribe({
+    const select = event.target as HTMLSelectElement;
+    const estado = select.value as EstadoIncidencia;
+    const actual = this.estadoDe(e);
+    if (estado === actual) return;
+    // Justificar es irreversible: confirmar y, si cancela, revertir el select.
+    if (
+      estado === 'justificada' &&
+      !confirm('¿Marcar como justificada? Una vez justificada no se podrá cambiar el estado.')
+    ) {
+      select.value = actual ?? '';
+      return;
+    }
+    const req: Observable<unknown> =
+      e.origen === 'intento'
+        ? this.intentoService.update(e.id, { estado })
+        : this.service.update(e.id, { estado });
+    req.subscribe({
       next: () => this.load(),
       error: (err) => this.error.set(this.msg(err)),
     });
@@ -253,6 +346,7 @@ export class IncidenciasPage implements OnDestroy {
     this.fotoCargando.set(true);
     this.http.get(`${API_URL}${e.foto_url}`, { responseType: 'blob' }).subscribe({
       next: (blob) => {
+        this.fotoBlob.set(blob);
         this.fotoUrl.set(URL.createObjectURL(blob));
         this.fotoCargando.set(false);
       },
@@ -288,11 +382,18 @@ export class IncidenciasPage implements OnDestroy {
     this.eventoSel.set(null);
   }
 
+  /** Un desconocido se resolvió (asistencia/rostro): cierra el modal y recarga. */
+  onResuelto(): void {
+    this.cerrarFoto();
+    this.load();
+  }
+
   /** Libera el object URL anterior para no fugar memoria. */
   private revocarFoto(): void {
     const url = this.fotoUrl();
     if (url) URL.revokeObjectURL(url);
     this.fotoUrl.set(null);
+    this.fotoBlob.set(null);
   }
 
   ngOnDestroy(): void {

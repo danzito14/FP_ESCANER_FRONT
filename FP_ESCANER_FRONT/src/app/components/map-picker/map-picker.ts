@@ -5,6 +5,12 @@ import * as L from 'leaflet';
 import 'leaflet-draw';
 
 import { Coordenada, wktToCoords, wktToPoint } from '../../core/utils/geo';
+import {
+  ETIQUETA_CALLE,
+  ETIQUETA_SATELITE,
+  capaCalle,
+  capaSatelite,
+} from '../../core/utils/map-layers';
 import { GeolocationService } from '../../service/geolocation';
 
 /**
@@ -45,19 +51,26 @@ export class MapPicker {
     });
   }
 
+  // Capas base: calle (default) y satélite, alternables desde el control del mapa.
+  private readonly capaCalle = capaCalle();
+  private readonly capaSatelite = capaSatelite();
+
   readonly options: L.MapOptions = {
-    layers: [
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap',
-      }),
-    ],
+    layers: [this.capaCalle],
     zoom: 14,
     center: L.latLng(25.7129, -108.7218),
   };
 
   onMapReady(map: L.Map): void {
     this.map = map;
+    // Selector de capa base: Calle / Satélite (radios arriba a la derecha).
+    L.control
+      .layers(
+        { [ETIQUETA_CALLE]: this.capaCalle, [ETIQUETA_SATELITE]: this.capaSatelite },
+        undefined,
+        { position: 'topright' },
+      )
+      .addTo(map);
     const drawn = new L.FeatureGroup();
     this.drawn = drawn;
     map.addLayer(drawn);

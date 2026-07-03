@@ -1,10 +1,17 @@
 import { Routes } from '@angular/router';
 
-import { authGuard, guestGuard, scopeGuard } from './core/guards/auth';
+import {
+  authGuard,
+  guestGuard,
+  kioskoInicioGuard,
+  scopeGuard,
+} from './core/guards/auth';
+import { rosterListoGuard } from './core/roster-listo.guard';
 
 export const routes: Routes = [
   {
     path: '',
+    canActivate: [kioskoInicioGuard],
     loadComponent: () =>
       import('./pages/landing-page/landing-page').then((m) => m.LandingPage),
   },
@@ -100,6 +107,27 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/configuracion-page/configuracion-page').then(
         (m) => m.ConfiguracionPage,
+      ),
+  },
+  // ── Kiosko offline (APK) — gateado por scanner:use + roster/modelo listos ──
+  {
+    path: 'descarga',
+    canActivate: [scopeGuard('scanner:use')],
+    loadComponent: () =>
+      import('./pages/descarga/descarga.component').then((m) => m.DescargaComponent),
+  },
+  {
+    path: 'escaneo',
+    canActivate: [scopeGuard('scanner:use'), rosterListoGuard],
+    loadComponent: () =>
+      import('./pages/escaneo/escaneo.component').then((m) => m.EscaneoComponent),
+  },
+  {
+    path: 'enrolar',
+    canActivate: [scopeGuard('scanner:use'), rosterListoGuard],
+    loadComponent: () =>
+      import('./pages/enrolamiento/enrolamiento.component').then(
+        (m) => m.EnrolamientoComponent,
       ),
   },
   { path: '**', redirectTo: '' },

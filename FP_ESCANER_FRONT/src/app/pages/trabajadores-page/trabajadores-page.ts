@@ -3,6 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subscription } from 'rxjs';
 
 import { EmbeddingCapture } from '../../components/embedding-capture/embedding-capture';
+import { EmpSync } from '../../components/emp-sync/emp-sync';
 import { FiltrosTabla } from '../../components/filtros-tabla/filtros-tabla';
 import { Paginacion, TAM_PAGINA } from '../../components/paginacion/paginacion';
 import { TrabajadorForm } from '../../components/trabajador-form/trabajador-form';
@@ -13,7 +14,7 @@ import {
   TrabajadorCreate,
   TrabajadorUpdate,
 } from '../../core/interfaces/trabajador';
-import { alBuscar } from '../../core/utils/buscar';
+import { alBuscar, esNumerico } from '../../core/utils/buscar';
 import { AreaTrabajoService } from '../../service/area-trabajo';
 import { AuthService } from '../../service/auth';
 import { EmbeddingService } from '../../service/embedding';
@@ -23,7 +24,7 @@ import { PuedeDirective } from '../../core/directives/puede';
 
 @Component({
   selector: 'app-trabajadores-page',
-  imports: [TrabajadorForm, EmbeddingCapture, FiltrosTabla, PuedeDirective, Paginacion],
+  imports: [TrabajadorForm, EmbeddingCapture, EmpSync, FiltrosTabla, PuedeDirective, Paginacion],
   templateUrl: './trabajadores-page.html',
   styleUrl: './trabajadores-page.scss',
 })
@@ -112,8 +113,13 @@ export class TrabajadoresPage {
     this.loading.set(true);
     this.cargandoMas.set(true);
     this.error.set(null);
-    this.cargaSub = this.service
-      .listAll({ nombre: this.buscar() })
+    const term = this.buscar().trim();
+    // Solo dígitos → búsqueda por nº de empleado (id_emp, server); si no, por nombre
+    // con la carga progresiva por lotes.
+    const fuente = esNumerico(term)
+      ? this.service.buscarPorId(term, { limit: 500 })
+      : this.service.listAll({ nombre: term });
+    this.cargaSub = fuente
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (data) => {

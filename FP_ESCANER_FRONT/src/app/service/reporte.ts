@@ -5,7 +5,12 @@ import { Observable } from 'rxjs';
 
 import { API_URL } from '../core/constants/api';
 
-export type TipoReporte = 'asistencias' | 'incidencias' | 'intentos' | 'trabajadores';
+export type TipoReporte =
+  | 'asistencias'
+  | 'incidencias'
+  | 'intentos'
+  | 'trabajadores'
+  | 'retardos';
 export type FormatoReporte = 'xlsx' | 'csv';
 
 /** Descarga de reportes (Excel/CSV). El backend acota por empresa del usuario. */

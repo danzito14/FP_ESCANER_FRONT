@@ -1,5 +1,19 @@
 import { EstadoRegistro, TipoRegistro } from './common';
 
+/**
+ * Cuerpo de POST /asistencias (alta manual). `id_empresa` no se manda: el backend
+ * la deriva del trabajador. `fecha_hora` opcional: null = ahora (UTC); en el flujo
+ * de "rostro desconocido" se manda la fecha del intento.
+ */
+export interface AsistenciaManualCreate {
+  id_trabajador: number;
+  id_puerta: number;
+  tipo_registro?: TipoRegistro;
+  fecha_hora?: string | null;
+  observaciones?: string | null;
+  id_dispositivo?: number | null;
+}
+
 export interface Asistencia {
   /** UUID (string) — las tablas de eventos usan UUID. */
   id_asistencia: string;

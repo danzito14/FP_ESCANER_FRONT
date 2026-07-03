@@ -5,31 +5,47 @@ import { HttpClient } from '@angular/common/http';
 import { API_URL } from '../../core/constants/api';
 import { FiltrosTabla } from '../../components/filtros-tabla/filtros-tabla';
 import { Paginacion, TAM_PAGINA } from '../../components/paginacion/paginacion';
+import { ResolverDesconocido } from '../../components/resolver-desconocido/resolver-desconocido';
+import { EstadoIncidencia } from '../../core/interfaces/common';
 import { EventoCombinado } from '../../core/interfaces/evento-combinado';
 import { alFiltrar } from '../../core/utils/buscar';
 import { colorEstado } from '../../core/utils/estado-color';
 import { rangoUltimaSemana } from '../../core/utils/fechas';
 import { incluyeTexto } from '../../core/utils/texto';
+import { AuthService } from '../../service/auth';
 import { IncidenciaService } from '../../service/incidencia';
+import { IntentoService } from '../../service/intento';
 
 /**
  * Intentos fallidos (spoofing / desconocido / otra empresa), con foto.
- * Reutiliza GET /incidencias/combinado filtrado a origen='intento' (scope
- * incidencias:read). Vista de solo lectura: los intentos no tienen estado.
+ * El display sale de GET /incidencias/combinado filtrado a origen='intento'
+ * (scope incidencias:read), pero ese feed trae el estado de los intentos en null,
+ * así que el estado real se enriquece desde GET /intentos y se puede justificar
+ * con PUT /intentos/{id} (para 'otra_empresa' el backend crea la asistencia manual).
  */
 @Component({
   selector: 'app-intentos-page',
-  imports: [FiltrosTabla, DatePipe, DecimalPipe, Paginacion],
+  imports: [FiltrosTabla, DatePipe, DecimalPipe, Paginacion, ResolverDesconocido],
   templateUrl: './intentos-page.html',
   styleUrl: './intentos-page.scss',
 })
 export class IntentosPage implements OnDestroy {
   private readonly service = inject(IncidenciaService);
+  private readonly intentoService = inject(IntentoService);
+  private readonly auth = inject(AuthService);
   private readonly http = inject(HttpClient);
+
+  /** Puede justificar/cambiar el estado de un intento (mismo scope que incidencias). */
+  readonly puedeEditar = computed(() => this.auth.puedeEscribir('incidencias'));
+  readonly estados: EstadoIncidencia[] = ['pendiente', 'revisada', 'justificada'];
+  /** Estado real por id de intento (GET /intentos); el combinado lo trae null. */
+  readonly estadosIntento = signal<Map<string, EstadoIncidencia>>(new Map());
 
   /** Intento seleccionado para ver su foto (modal). */
   readonly eventoSel = signal<EventoCombinado | null>(null);
   readonly fotoUrl = signal<string | null>(null);
+  /** Blob de la foto (se conserva para poder asignarla como rostro de un trabajador). */
+  readonly fotoBlob = signal<Blob | null>(null);
   readonly fotoCargando = signal(false);
 
   readonly items = signal<EventoCombinado[]>([]);
@@ -98,6 +114,56 @@ export class IntentosPage implements OnDestroy {
           this.loading.set(false);
         },
       });
+    this.cargarEstados();
+  }
+
+  /**
+   * Estado real de cada intento desde GET /intentos (el combinado los trae null).
+   * Silencioso: si falla, la tabla queda sin estado/justificar pero no se rompe.
+   */
+  private cargarEstados(): void {
+    this.intentoService
+      .list({ fechaInicio: this.fechaInicio(), fechaFin: this.fechaFin(), limit: 500 })
+      .subscribe({
+        next: (data) =>
+          this.estadosIntento.set(new Map(data.map((i) => [i.id_intento, i.estado]))),
+        error: () => this.estadosIntento.set(new Map()),
+      });
+  }
+
+  /** Estado conocido del intento (null si GET /intentos no lo trajo). */
+  estadoDe(e: EventoCombinado): EstadoIncidencia | null {
+    return this.estadosIntento().get(e.id) ?? null;
+  }
+
+  /**
+   * ¿Se puede cambiar el estado de este evento? No para spoofing/fuera_de_area
+   * (por ahora) ni para los ya justificados (irreversible), y requiere permiso.
+   */
+  editable(e: EventoCombinado): boolean {
+    if (!this.puedeEditar()) return false;
+    if (e.tipo === 'spoofing' || e.tipo === 'fuera_de_area') return false;
+    return this.estadoDe(e) !== 'justificada';
+  }
+
+  /** Cambia el estado del intento (justificar/revisar) vía PUT /intentos/{id}. */
+  cambiarEstado(e: EventoCombinado, event: Event): void {
+    const select = event.target as HTMLSelectElement;
+    const estado = select.value as EstadoIncidencia;
+    const actual = this.estadoDe(e);
+    if (estado === actual) return;
+    // Justificar es irreversible: confirmar y, si cancela, revertir el select.
+    if (
+      estado === 'justificada' &&
+      !confirm('¿Marcar como justificada? Una vez justificada no se podrá cambiar el estado.')
+    ) {
+      select.value = actual ?? '';
+      return;
+    }
+    this.intentoService.update(e.id, { estado }).subscribe({
+      next: () => this.load(),
+      error: (err) => this.error.set(this.msg(err)),
+    });
   }
 
   trabajadorNombre(e: EventoCombinado): string {
@@ -112,6 +178,7 @@ export class IntentosPage implements OnDestroy {
     this.fotoCargando.set(true);
     this.http.get(`${API_URL}${e.foto_url}`, { responseType: 'blob' }).subscribe({
       next: (blob) => {
+        this.fotoBlob.set(blob);
         this.fotoUrl.set(URL.createObjectURL(blob));
         this.fotoCargando.set(false);
       },
@@ -124,11 +191,18 @@ export class IntentosPage implements OnDestroy {
     this.eventoSel.set(null);
   }
 
+  /** Un desconocido se resolvió (asistencia/rostro): cierra el modal y recarga. */
+  onResuelto(): void {
+    this.cerrarFoto();
+    this.load();
+  }
+
   /** Libera el object URL anterior para no fugar memoria. */
   private revocarFoto(): void {
     const url = this.fotoUrl();
     if (url) URL.revokeObjectURL(url);
     this.fotoUrl.set(null);
+    this.fotoBlob.set(null);
   }
 
   ngOnDestroy(): void {

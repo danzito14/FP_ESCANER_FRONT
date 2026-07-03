@@ -14,4 +14,6 @@ export class TrabajadorService extends BaseCrud<
   TrabajadorUpdate
 > {
   protected readonly resource = 'trabajadores';
+  // Búsqueda por nº de empleado SYS21 (id_emp), no por id_trabajador.
+  protected override readonly idParam = 'id_emp';
 }

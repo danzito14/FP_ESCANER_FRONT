@@ -4,6 +4,7 @@ import { FiltrosTabla } from '../../components/filtros-tabla/filtros-tabla';
 import { Paginacion, TAM_PAGINA } from '../../components/paginacion/paginacion';
 import { RolForm } from '../../components/rol-form/rol-form';
 import { Rol, RolCreate, RolUpdate } from '../../core/interfaces/rol';
+import { alBuscar, esNumerico } from '../../core/utils/buscar';
 import { incluyeTexto } from '../../core/utils/texto';
 import { RolService } from '../../service/rol';
 import { PuedeDirective } from '../../core/directives/puede';
@@ -27,12 +28,17 @@ export class RolesPage {
   readonly buscar = signal('');
   readonly estados = ['activo', 'inactivo'];
 
-  /** Filtro de estado + búsqueda (client-side; /roles no tiene ?nombre=). */
+  /**
+   * Filtro de estado + búsqueda. Si el término es numérico, la búsqueda por id la
+   * hizo el backend (/roles/buscar), así que no se vuelve a filtrar por texto; si es
+   * texto, /roles no tiene ?nombre= y se filtra client-side sobre lo cargado.
+   */
   readonly itemsFiltrados = computed(() => {
     const estado = this.filtroEstado();
     const q = this.buscar();
     let lista = this.items();
     if (estado) lista = lista.filter((r) => r.estado === estado);
+    if (esNumerico(q)) return lista;
     return lista.filter((r) =>
       incluyeTexto(q, r.nombre_rol, r.descripcion, r.permisos.scopes.join(' ')),
     );
@@ -48,13 +54,17 @@ export class RolesPage {
   });
 
   constructor() {
+    alBuscar(this.buscar, () => this.load());
     this.load();
   }
 
   load(): void {
     this.loading.set(true);
     this.error.set(null);
-    this.service.list().subscribe({
+    const term = this.buscar().trim();
+    // Solo dígitos → búsqueda por id (server); si no, lista todo y filtra por nombre.
+    const req = esNumerico(term) ? this.service.buscarPorId(term) : this.service.list();
+    req.subscribe({
       next: (data) => {
         this.items.set(data);
         this.loading.set(false);

@@ -10,6 +10,7 @@ import { Asistencia } from '../../core/interfaces/asistencia';
 import { Dispositivo } from '../../core/interfaces/dispositivo';
 import { Empresa } from '../../core/interfaces/empresa';
 import { PuertaAcceso } from '../../core/interfaces/puerta-acceso';
+import { RetardoResponse } from '../../core/interfaces/retardo';
 import { Trabajador } from '../../core/interfaces/trabajador';
 import {
   lngLatToCoords,
@@ -21,11 +22,14 @@ import {
 import { alFiltrar } from '../../core/utils/buscar';
 import { colorEstado } from '../../core/utils/estado-color';
 import { rangoUltimaSemana } from '../../core/utils/fechas';
+import { incluyeTexto } from '../../core/utils/texto';
+import { fechaCortaLocal, fmtMinutosRetardo } from '../../core/utils/retardo';
 import { AreaTrabajoService } from '../../service/area-trabajo';
 import { AsistenciaService } from '../../service/asistencia';
 import { AuthService } from '../../service/auth';
 import { DispositivoService } from '../../service/dispositivo';
 import { EmpresaService } from '../../service/empresa';
+import { IncidenciaService } from '../../service/incidencia';
 import { PuertaAccesoService } from '../../service/puerta-acceso';
 import { TrabajadorService } from '../../service/trabajador';
 
@@ -42,11 +46,17 @@ export class AsistenciasPage {
   private readonly puertaService = inject(PuertaAccesoService);
   private readonly areaService = inject(AreaTrabajoService);
   private readonly empresaService = inject(EmpresaService);
+  private readonly incidenciaService = inject(IncidenciaService);
   private readonly auth = inject(AuthService);
 
   readonly esAdmin = this.auth.esAdmin;
+  /** Formateadores del retardo (compartidos, para la plantilla). */
+  readonly fechaCorta = fechaCortaLocal;
+  readonly fmtMin = fmtMinutosRetardo;
 
   readonly items = signal<Asistencia[]>([]);
+  /** Retardos del período (GET /incidencias/retardos); no viven en asistencias. */
+  readonly retardos = signal<RetardoResponse[]>([]);
   readonly trabajadores = signal<Map<number, Trabajador>>(new Map());
   readonly dispositivos = signal<Map<number, Dispositivo>>(new Map());
   readonly puertas = signal<Map<number, PuertaAcceso>>(new Map());
@@ -66,7 +76,9 @@ export class AsistenciasPage {
   readonly fechaInicio = signal(this.rango.inicio);
   readonly fechaFin = signal(this.rango.fin);
   readonly estados = ['exitoso', 'rechazado', 'manual', 'fuera_de_area', 'cancelado'];
-  readonly tipos = ['entrada', 'salida'];
+  readonly tipos = ['entrada', 'salida', 'retardo'];
+  /** Modo tabla de retardos: activo cuando el chip de tipo es 'retardo'. */
+  readonly modoRetardos = computed(() => this.filtroTipo() === 'retardo');
 
   /** Empresas/áreas como arreglo para los selectores. */
   readonly empresasArr = computed(() => [...this.empresas().values()]);
@@ -97,11 +109,20 @@ export class AsistenciasPage {
     return acc;
   });
 
-  /** Conteo por tipo_registro (sobre la base). */
+  /** Retardos filtrados por la búsqueda (vienen de su propio endpoint). */
+  readonly retardosFiltrados = computed(() => {
+    const q = this.buscar();
+    return this.retardos().filter((r) =>
+      incluyeTexto(q, r.trabajador_nombre, r.id_emp, r.area_nombre),
+    );
+  });
+
+  /** Conteo por tipo_registro (sobre la base). 'retardo' sale de su propio endpoint. */
   readonly conteosTipo = computed<Record<string, number>>(() => {
     const acc: Record<string, number> = {};
     for (const t of this.tipos) acc[t] = 0;
     for (const a of this.baseFiltrados()) acc[a.tipo_registro] = (acc[a.tipo_registro] ?? 0) + 1;
+    acc['retardo'] = this.retardosFiltrados().length;
     return acc;
   });
 
@@ -118,6 +139,14 @@ export class AsistenciasPage {
   readonly pagina = signal(1);
   readonly itemsPagina = computed(() => {
     const lista = this.itemsFiltrados();
+    const maxPag = Math.max(1, Math.ceil(lista.length / TAM_PAGINA));
+    const p = Math.min(this.pagina(), maxPag);
+    return lista.slice((p - 1) * TAM_PAGINA, (p - 1) * TAM_PAGINA + TAM_PAGINA);
+  });
+
+  /** Página actual de la tabla de retardos (misma señal `pagina`). */
+  readonly retardosPagina = computed(() => {
+    const lista = this.retardosFiltrados();
     const maxPag = Math.max(1, Math.ceil(lista.length / TAM_PAGINA));
     const p = Math.min(this.pagina(), maxPag);
     return lista.slice((p - 1) * TAM_PAGINA, (p - 1) * TAM_PAGINA + TAM_PAGINA);
@@ -253,6 +282,20 @@ export class AsistenciasPage {
         this.loading.set(false);
       },
     });
+    this.cargarRetardos();
+  }
+
+  /**
+   * Retardos del período desde GET /incidencias/retardos (contador del chip + tabla
+   * del modo retardos). Silencioso: si falla o no hay permiso, quedan en 0.
+   */
+  private cargarRetardos(): void {
+    this.incidenciaService
+      .retardos({ fechaInicio: this.fechaInicio(), fechaFin: this.fechaFin(), limit: 500 })
+      .subscribe({
+        next: (data) => this.retardos.set(data),
+        error: () => this.retardos.set([]),
+      });
   }
 
   trabajadorNombre(a: Asistencia): string {
