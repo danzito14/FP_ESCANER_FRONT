@@ -14,7 +14,33 @@ export interface LogEntry {
 @Injectable({ providedIn: 'root' })
 export class LogService {
   private readonly MAX = 120;
+  private readonly ACTIVO_KEY = 'debug_logs_on';
   readonly entradas = signal<LogEntry[]>([]);
+
+  /**
+   * ¿Mostrar el panel de log en pantalla? Lo decide el admin (persistido en
+   * localStorage). El buffer SIEMPRE se llena; esto solo controla la visibilidad
+   * del panel, para depurar a demanda tanto en APK como en web. Default: apagado.
+   */
+  readonly activo = signal(this.leerActivo());
+
+  /** Enciende/apaga el panel de log y lo persiste. */
+  setActivo(v: boolean): void {
+    this.activo.set(v);
+    try {
+      localStorage.setItem(this.ACTIVO_KEY, v ? '1' : '0');
+    } catch {
+      /* SSR/sin storage: ignorar */
+    }
+  }
+
+  private leerActivo(): boolean {
+    try {
+      return localStorage.getItem(this.ACTIVO_KEY) === '1';
+    } catch {
+      return false;
+    }
+  }
 
   add(level: LogLevel, msg: string): void {
     const d = new Date();

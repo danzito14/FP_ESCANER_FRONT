@@ -43,16 +43,25 @@ export abstract class BaseCrud<T, TCreate = Partial<T>, TUpdate = Partial<T>> {
       fechaInicio?: string;
       fechaFin?: string;
       idEmpresa?: number;
+      idArea?: number;
+      /** Búsqueda parcial por nº de empleado (solo trabajadores). */
+      idEmp?: string;
+      /** true = solo con rostro, false = solo sin rostro, undefined = todos (solo trabajadores). */
+      conRostro?: boolean;
     } = {},
   ): Observable<T[]> {
     let params = new HttpParams()
       .set('skip', opts.skip ?? 0)
       .set('limit', opts.limit ?? 100);
     const nombre = opts.nombre?.trim();
+    const idEmp = opts.idEmp?.trim();
     if (nombre) params = params.set('nombre', nombre);
+    if (idEmp) params = params.set('id_emp', idEmp);
     if (opts.fechaInicio) params = params.set('fecha_inicio', opts.fechaInicio);
     if (opts.fechaFin) params = params.set('fecha_fin', opts.fechaFin);
     if (opts.idEmpresa) params = params.set('id_empresa', opts.idEmpresa);
+    if (opts.idArea) params = params.set('id_area', opts.idArea);
+    if (opts.conRostro !== undefined) params = params.set('con_rostro', opts.conRostro);
     return this.http.get<T[]>(this.baseUrl, { params });
   }
 
@@ -83,11 +92,21 @@ export abstract class BaseCrud<T, TCreate = Partial<T>, TUpdate = Partial<T>> {
    * resto del filtrado (área/estado) sigue siendo client-side sobre el acumulado.
    */
   listAll(
-    opts: { nombre?: string; idEmpresa?: number; tamLote?: number } = {},
+    opts: {
+      nombre?: string;
+      idEmpresa?: number;
+      idArea?: number;
+      idEmp?: string;
+      conRostro?: boolean;
+      tamLote?: number;
+    } = {},
   ): Observable<T[]> {
     const tamLote = opts.tamLote ?? 500;
     const lote = (skip: number) =>
-      this.list({ nombre: opts.nombre, idEmpresa: opts.idEmpresa, skip, limit: tamLote });
+      this.list({
+        nombre: opts.nombre, idEmpresa: opts.idEmpresa, idArea: opts.idArea,
+        idEmp: opts.idEmp, conRostro: opts.conRostro, skip, limit: tamLote,
+      });
 
     return lote(0).pipe(
       // i = índice de iteración de expand: el lote ya emitido es la página i,

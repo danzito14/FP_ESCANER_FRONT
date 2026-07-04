@@ -1,6 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { SyncService } from '../../core/sync.service';
 
 @Component({
@@ -29,6 +29,7 @@ import { SyncService } from '../../core/sync.service';
 export class DescargaComponent implements OnInit {
   sync = inject(SyncService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
 
   async ngOnInit() { await this.correr(); }
 
@@ -36,7 +37,11 @@ export class DescargaComponent implements OnInit {
     // 'tipo' lo elige el dispositivo (campo|oficina|empaque) en la pantalla de ajustes.
     const tipo = localStorage.getItem('tipo_fichaje') ?? 'oficina';
     const ok = await this.sync.bootstrap(tipo);
-    if (ok) this.router.navigateByUrl('/escaneo', { replaceUrl: true });
+    if (ok) {
+      // Vuelve a donde el usuario iba (?next), por defecto el escáner.
+      const next = this.route.snapshot.queryParamMap.get('next') || '/escaneo';
+      this.router.navigateByUrl(next, { replaceUrl: true });
+    }
   }
   reintentar() { this.correr(); }
 }

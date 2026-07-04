@@ -14,6 +14,14 @@ export interface FotoPendiente {
   [k: string]: unknown;
 }
 
+/** Resumen de POR QUÉ fallan las fotos pendientes (agrupado). */
+export interface ResumenPendiente {
+  origen?: string | null;
+  motivo?: string | null;
+  total: number;
+  [k: string]: unknown;
+}
+
 /**
  * Sincronizador de empleados con SYS21 (solo admin). El backend lo corre automático;
  * estos endpoints son para dispararlo/consultarlo MANUALMENTE desde el panel.
@@ -40,6 +48,16 @@ export class EmpSyncService {
   /** Empleados cuya foto hay que volver a tomar. */
   fotosPendientes(): Observable<FotoPendiente[]> {
     return this.http.get<FotoPendiente[]>(`${API_URL}/emp_sync/fotos-pendientes`);
+  }
+
+  /** Resumen de por qué fallan (agrupado por origen/motivo). */
+  resumenPendientes(): Observable<ResumenPendiente[]> {
+    return this.http.get<ResumenPendiente[]>(`${API_URL}/emp_sync/fotos-pendientes/resumen`);
+  }
+
+  /** Empleados con área inválida (no mapea a un área del sistema). */
+  areasInvalidas(): Observable<FotoPendiente[]> {
+    return this.http.get<FotoPendiente[]>(`${API_URL}/emp_sync/fotos-pendientes/areas-invalidas`);
   }
 
   /** Marca una foto pendiente como resuelta o ignorada. */

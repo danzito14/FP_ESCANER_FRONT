@@ -24,7 +24,6 @@ import {
 
 import { AuthService } from '../../service/auth';
 import { LayoutService } from '../../service/layout';
-import { ConexionService } from '../../core/conexion.service';
 
 interface NavItem {
   titulo: string;
@@ -46,7 +45,6 @@ export class Sidebar {
   protected readonly layout = inject(LayoutService);
   protected readonly auth = inject(AuthService);
   private readonly router = inject(Router);
-  private readonly conexion = inject(ConexionService);
 
   private readonly todos: NavItem[] = [
     { titulo: 'Usuarios', ruta: '/usuarios', icono: faUser, scope: 'usuarios:read' },
@@ -69,18 +67,13 @@ export class Sidebar {
   );
 
   /**
-   * Ítems visibles: si es kiosko, solo Escáner (ruta según el modo de conexión:
-   * offline→/escaneo, online→/scanner) + Enrolar. Si no, los del admin según scopes.
+   * Ítems visibles: si es kiosko, SIEMPRE el escáner offline (/escaneo, que busca local
+   * primero y cae al servidor solo como fallback si hay internet) + Enrolar. Si no, los del admin.
    */
   readonly items = computed<NavItem[]>(() => {
     if (this.esKiosko()) {
       return [
-        {
-          titulo: 'Escáner',
-          ruta: this.conexion.offline() ? '/escaneo' : '/scanner',
-          icono: faExpand,
-          scope: 'scanner:use',
-        },
+        { titulo: 'Escáner', ruta: '/escaneo', icono: faExpand, scope: 'scanner:use' },
         { titulo: 'Enrolar', ruta: '/enrolar', icono: faUserPlus, scope: 'scanner:use' },
       ];
     }

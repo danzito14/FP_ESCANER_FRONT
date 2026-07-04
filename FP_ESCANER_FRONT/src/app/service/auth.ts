@@ -39,6 +39,15 @@ export class AuthService {
       this.tieneScope('incidencias:read'),
   );
 
+  /**
+   * Puede ver el PANEL de inicio (dashboard). Es un permiso OTORGABLE por rol:
+   * scope 'dashboard:read' (además del super-admin). El backend debe incluirlo en su
+   * catálogo de scopes para poder asignarlo desde Roles.
+   */
+  readonly puedeVerPanel = computed(
+    () => this.esAdmin() || this.tieneScope('dashboard:read'),
+  );
+
   constructor() {
     // Al iniciar (si ya hay sesión), rehidrata usuario + scopes con /usuarios/me.
     // Se difiere para que el constructor termine antes de disparar HTTP (evita el

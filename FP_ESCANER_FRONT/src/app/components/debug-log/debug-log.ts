@@ -1,6 +1,7 @@
 import {
   Component,
   ElementRef,
+  computed,
   effect,
   inject,
   signal,
@@ -8,16 +9,18 @@ import {
 } from '@angular/core';
 
 import { LogService } from '../../core/log.service';
+import { AuthService } from '../../service/auth';
 
 /**
  * Panel de log en vivo anclado abajo (sobre el footer), colapsable.
- * Muestra rutas, HTTP (url+status) y eventos. Solo para diagnóstico del APK.
- * Para ocultarlo: quita <app-debug-log /> de app.html.
+ * Muestra rutas, HTTP (url+status) y eventos. Solo para diagnóstico (APK y web).
+ * Solo se muestra al super-admin y cuando él lo activa (Configuración → Depuración).
  */
 @Component({
   selector: 'app-debug-log',
   standalone: true,
   template: `
+    @if (visible()) {
     <div class="dl" [class.abierto]="abierto()">
       <div class="dl-bar" (click)="abierto.set(!abierto())">
         <span class="dl-titulo">🐞 log <b>{{ log.entradas().length }}</b></span>
@@ -38,6 +41,7 @@ import { LogService } from '../../core/log.service';
         </div>
       }
     </div>
+    }
   `,
   styles: [`
     .dl {
@@ -76,6 +80,9 @@ import { LogService } from '../../core/log.service';
 })
 export class DebugLog {
   readonly log = inject(LogService);
+  private readonly auth = inject(AuthService);
+  /** Solo super-admin y solo si él activó los logs (Configuración → Depuración). */
+  readonly visible = computed(() => this.auth.esAdmin() && this.log.activo());
   readonly abierto = signal(false);
   private readonly cuerpo = viewChild<ElementRef<HTMLDivElement>>('cuerpo');
 

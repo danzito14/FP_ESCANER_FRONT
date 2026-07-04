@@ -12,6 +12,7 @@ import { RouterLink } from '@angular/router';
 import { FaIconComponent } from '@fortawesome/angular-fontawesome';
 import { faVolumeHigh, faVolumeXmark } from '@fortawesome/free-solid-svg-icons';
 import {
+  Face,
   FaceDetection,
   LandmarkMode,
   PerformanceMode,
@@ -46,9 +47,11 @@ const UMBRAL = 0.5; // match coseno (= motor.py)
 const UMBRAL_LIVENESS = 0.5; // anti-spoof: score_real mínimo
 const COOLDOWN_MS = 8000; // no re-fichar a la misma persona seguido
 const COOLDOWN_INTENTO_MS = 8000; // no registrar el mismo intento cada frame
+const COOLDOWN_FALLBACK_MS = 6000; // mín. entre llamadas de fallback al servidor
 const MAX_POSE = 25; // grados
 const TICK_MS = 700; // ~1.4 fps (ML Kit por archivo es pesado)
-const FRAMES_SALIDA = 4; // frames sin cara para desbloquear (~2.8s; evita re-detección por parpadeo)
+const FRAMES_SALIDA = 4; // frames sin cara para soltar la presencia (~2.8s; evita parpadeo)
+const UMBRAL_DETECCION = 0.75; // calidad mínima de la cara (tamaño+frontal) para escanear (= SCORE_MIN web)
 
 type Estado = 'idle' | 'cargando' | 'detectando' | 'error';
 
@@ -119,7 +122,8 @@ interface Toast {
           }
           @if (status() === 'detectando') {
             <div class="stage-hint" [class.detectado]="!!ultimo()?.exito">
-              <span>{{ ultimo()?.texto ?? 'Acerca tu rostro a la cámara' }}</span>
+              <span>{{ ultimo()?.texto
+                ?? (calidadPct() > 0 ? ('Acércate… ' + calidadPct() + '% (mín. 75%)') : 'Acerca tu rostro a la cámara') }}</span>
             </div>
           }
         </div>
@@ -172,6 +176,8 @@ export class EscaneoComponent implements OnDestroy {
   readonly toasts = signal<Toast[]>([]);
   /** Último resultado (para el hint del centro). */
   readonly ultimo = signal<{ exito: boolean; texto: string } | null>(null);
+  /** Calidad de la cara detectada (0-100). Solo escanea al llegar a UMBRAL_DETECCIÓN. */
+  readonly calidadPct = signal(0);
   readonly controlesVisibles = signal(true);
   readonly camaraAbierta = computed(
     () => this.status() === 'cargando' || this.status() === 'detectando',
@@ -183,11 +189,14 @@ export class EscaneoComponent implements OnDestroy {
   private watchId?: string;
   private controlesTimer?: ReturnType<typeof setTimeout>;
   private procesando = false;
-  private bloqueado = false;      // ya reconoció una cara → no re-escanea hasta que se vaya
+  private manejado = false;       // ya se registró/consultó ESTA presencia → no repite hasta que la cara se vaya
+  private ultimoBox: { color: string; label: string } | null = null; // recuadro a mantener
+  private ultimoCentro: { cx: number; cy: number } | null = null;     // centro de la cara manejada
   private framesSinCara = 0;      // frames seguidos sin cara → desbloquea
   private toastSeq = 0;
   private cooldown = new Map<number, number>();
   private cooldownIntento = new Map<string, number>();
+  private cooldownFallback = 0;   // último llamado de fallback al servidor
   private geo: { lon: number; lat: number } | null = null;
   private poligono: string | null = null;
 
@@ -224,7 +233,9 @@ export class EscaneoComponent implements OnDestroy {
     this.error.set(null);
     this.toasts.set([]);
     this.ultimo.set(null);
-    this.bloqueado = false;
+    this.manejado = false;
+    this.ultimoBox = null;
+    this.ultimoCentro = null;
     this.framesSinCara = 0;
     this.status.set('cargando');
     try {
@@ -261,7 +272,9 @@ export class EscaneoComponent implements OnDestroy {
     this.controlesVisibles.set(true);
     this.camera.stop();
     this.voz.callar();
-    this.bloqueado = false;
+    this.manejado = false;
+    this.ultimoBox = null;
+    this.ultimoCentro = null;
     this.limpiarCanvas();
     this.status.set('idle');
   }
@@ -285,6 +298,7 @@ export class EscaneoComponent implements OnDestroy {
 
       // Sin cara (o varias): si se fue de verdad (2 frames), desbloquea para el siguiente.
       if (faces.length !== 1) {
+        this.calidadPct.set(0);
         if (++this.framesSinCara >= FRAMES_SALIDA) this.reset();
         return;
       }
@@ -292,19 +306,37 @@ export class EscaneoComponent implements OnDestroy {
       const f = faces[0];
       const b = { left: f.bounds.left, top: f.bounds.top, right: f.bounds.right, bottom: f.bounds.bottom };
 
-      // Ya reconoció una cara y sigue ahí → mantiene el recuadro, NO re-escanea.
-      if (this.bloqueado) {
-        this.dibujarBox(v, b, this.ultimo()?.exito ? '#16a34a' : '#dc2626', this.ultimo()?.texto);
+      const cx = (b.left + b.right) / 2, cy = (b.top + b.bottom) / 2;
+      // ¿La cara se movió MUCHO desde la que manejamos? = otra persona → nueva presencia.
+      if (this.ultimoCentro &&
+          Math.hypot(cx - this.ultimoCentro.cx, cy - this.ultimoCentro.cy) > (b.right - b.left) * 0.6) {
+        this.reset();
+      }
+      this.ultimoCentro = { cx, cy };
+
+      // Ya se manejó ESTA presencia (fichó local o consultó al server) → mantiene el recuadro y
+      // NO vuelve a registrar/consultar hasta que la cara se vaya o cambie de persona.
+      if (this.manejado) {
+        if (this.ultimoBox) this.dibujarBox(v, b, this.ultimoBox.color, this.ultimoBox.label);
         return;
       }
 
       // Pose no frontal / sin landmarks → recuadro neutro, aún no reconoce.
       if (Math.abs(f.headEulerAngleY ?? 0) > MAX_POSE || Math.abs(f.headEulerAngleX ?? 0) > MAX_POSE) {
+        this.calidadPct.set(0);
         this.dibujarBox(v, b, '#ffffff'); return;
       }
       const kps = ordenarKps(f.landmarks);
-      if (!kps) { this.dibujarBox(v, b, '#ffffff'); return; }
-      this.dibujarBox(v, b, '#facc15'); // amarillo: analizando
+      if (!kps) { this.calidadPct.set(0); this.dibujarBox(v, b, '#ffffff'); return; }
+
+      // Calidad (proxy de "detección"): NO escanea hasta el 75% (= SCORE_MIN del scanner web).
+      const calidad = this.calidadCara(f, v.videoWidth);
+      this.calidadPct.set(Math.round(calidad * 100));
+      if (calidad < UMBRAL_DETECCION) {
+        this.dibujarBox(v, b, '#ffffff', `${Math.round(calidad * 100)}%`);
+        return;
+      }
+      this.dibujarBox(v, b, '#facc15'); // amarillo: analizando (calidad ok)
 
       // Anti-spoof: se calcula y loguea siempre; solo BLOQUEA si el toggle está ON.
       const bbox = [b.left, b.top, b.right, b.bottom];
@@ -320,8 +352,7 @@ export class EscaneoComponent implements OnDestroy {
           this.subida.subirPendientes();
         }
         this.resultado(false, 'Prueba de vida', '—', null, 'Posible foto/pantalla');
-        this.bloqueado = true;
-        this.dibujarBox(v, b, '#dc2626', 'Prueba de vida');
+        this.marcar(v, b, '#dc2626', 'Prueba de vida');
         return;
       }
 
@@ -330,39 +361,52 @@ export class EscaneoComponent implements OnDestroy {
 
       if (r && r.sim >= UMBRAL) {
         const nombre = `${r.nombre} ${r.apellido}`;
-        if (!this.enCooldown(r.id)) {         // 1ª vez (o >8s) → registra + avisa
+        const pct = Math.round(r.sim * 100);
+        if (!this.enCooldown(r.id)) {         // 1ª vez (o si volvió tras >8s) → registra + avisa
           this.cooldown.set(r.id, Date.now());
           const dentro = this.geo ? dentroDeArea(this.geo.lon, this.geo.lat, this.poligono) : false;
           await this.eventos.registrarAsistencia({ id_trabajador: r.id, sim: r.sim, dentro,
             lat: this.geo?.lat ?? null, lon: this.geo?.lon ?? null });
           this.subida.subirPendientes();
-          this.resultado(true, 'Fichaje registrado', nombre, Math.round(r.sim * 100));
+          this.resultado(true, 'Fichaje registrado', nombre, pct);
         } else {
-          this.ultimo.set({ exito: true, texto: `✓ ${nombre}` }); // ya registrado: sin toast/voz repetido
+          this.ultimo.set({ exito: true, texto: `✓ ${nombre} · ${pct}%` }); // volvió pronto: sin doble registro
         }
-        this.bloqueado = true;
-        this.dibujarBox(v, b, '#16a34a', nombre);
+        this.marcar(v, b, '#16a34a', `${nombre} · ${pct}%`);
       } else {
-        // Local no lo reconoció → si HAY INTERNET, prueba en el servidor (híbrido).
-        let online: AccesoResponse | null = null;
-        if (this.conexion.hayInternet()) online = await this.buscarEnServidor(dataUrl);
-
-        if (online?.acceso && online.trabajador) {
-          const nombre = `${online.trabajador.nombre} ${online.trabajador.apellido}`;
-          this.resultado(true, 'Fichaje (servidor)', nombre,
-            online.confianza != null ? Math.round(online.confianza * 100) : null);
-          this.bloqueado = true;
-          this.dibujarBox(v, b, '#16a34a', nombre);
-        } else {
-          if (!this.enCooldownIntento('desconocido')) {
-            this.cooldownIntento.set('desconocido', Date.now());
-            await this.eventos.registrarIntento({ tipo: 'desconocido', sim: r?.sim ?? null,
-              lat: this.geo?.lat ?? null, lon: this.geo?.lon ?? null });
-            this.subida.subirPendientes();
+        // Local no lo reconoció.
+        const hayNet = this.conexion.hayInternet();
+        if (hayNet && Date.now() - this.cooldownFallback > COOLDOWN_FALLBACK_MS) {
+          // UNA consulta al SERVIDOR por presencia (multi-frame + liveness activo). El server REGISTRA.
+          this.cooldownFallback = Date.now();
+          const online = await this.buscarEnServidor(v, dataUrl);
+          if (online) {
+            // El servidor YA registró (asistencia o intento) → el APK SOLO muestra (sin doble registro).
+            if (online.acceso && online.trabajador) {
+              const nombre = `${online.trabajador.nombre} ${online.trabajador.apellido}`;
+              const pct = online.confianza != null ? Math.round(online.confianza * 100) : null;
+              this.resultado(true, 'Fichaje (servidor)', nombre, pct);
+              this.marcar(v, b, '#16a34a', pct != null ? `${nombre} · ${pct}%` : nombre);
+            } else {
+              this.resultado(false, 'No reconocido', '—', null, online.mensaje ?? 'No reconocido');
+              this.marcar(v, b, '#dc2626', 'No reconocido');
+            }
+            return;
           }
+          // El server no respondió (error de red) → cae abajo.
+        }
+
+        if (hayNet) {
+          // Con internet pero aún no se pudo consultar (dentro del cooldown/error) → espera:
+          // NO marca ni registra local (para no chocar con lo que el server ya maneja).
+          this.dibujarBox(v, b, '#facc15', 'Verificando…');
+        } else {
+          // OFFLINE → intento local 'desconocido' (una vez por presencia; queda "manejado").
+          await this.eventos.registrarIntento({ tipo: 'desconocido', sim: r?.sim ?? null,
+            lat: this.geo?.lat ?? null, lon: this.geo?.lon ?? null });
+          this.subida.subirPendientes();
           this.resultado(false, 'No reconocido', '—', null, 'Rostro no reconocido');
-          this.bloqueado = true;
-          this.dibujarBox(v, b, '#dc2626', 'No reconocido');
+          this.marcar(v, b, '#dc2626', 'No reconocido');
         }
       }
     } catch { /* frame malo, sigue */ }
@@ -406,9 +450,19 @@ export class EscaneoComponent implements OnDestroy {
     if (canvas && ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
   }
 
-  /** Fallback ONLINE: manda el frame al servidor (mismo endpoint que el scanner web). */
-  private async buscarEnServidor(dataUrl: string): Promise<AccesoResponse | null> {
+  /**
+   * Fallback ONLINE: manda VARIOS frames al servidor (mismo endpoint que el scanner web).
+   * Reusa el frame ya capturado + 3 más con micro-pausa → hay movimiento entre frames, lo que
+   * habilita el liveness ACTIVO del servidor (además del anti-spoof) y ataja el replay de video.
+   * El servidor reconoce (global+super) y REGISTRA el evento; el APK solo muestra la respuesta.
+   */
+  private async buscarEnServidor(v: HTMLVideoElement, primerDataUrl: string): Promise<AccesoResponse | null> {
     try {
+      const blobs: Blob[] = [dataUrlToBlob(primerDataUrl)];
+      for (let i = 0; i < 3; i++) {
+        await new Promise((r) => setTimeout(r, 150));       // micro-pausa → movimiento entre frames
+        blobs.push(dataUrlToBlob(this.camera.capture(v, 0.9)));
+      }
       const params: AccesoParams = {
         id_puerta: this.cfg.idPuerta(),
         tipo_registro: this.cfg.tipoRegistro(),
@@ -416,8 +470,8 @@ export class EscaneoComponent implements OnDestroy {
         latitud: this.geo?.lat,
         longitud: this.geo?.lon,
       };
-      this.log.net('→ POST scanner/acceso/liveness (fallback servidor)');
-      const res = await firstValueFrom(this.scanner.acceso(params, [dataUrlToBlob(dataUrl)]));
+      this.log.net(`→ POST scanner/acceso/liveness (fallback, ${blobs.length} fotos)`);
+      const res = await firstValueFrom(this.scanner.acceso(params, blobs));
       this.log.ok(`← acceso=${res.acceso} ${res.trabajador ? res.trabajador.nombre : ''}`);
       return res;
     } catch (e: any) {
@@ -426,12 +480,39 @@ export class EscaneoComponent implements OnDestroy {
     }
   }
 
-  /** Desbloquea (la cara se fue): listo para escanear a la siguiente persona. */
+  /** Marca ESTA presencia como manejada: mantiene el recuadro y no re-registra/consulta hasta que se vaya. */
+  private marcar(
+    v: HTMLVideoElement,
+    b: { left: number; top: number; right: number; bottom: number },
+    color: string, label: string,
+  ): void {
+    this.manejado = true;
+    this.ultimoBox = { color, label };
+    this.ultimoCentro = { cx: (b.left + b.right) / 2, cy: (b.top + b.bottom) / 2 };
+    this.dibujarBox(v, b, color, label);
+  }
+
+  /** Suelta la presencia (la cara se fue o cambió de persona): listo para la siguiente. */
   private reset(): void {
-    if (!this.bloqueado && !this.ultimo()) return;
-    this.bloqueado = false;
+    if (!this.manejado && !this.ultimo() && !this.ultimoBox) return;
+    this.manejado = false;
+    this.ultimoBox = null;
+    this.ultimoCentro = null;
     this.ultimo.set(null);
+    this.calidadPct.set(0);
     this.limpiarCanvas();
+  }
+
+  /**
+   * "Calidad" de la cara (0-1) como proxy del score de detección (ML Kit no lo da):
+   * combina tamaño (qué tan cerca/grande) y qué tan frontal está. Escala fácil de calibrar.
+   */
+  private calidadCara(f: Face, frameW: number): number {
+    const w = f.bounds.right - f.bounds.left;
+    const tamano = Math.min(1, w / (frameW * 0.25)); // 1 si la cara ≥25% del ancho del frame
+    const yaw = Math.abs(f.headEulerAngleY ?? 0), pitch = Math.abs(f.headEulerAngleX ?? 0);
+    const frontal = Math.max(0, 1 - (yaw + pitch) / 45); // 1 frontal, 0 a ~45° combinados
+    return tamano * 0.5 + frontal * 0.5;
   }
 
   /** Empuja un toast + hint + voz (como el online). */

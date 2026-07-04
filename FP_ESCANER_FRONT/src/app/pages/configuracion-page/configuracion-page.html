@@ -15,10 +15,10 @@
     <div class="voz-controls">
       <label>
         <span>Puerta</span>
-        <select [value]="cfg.idPuerta()" (change)="cfg.idPuerta.set(+$any($event.target).value)">
-          <option [value]="0">Selecciona una puerta…</option>
+        <select (change)="cfg.idPuerta.set(+$any($event.target).value)">
+          <option [value]="0" [selected]="cfg.idPuerta() === 0">Selecciona una puerta…</option>
           @for (p of puertas(); track p.id_puerta) {
-            <option [value]="p.id_puerta">{{ p.nombre_puerta }}</option>
+            <option [value]="p.id_puerta" [selected]="p.id_puerta === cfg.idPuerta()">{{ p.nombre_puerta }}</option>
           }
         </select>
       </label>
@@ -42,20 +42,20 @@
 
       <label>
         <span>Dispositivo (opcional)</span>
-        <select [value]="cfg.idDispositivo()" (change)="cfg.idDispositivo.set(+$any($event.target).value)">
-          <option [value]="0">Sin dispositivo</option>
+        <select (change)="cfg.idDispositivo.set(+$any($event.target).value)">
+          <option [value]="0" [selected]="cfg.idDispositivo() === 0">Sin dispositivo</option>
           @for (d of dispositivos(); track d.id_dispositivo) {
-            <option [value]="d.id_dispositivo">{{ d.nombre_dispositivo }}</option>
+            <option [value]="d.id_dispositivo" [selected]="d.id_dispositivo === cfg.idDispositivo()">{{ d.nombre_dispositivo }}</option>
           }
         </select>
       </label>
 
       <label>
         <span>Cámara</span>
-        <select [value]="cfg.camaraId()" (change)="cfg.camaraId.set($any($event.target).value)">
-          <option value="">Predeterminada (frontal)</option>
+        <select (change)="cfg.camaraId.set($any($event.target).value)">
+          <option value="" [selected]="cfg.camaraId() === ''">Predeterminada (frontal)</option>
           @for (c of camarasOpts(); track c.id) {
-            <option [value]="c.id">{{ c.nombre }}</option>
+            <option [value]="c.id" [selected]="c.id === cfg.camaraId()">{{ c.nombre }}</option>
           }
         </select>
       </label>
@@ -123,10 +123,10 @@
 
         <label>
           <span>Voz</span>
-          <select [value]="voz.vozNombre()" (change)="voz.setVoz($any($event.target).value)">
-            <option value="">Automática (español)</option>
+          <select (change)="voz.setVoz($any($event.target).value)">
+            <option value="" [selected]="voz.vozNombre() === ''">Automática (español)</option>
             @for (v of voz.voces(); track v.voiceURI) {
-              <option [value]="v.name">{{ v.name }} — {{ v.lang }}</option>
+              <option [value]="v.name" [selected]="v.name === voz.vozNombre()">{{ v.name }} — {{ v.lang }}</option>
             }
           </select>
         </label>
@@ -249,4 +249,27 @@
       </small>
     </div>
   </div>
+
+  @if (esAdmin()) {
+    <div class="config-card">
+      <div class="config-titulo">
+        <fa-icon [icon]="iconBug" />
+        <div>
+          <h2>Depuración</h2>
+          <p>Muestra un panel de log en vivo abajo (rutas, HTTP y eventos). Solo para el admin, útil para diagnosticar el APK o la web.</p>
+        </div>
+      </div>
+
+      <div class="voz-controls">
+        <label class="voz-toggle">
+          <input type="checkbox" [checked]="log.activo()"
+            (change)="log.setActivo($any($event.target).checked)" />
+          Mostrar panel de logs (🐞)
+        </label>
+        <small class="hint">
+          Se guarda en este equipo. El buffer siempre se registra; esto solo muestra u oculta el panel.
+        </small>
+      </div>
+    </div>
+  }
 </section>
