@@ -57,6 +57,8 @@ export class TrabajadoresPage {
   readonly filtroEmpresa = signal(0);
   readonly filtroArea = signal(0);
   readonly filtroEstado = signal('');
+  /** '' = todos · 'con' = con rostro · 'sin' = sin rostro (server-side). */
+  readonly filtroRostro = signal<'' | 'con' | 'sin'>('');
   readonly buscar = signal('');
   readonly estados = ['activo', 'inactivo', 'suspendido'];
 
@@ -114,11 +116,12 @@ export class TrabajadoresPage {
     this.cargandoMas.set(true);
     this.error.set(null);
     const term = this.buscar().trim();
-    // Solo dígitos → búsqueda por nº de empleado (id_emp, server); si no, por nombre
-    // con la carga progresiva por lotes.
-    const fuente = esNumerico(term)
-      ? this.service.buscarPorId(term, { limit: 500 })
-      : this.service.listAll({ nombre: term });
+    const rostro = this.filtroRostro();
+    const conRostro = rostro === 'con' ? true : rostro === 'sin' ? false : undefined;
+    // Numérico → id_emp; texto → nombre. con_rostro se combina server-side. Carga por lotes.
+    const fuente = this.service.listAll(
+      esNumerico(term) ? { idEmp: term, conRostro } : { nombre: term, conRostro },
+    );
     this.cargaSub = fuente
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -138,6 +141,13 @@ export class TrabajadoresPage {
 
   areaNombre(id: number): string {
     return this.areas().find((a) => a.id_area === id)?.nombre_area ?? `#${id}`;
+  }
+
+  /** Filtro con/sin rostro (server-side) → recarga. */
+  setRostro(v: '' | 'con' | 'sin'): void {
+    this.filtroRostro.set(v);
+    this.pagina.set(1);
+    this.load();
   }
 
   nuevo(): void {

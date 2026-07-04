@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FaIconComponent } from '@fortawesome/angular-fontawesome';
 import {
+  faBug,
   faCamera,
   faCircleCheck,
   faCircleXmark,
@@ -30,6 +31,7 @@ import { DbService } from '../../core/db.service';
 import { ModeloService } from '../../core/modelo.service';
 import { SyncService } from '../../core/sync.service';
 import { SubidaService } from '../../core/subida.service';
+import { LogService } from '../../core/log.service';
 
 interface ResumenDatos {
   modelo: boolean;
@@ -58,6 +60,9 @@ export class ConfiguracionPage {
   private readonly modelo = inject(ModeloService);
   protected readonly sync = inject(SyncService);
   private readonly subida = inject(SubidaService);
+  protected readonly log = inject(LogService);
+  /** Solo el super-admin ve/activa el panel de logs. */
+  readonly esAdmin = this.auth.esAdmin;
   readonly subiendo = signal(false);
 
   readonly iconVoz = faVolumeHigh;
@@ -68,6 +73,7 @@ export class ConfiguracionPage {
   readonly iconOk = faCircleCheck;
   readonly iconNo = faCircleXmark;
   readonly iconSync = faRotate;
+  readonly iconBug = faBug;
 
   /** Verificación de datos para escanear offline. */
   readonly datos = signal<ResumenDatos | null>(null);

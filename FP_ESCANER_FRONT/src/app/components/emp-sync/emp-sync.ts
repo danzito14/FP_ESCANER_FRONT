@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 
-import { EmpSyncService, FotoPendiente } from '../../service/emp-sync';
+import { EmpSyncService, FotoPendiente, ResumenPendiente } from '../../service/emp-sync';
 
 /**
  * Barra de sincronización SYS21 (solo admin). El back lo hace automático; esto es para
@@ -32,6 +32,14 @@ import { EmpSyncService, FotoPendiente } from '../../service/emp-sync';
       </div>
 
       @if (abierto()) {
+        @if (resumen().length) {
+          <div class="sync-resumen">
+            <span class="sync-resumen-lbl">Razones:</span>
+            @for (r of resumen(); track $index) {
+              <span class="sync-motivo">{{ r.motivo || r.origen || 'otro' }} <b>{{ r.total }}</b></span>
+            }
+          </div>
+        }
         @if (cargandoPend()) {
           <p class="sync-hint">Cargando…</p>
         } @else if (pendientes().length === 0) {
@@ -66,6 +74,11 @@ import { EmpSyncService, FotoPendiente } from '../../service/emp-sync';
     .sync-msg.err { color: var(--danger); }
     .sync-acciones { display: flex; gap: 0.5rem; flex-wrap: wrap; }
     .sync-hint { color: var(--text-muted); font-size: 0.85rem; margin: 0.6rem 0 0; }
+    .sync-resumen { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 0.6rem 0 0; }
+    .sync-resumen-lbl { font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+    .sync-motivo { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.2rem 0.6rem;
+      border-radius: 999px; background: var(--warning-soft); color: var(--warning); font-size: 0.8rem; }
+    .sync-motivo b { font-weight: 700; }
     .sync-lista { list-style: none; padding: 0; margin: 0.6rem 0 0;
       border: 1px solid var(--border); border-radius: var(--radius-sm); max-height: 260px; overflow: auto; }
     .sync-lista li { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
@@ -85,6 +98,7 @@ export class EmpSync {
   readonly abierto = signal(false);
   readonly cargandoPend = signal(false);
   readonly pendientes = signal<FotoPendiente[]>([]);
+  readonly resumen = signal<ResumenPendiente[]>([]);
 
   run(): void {
     this.corriendo.set('run'); this.aviso('', false);
@@ -113,6 +127,11 @@ export class EmpSync {
     this.sync.fotosPendientes().subscribe({
       next: (d) => { this.pendientes.set(d ?? []); this.cargandoPend.set(false); },
       error: (e) => { this.aviso('✕ ' + this.msg(e), true); this.cargandoPend.set(false); },
+    });
+    // Razones (por qué fallan), agrupadas.
+    this.sync.resumenPendientes().subscribe({
+      next: (d) => this.resumen.set(d ?? []),
+      error: () => this.resumen.set([]),
     });
   }
 

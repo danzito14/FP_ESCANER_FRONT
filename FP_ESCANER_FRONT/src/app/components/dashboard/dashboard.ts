@@ -21,6 +21,7 @@ import { AsistenciaService } from '../../service/asistencia';
 import { AuthService } from '../../service/auth';
 import { EmpresaService } from '../../service/empresa';
 import { IncidenciaService } from '../../service/incidencia';
+import { DashboardDia, ReporteDashboardService } from '../../service/reporte-dashboard';
 
 /**
  * Panel de inicio: informe general de asistencias e incidencias en un rango
@@ -39,6 +40,10 @@ export class Dashboard {
   private readonly asistenciaService = inject(AsistenciaService);
   private readonly incidenciaService = inject(IncidenciaService);
   private readonly empresaService = inject(EmpresaService);
+  private readonly dashDia = inject(ReporteDashboardService);
+
+  /** Resumen del día (GET /reportes/dashboard); null si aún no carga o sin permiso. */
+  readonly dia = signal<DashboardDia | null>(null);
 
   protected readonly icons = {
     asistencias: faClipboardCheck,
@@ -105,7 +110,21 @@ export class Dashboard {
     // Recarga al cambiar rango de fechas o empresa.
     alFiltrar([this.fechaInicio, this.fechaFin, this.filtroEmpresa], () => this.load());
     this.load();
+    this.cargarDia();
   }
+
+  /** Resumen del día (hoy). Si no hay permiso/endpoint, deja la sección oculta. */
+  private cargarDia(): void {
+    this.dashDia.dia().subscribe({
+      next: (d) => this.dia.set(d),
+      error: () => this.dia.set(null),
+    });
+  }
+
+  /** por_tipo (oficina/empaque/campo) como arreglo para el template. */
+  readonly diaTipos = computed(() =>
+    Object.entries(this.dia()?.asistencia.por_tipo ?? {}).map(([tipo, v]) => ({ tipo, ...v })),
+  );
 
   load(): void {
     this.loading.set(true);

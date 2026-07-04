@@ -38,7 +38,8 @@ export class LandingPage {
   private readonly auth = inject(AuthService);
 
   readonly isAuthenticated = this.auth.isAuthenticated;
-  readonly puedeVerDashboard = this.auth.puedeVerDashboard;
+  /** El dashboard es un permiso otorgable ('dashboard:read') o super-admin. */
+  readonly puedeVerPanel = this.auth.puedeVerPanel;
   readonly flecha = faArrowRightLong;
 
   private readonly modulos: Modulo[] = [
