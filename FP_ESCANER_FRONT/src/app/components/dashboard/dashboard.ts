@@ -107,15 +107,20 @@ export class Dashboard {
         error: (e) => this.error.set(this.msg(e)),
       });
     }
-    // Recarga al cambiar rango de fechas o empresa.
+    // Recarga al cambiar rango de fechas o empresa (informe semanal).
     alFiltrar([this.fechaInicio, this.fechaFin, this.filtroEmpresa], () => this.load());
+    // El resumen del día solo depende de la empresa (siempre es hoy).
+    alFiltrar([this.filtroEmpresa], () => this.cargarDia());
     this.load();
     this.cargarDia();
   }
 
-  /** Resumen del día (hoy). Si no hay permiso/endpoint, deja la sección oculta. */
+  /**
+   * Resumen del día (hoy) acotado a la empresa elegida (0 = todas, para admin).
+   * Si no hay permiso/endpoint, deja la sección oculta.
+   */
   private cargarDia(): void {
-    this.dashDia.dia().subscribe({
+    this.dashDia.dia(this.filtroEmpresa()).subscribe({
       next: (d) => this.dia.set(d),
       error: () => this.dia.set(null),
     });
@@ -125,6 +130,14 @@ export class Dashboard {
   readonly diaTipos = computed(() =>
     Object.entries(this.dia()?.asistencia.por_tipo ?? {}).map(([tipo, v]) => ({ tipo, ...v })),
   );
+
+  /** % de asistencia de hoy (presentes / padrón total del día). */
+  readonly pctPresentes = computed(() => {
+    const a = this.dia()?.asistencia;
+    if (!a) return 0;
+    const tot = a.presentes + a.ausentes;
+    return tot > 0 ? Math.round((a.presentes / tot) * 100) : 0;
+  });
 
   load(): void {
     this.loading.set(true);
