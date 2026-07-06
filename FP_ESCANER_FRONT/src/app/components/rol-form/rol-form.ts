@@ -36,6 +36,8 @@ const RECURSOS: RecursoDef[] = [
   { key: 'asistencias', label: 'Asistencias', acciones: ['read'] },
   { key: 'escaneos', label: 'Escaneos', acciones: ['read'] },
   { key: 'reportes', label: 'Reportes', acciones: ['read'] },
+  // Gate solo del front (ningún endpoint lo exige): controla ver el panel de inicio.
+  { key: 'dashboard', label: 'Panel de inicio (dashboard)', acciones: ['read'] },
 ];
 
 @Component({
