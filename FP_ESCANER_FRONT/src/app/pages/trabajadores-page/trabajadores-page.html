@@ -6,7 +6,7 @@
 
   @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
 
-  @if (esAdmin()) { <app-emp-sync /> }
+  @if (puedeVerSync()) { <app-emp-sync /> }
 
   <app-filtros-tabla
     [esAdmin]="esAdmin()"
