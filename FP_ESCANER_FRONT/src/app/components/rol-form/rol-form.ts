@@ -36,6 +36,8 @@ const RECURSOS: RecursoDef[] = [
   { key: 'asistencias', label: 'Asistencias', acciones: ['read'] },
   { key: 'escaneos', label: 'Escaneos', acciones: ['read'] },
   { key: 'reportes', label: 'Reportes', acciones: ['read'] },
+  // Sincronización SYS21: read = ver estado/fotos pendientes; write = resolver/ignorar y disparar.
+  { key: 'emp_sync', label: 'Sincronización SYS21 (fotos pendientes)', acciones: ['read', 'write'] },
   // Gate solo del front (ningún endpoint lo exige): controla ver el panel de inicio.
   { key: 'dashboard', label: 'Panel de inicio (dashboard)', acciones: ['read'] },
 ];

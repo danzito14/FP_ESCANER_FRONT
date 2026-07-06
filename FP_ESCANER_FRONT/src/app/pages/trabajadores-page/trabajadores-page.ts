@@ -38,6 +38,17 @@ export class TrabajadoresPage {
 
   readonly esAdmin = this.auth.esAdmin;
 
+  /**
+   * La barra SYS21 (fotos pendientes) la ve el super-admin o quien pueda VER y
+   * EDITAR trabajadores. Ojo: los endpoints exigen scope emp_sync:read (y
+   * emp_sync:write para resolver); ese permiso hay que otorgarlo aparte al rol.
+   */
+  readonly puedeVerSync = computed(
+    () =>
+      this.esAdmin() ||
+      (this.auth.puedeLeer('trabajadores') && this.auth.puedeEscribir('trabajadores')),
+  );
+
   readonly items = signal<Trabajador[]>([]);
   readonly areas = signal<AreaTrabajo[]>([]);
   readonly empresas = signal<Empresa[]>([]);
