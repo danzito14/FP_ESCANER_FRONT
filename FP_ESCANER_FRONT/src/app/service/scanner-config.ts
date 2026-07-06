@@ -9,8 +9,11 @@ const KEY = 'scanner_config';
 export type CalidadCamara = 'sd' | 'hd' | 'fhd' | 'max';
 /** Alcance de detección (corto = cercano/estricto, largo = más sensible/lejano). */
 export type AlcanceDeteccion = 'corto' | 'largo';
-/** Tipo de fichaje del dispositivo (define qué roster baja el kiosko offline). */
-export type TipoFichaje = 'campo' | 'oficina' | 'empaque';
+/**
+ * Tipo de fichaje del dispositivo (define qué roster baja el kiosko offline).
+ * 'mixto' = oficina + empaque juntos (lugares con entrada compartida).
+ */
+export type TipoFichaje = 'campo' | 'oficina' | 'empaque' | 'mixto';
 
 interface ScannerCfg {
   idPuerta: number;
@@ -89,7 +92,10 @@ export class ScannerConfigService {
       if (c.tipoRegistro === 'entrada' || c.tipoRegistro === 'salida') {
         this.tipoRegistro.set(c.tipoRegistro);
       }
-      if (c.tipoFichaje === 'campo' || c.tipoFichaje === 'oficina' || c.tipoFichaje === 'empaque') {
+      if (
+        c.tipoFichaje === 'campo' || c.tipoFichaje === 'oficina' ||
+        c.tipoFichaje === 'empaque' || c.tipoFichaje === 'mixto'
+      ) {
         this.tipoFichaje.set(c.tipoFichaje);
       }
       if (typeof c.camaraId === 'string') this.camaraId.set(c.camaraId);
