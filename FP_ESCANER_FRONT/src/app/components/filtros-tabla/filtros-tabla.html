@@ -9,18 +9,18 @@
         }
       </select>
     </div>
+  }
 
-    @if (mostrarArea()) {
-      <div class="form-field">
-        <label>Área</label>
-        <select [value]="area()" (change)="onArea($event)">
-          <option [value]="0">Todas</option>
-          @for (a of areas(); track a.id_area) {
-            <option [value]="a.id_area">{{ a.nombre_area }}</option>
-          }
-        </select>
-      </div>
-    }
+  @if (mostrarArea() && (esAdmin() || (areaTodos() && areas().length))) {
+    <div class="form-field">
+      <label>Área</label>
+      <select [value]="area()" (change)="onArea($event)">
+        <option [value]="0">Todas</option>
+        @for (a of areas(); track a.id_area) {
+          <option [value]="a.id_area">{{ a.nombre_area }}</option>
+        }
+      </select>
+    </div>
   }
 
   @if (estados().length && !chips()) {
