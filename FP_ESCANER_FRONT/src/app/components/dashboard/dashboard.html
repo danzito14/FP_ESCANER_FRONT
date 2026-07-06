@@ -27,71 +27,6 @@
     </div>
   </header>
 
-  @if (dia(); as d) {
-    <section class="dash-group">
-      <h3>
-        <fa-icon [icon]="icons.asistencias" /> Hoy · {{ d.fecha }}
-        <span class="muted">({{ d.asistencia.presentes }}/{{ d.asistencia.presentes + d.asistencia.ausentes }} presentes)</span>
-      </h3>
-      <div class="kpi-grid">
-        <div class="kpi" style="--c: #16a34a">
-          <fa-icon [icon]="icons.entrada" class="kpi-ico" />
-          <span class="kpi-num">{{ d.asistencia.presentes }}</span>
-          <span class="kpi-lbl">Presentes</span>
-        </div>
-        <div class="kpi" style="--c: #ef4444">
-          <fa-icon [icon]="icons.cancelado" class="kpi-ico" />
-          <span class="kpi-num">{{ d.asistencia.ausentes }}</span>
-          <span class="kpi-lbl">Ausentes</span>
-        </div>
-        <div class="kpi" style="--c: #eab308">
-          <fa-icon [icon]="icons.pendiente" class="kpi-ico" />
-          <span class="kpi-num">{{ d.retardos_hoy }}</span>
-          <span class="kpi-lbl">Retardos hoy</span>
-        </div>
-        <div class="kpi" style="--c: #ef4444">
-          <fa-icon [icon]="icons.rechazado" class="kpi-ico" />
-          <span class="kpi-num">{{ d.intentos_hoy }}</span>
-          <span class="kpi-lbl">Intentos hoy</span>
-        </div>
-        <div class="kpi" style="--c: #eab308">
-          <fa-icon [icon]="icons.incidencias" class="kpi-ico" />
-          <span class="kpi-num">{{ d.incidencias_pendientes }}</span>
-          <span class="kpi-lbl">Incid. pendientes</span>
-        </div>
-      </div>
-
-      @if (diaTipos().length) {
-        <div class="kpi-grid" style="margin-top:.75rem">
-          @for (t of diaTipos(); track t.tipo) {
-            <div class="kpi" style="--c: #245640">
-              <span class="kpi-num">{{ t.presentes }}/{{ t.total }}</span>
-              <span class="kpi-lbl" style="text-transform:capitalize">{{ t.tipo }}</span>
-            </div>
-          }
-        </div>
-      }
-
-      <div class="kpi-grid" style="margin-top:.75rem">
-        <div class="kpi" style="--c: #16a34a">
-          <fa-icon [icon]="icons.exitoso" class="kpi-ico" />
-          <span class="kpi-num">{{ d.trabajadores.con_rostro }}</span>
-          <span class="kpi-lbl">Con rostro</span>
-        </div>
-        <div class="kpi" style="--c: #eab308">
-          <fa-icon [icon]="icons.cancelado" class="kpi-ico" />
-          <span class="kpi-num">{{ d.trabajadores.sin_rostro }}</span>
-          <span class="kpi-lbl">Sin rostro</span>
-        </div>
-        <div class="kpi" style="--c: #245640">
-          <fa-icon [icon]="icons.asistencias" class="kpi-ico" />
-          <span class="kpi-num">{{ d.trabajadores.total }}</span>
-          <span class="kpi-lbl">Padrón total</span>
-        </div>
-      </div>
-    </section>
-  }
-
   @if (error()) {
     <div class="alert alert-error">{{ error() }}</div>
   }
@@ -165,6 +100,72 @@
           <fa-icon [icon]="icons.exitoso" class="kpi-ico" />
           <span class="kpi-num">{{ kpiIncidencias().justificadas }}</span>
           <span class="kpi-lbl">Justificadas</span>
+        </div>
+      </div>
+    </section>
+  }
+
+  <!-- Resumen del día (en vivo). Va al final: el informe de arriba es del período. -->
+  @if (dia(); as d) {
+    <section class="dash-group dash-hoy">
+      <h3>
+        <fa-icon [icon]="icons.entrada" /> Resumen de hoy
+        <span class="muted">· {{ d.fecha }}</span>
+      </h3>
+
+      <div class="hoy-hero">
+        <div class="hoy-cifra">
+          <span class="hoy-pres">{{ d.asistencia.presentes }}</span>
+          <span class="hoy-tot">/ {{ d.asistencia.presentes + d.asistencia.ausentes }}</span>
+        </div>
+        <div class="hoy-info">
+          <span class="hoy-lbl">presentes hoy</span>
+          <div class="hoy-bar"><span [style.width.%]="pctPresentes()"></span></div>
+          <span class="hoy-sub">{{ pctPresentes() }}% de asistencia · {{ d.asistencia.ausentes }} ausentes</span>
+        </div>
+      </div>
+
+      @if (diaTipos().length) {
+        <div class="kpi-grid">
+          @for (t of diaTipos(); track t.tipo) {
+            <div class="kpi" style="--c: #245640">
+              <span class="kpi-num">{{ t.presentes }}/{{ t.total }}</span>
+              <span class="kpi-lbl" style="text-transform:capitalize">{{ t.tipo }}</span>
+            </div>
+          }
+        </div>
+      }
+
+      <div class="kpi-grid">
+        <div class="kpi" style="--c: #eab308">
+          <fa-icon [icon]="icons.pendiente" class="kpi-ico" />
+          <span class="kpi-num">{{ d.retardos_hoy }}</span>
+          <span class="kpi-lbl">Retardos hoy</span>
+        </div>
+        <div class="kpi" style="--c: #ef4444">
+          <fa-icon [icon]="icons.rechazado" class="kpi-ico" />
+          <span class="kpi-num">{{ d.intentos_hoy }}</span>
+          <span class="kpi-lbl">Intentos hoy</span>
+        </div>
+        <div class="kpi" style="--c: #eab308">
+          <fa-icon [icon]="icons.incidencias" class="kpi-ico" />
+          <span class="kpi-num">{{ d.incidencias_pendientes }}</span>
+          <span class="kpi-lbl">Incid. pendientes</span>
+        </div>
+        <div class="kpi" style="--c: #16a34a">
+          <fa-icon [icon]="icons.exitoso" class="kpi-ico" />
+          <span class="kpi-num">{{ d.trabajadores.con_rostro }}</span>
+          <span class="kpi-lbl">Con rostro</span>
+        </div>
+        <div class="kpi" style="--c: #ef4444">
+          <fa-icon [icon]="icons.cancelado" class="kpi-ico" />
+          <span class="kpi-num">{{ d.trabajadores.sin_rostro }}</span>
+          <span class="kpi-lbl">Sin rostro</span>
+        </div>
+        <div class="kpi" style="--c: #245640">
+          <fa-icon [icon]="icons.asistencias" class="kpi-ico" />
+          <span class="kpi-num">{{ d.trabajadores.total }}</span>
+          <span class="kpi-lbl">Padrón total</span>
         </div>
       </div>
     </section>

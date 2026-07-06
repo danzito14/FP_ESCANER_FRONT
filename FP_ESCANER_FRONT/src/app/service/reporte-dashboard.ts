@@ -29,9 +29,16 @@ export interface DashboardDia {
 export class ReporteDashboardService {
   private readonly http = inject(HttpClient);
 
-  /** Resumen del día. `fecha` 'YYYY-MM-DD' (vacío = hoy). */
-  dia(fecha?: string): Observable<DashboardDia> {
+  /**
+   * Resumen del día.
+   * @param idEmpresa 0 = todas las empresas (solo admin); N = esa empresa. Si se
+   *   omite, el backend cae en la empresa 1 para el admin. Para un usuario normal
+   *   el parámetro no importa (el backend siempre lo acota a la suya).
+   * @param fecha 'YYYY-MM-DD' (vacío = hoy).
+   */
+  dia(idEmpresa?: number, fecha?: string): Observable<DashboardDia> {
     let params = new HttpParams();
+    if (idEmpresa !== undefined) params = params.set('id_empresa', idEmpresa);
     if (fecha) params = params.set('fecha', fecha);
     return this.http.get<DashboardDia>(`${API_URL}/reportes/dashboard`, { params });
   }
