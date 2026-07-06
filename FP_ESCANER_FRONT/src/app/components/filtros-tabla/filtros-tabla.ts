@@ -5,8 +5,9 @@ import { Empresa } from '../../core/interfaces/empresa';
 import { colorEstado } from '../../core/utils/estado-color';
 
 /**
- * Barra de filtros reutilizable. Empresa/Área solo se muestran para admin;
- * el buscador (texto, client-side) se muestra siempre.
+ * Barra de filtros reutilizable. Empresa se muestra solo para admin (multi-tenant).
+ * Área también, salvo que `areaTodos` sea true (entonces la ve cualquiera con la
+ * lista de áreas cargada). El buscador (texto, client-side) se muestra siempre.
  */
 @Component({
   selector: 'app-filtros-tabla',
@@ -18,6 +19,8 @@ export class FiltrosTabla {
   readonly empresas = input<Empresa[]>([]);
   readonly areas = input<AreaTrabajo[]>([]);
   readonly mostrarArea = input(true);
+  /** Muestra el filtro de Área también a los NO admin (si hay áreas cargadas). */
+  readonly areaTodos = input(false);
   /** Estados disponibles para el filtro de chips (vacío = sin filtro de estado). */
   readonly estados = input<string[]>([]);
   /** Conteo por estado (opcional, para mostrar la cantidad en cada chip). */
