@@ -27,13 +27,13 @@ import { DbService } from '../../core/db.service';
     <div class="cam-layer" [class.abierta]="enCamara()">
       <video #video playsinline muted></video>
       <div class="cam-overlay">
-        <p class="cam-target">Enrolando: <b>{{ objetivoTexto() }}</b></p>
+        <p class="cam-target">Registrando: <b>{{ objetivoTexto() }}</b></p>
         <div class="cam-bottom">
           <p class="cam-msg" [class.ok]="ok()">{{ mensaje() || 'Mira de frente, con buena luz.' }}</p>
           <div class="cam-btns">
             <button class="btn-salir" type="button" (click)="salirCamara()">✕ Salir</button>
             <button class="btn-cap" type="button" [disabled]="ocupado()" (click)="capturarYEnrolar()">
-              {{ ocupado() ? 'Capturando…' : 'Capturar y enrolar' }}
+              {{ ocupado() ? 'Capturando…' : 'Capturar y registrar' }}
             </button>
           </div>
         </div>
@@ -42,7 +42,7 @@ import { DbService } from '../../core/db.service';
 
     @if (!enCamara()) {
       <section class="crud-page">
-        <header class="crud-header"><h1>Enrolar rostro</h1></header>
+        <header class="crud-header"><h1>Registrar rostro</h1></header>
 
         <div class="tabs">
           <button type="button" [class.on]="modo() === 'asignar'" (click)="modo.set('asignar')">
@@ -207,7 +207,7 @@ export class EnrolamientoComponent implements OnInit, OnDestroy {
       const cap = await this.facial.capturarDeVideo(this.video()!.nativeElement);
       if (!cap) { this.fallo('No se logró una captura estable. Mira de frente, con buena luz.'); return; }
       await this.enrolar(cap);
-    } catch (e: any) { this.fallo(e?.message ?? 'Error al enrolar.'); }
+    } catch (e: any) { this.fallo(e?.message ?? 'Error al registrar el rostro.'); }
     finally { this.ocupado.set(false); }
   }
 

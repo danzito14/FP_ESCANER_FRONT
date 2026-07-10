@@ -6,17 +6,20 @@ import {
   faClock,
   faFileCsv,
   faFileExcel,
+  faFilePdf,
   faTriangleExclamation,
-  faUsers,
   faUserSecret,
 } from '@fortawesome/free-solid-svg-icons';
+import { firstValueFrom } from 'rxjs';
 
+import { EventoCombinado } from '../../core/interfaces/evento-combinado';
 import { Trabajador } from '../../core/interfaces/trabajador';
 import { rangoUltimaSemana } from '../../core/utils/fechas';
 import { fmtMinutosRetardo } from '../../core/utils/retardo';
 import { AsistenciaService } from '../../service/asistencia';
 import { AuthService } from '../../service/auth';
 import { IncidenciaService } from '../../service/incidencia';
+import { ReporteIntentosPdfService } from '../../service/reporte-intentos-pdf';
 import { FormatoReporte, ReporteService, TipoReporte } from '../../service/reporte';
 import { TrabajadorService } from '../../service/trabajador';
 
@@ -30,6 +33,8 @@ interface ReporteDef {
   usaTrabajador?: boolean;
   /** Permite filtrar por tipo de incidencia. */
   usaTipo?: boolean;
+  /** Reporte que solo se descarga como PDF (con fotos), generado en el cliente. */
+  soloPdf?: boolean;
   columnas: string[];
 }
 
@@ -63,10 +68,12 @@ export class ReportesPage {
   private readonly asistenciaService = inject(AsistenciaService);
   private readonly incidenciaService = inject(IncidenciaService);
   private readonly trabajadorService = inject(TrabajadorService);
+  private readonly pdf = inject(ReporteIntentosPdfService);
   private readonly auth = inject(AuthService);
 
   readonly iconXlsx = faFileExcel;
   readonly iconCsv = faFileCsv;
+  readonly iconPdf = faFilePdf;
   readonly tiposIncidencia = TIPOS_INCIDENCIA;
 
   /** Trabajadores para el filtro (se cargan si hay permiso). */
@@ -101,9 +108,10 @@ export class ReportesPage {
     {
       tipo: 'intentos',
       titulo: 'Intentos de acceso',
-      descripcion: 'Intentos (desconocidos, spoofing, fuera de área…).',
+      descripcion: 'Intentos (desconocidos, spoofing, otra empresa…) con su foto. Solo PDF.',
       icono: faUserSecret,
       usaFechas: true,
+      soloPdf: true,
       columnas: ['Persona', 'Tipo', 'Fecha / hora', 'Similitud'],
     },
     {
@@ -114,14 +122,6 @@ export class ReportesPage {
       usaFechas: true,
       usaTrabajador: true,
       columnas: ['Trabajador', 'Área', 'Fecha', 'Hora esperada', 'Hora real', 'Retardo'],
-    },
-    {
-      tipo: 'trabajadores',
-      titulo: 'Padrón de trabajadores',
-      descripcion: 'Listado de trabajadores y su rostro registrado.',
-      icono: faUsers,
-      usaFechas: false,
-      columnas: ['Nombre', 'Apellido', 'Estado', 'Rostro'],
     },
   ];
 
@@ -153,6 +153,9 @@ export class ReportesPage {
   readonly previewError = signal<string | null>(null);
   /** Formato que se está descargando ('' = ninguno). */
   readonly descargando = signal<FormatoReporte | ''>('');
+  /** PDF de intentos (con fotos) en curso + texto de progreso. */
+  readonly generandoPdf = signal(false);
+  readonly pdfProgreso = signal('');
 
   /** Límite de filas de la vista previa (la descarga trae todo). */
   readonly LIMITE_PREVIEW = 100;
@@ -331,5 +334,57 @@ export class ReportesPage {
         this.descargando.set('');
       },
     });
+  }
+
+  /**
+   * Descarga el reporte de intentos como PDF con las fotos (se genera en el
+   * cliente porque las fotos son protegidas). Trae TODO el rango (paginado) y
+   * baja cada foto como miniatura.
+   */
+  async descargarPdf(): Promise<void> {
+    const def = this.reporteSel();
+    if (!def) return;
+    this.generandoPdf.set(true);
+    this.previewError.set(null);
+    this.pdfProgreso.set('Cargando intentos…');
+    try {
+      const eventos = await this.traerTodosIntentos();
+      if (!eventos.length) {
+        this.previewError.set('No hay intentos en el período.');
+        return;
+      }
+      const rango = `${this.fechaInicio()} a ${this.fechaFin()}`;
+      await this.pdf.generar(eventos, { rango }, (hechas, total) => {
+        this.pdfProgreso.set(
+          total ? `Descargando fotos… ${hechas}/${total}` : 'Armando PDF…',
+        );
+      });
+    } catch {
+      this.previewError.set('No se pudo generar el PDF.');
+    } finally {
+      this.generandoPdf.set(false);
+      this.pdfProgreso.set('');
+    }
+  }
+
+  /** Trae todos los intentos del rango, paginando (el combinado limita a 500). */
+  private async traerTodosIntentos(): Promise<EventoCombinado[]> {
+    const PAG = 500;
+    const TOPE_SEGURIDAD = 5000; // evita colgar el navegador con miles de fotos
+    const todos: EventoCombinado[] = [];
+    for (let skip = 0; skip < TOPE_SEGURIDAD; skip += PAG) {
+      const pagina = await firstValueFrom(
+        this.incidenciaService.combinado({
+          origen: 'intento',
+          fechaInicio: this.fechaInicio(),
+          fechaFin: this.fechaFin(),
+          skip,
+          limit: PAG,
+        }),
+      );
+      todos.push(...pagina);
+      if (pagina.length < PAG) break;
+    }
+    return todos;
   }
 }

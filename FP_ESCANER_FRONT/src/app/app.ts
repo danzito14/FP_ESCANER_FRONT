@@ -6,6 +6,7 @@ import { Header } from './components/header/header';
 import { Footer } from './components/footer/footer';
 import { Sidebar } from './components/sidebar/sidebar';
 import { DebugLog } from './components/debug-log/debug-log';
+import { HelpFab } from './components/help-fab/help-fab';
 import { AuthService } from './service/auth';
 import { LayoutService } from './service/layout';
 import { LogService } from './core/log.service';
@@ -14,7 +15,7 @@ import { SubidaService } from './core/subida.service';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, Header, Footer, Sidebar, DebugLog],
+  imports: [RouterOutlet, Header, Footer, Sidebar, DebugLog, HelpFab],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
