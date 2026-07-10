@@ -358,6 +358,8 @@ export class EscaneoComponent implements OnDestroy {
 
       const { embedding } = await FaceEngine.extractEmbedding({ path: uri, kps });
       const r = this.match.buscar(Float32Array.from(embedding));
+      // Diagnóstico: mejor candidato local y su coseno (aunque no llegue al umbral).
+      this.log.info(`local: ${r ? `${r.nombre} ${r.apellido} sim=${r.sim.toFixed(3)}` : 'sin base'} (umbral ${UMBRAL})`);
 
       if (r && r.sim >= UMBRAL) {
         const nombre = `${r.nombre} ${r.apellido}`;

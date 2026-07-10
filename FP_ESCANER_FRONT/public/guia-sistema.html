@@ -1,0 +1,1057 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manual de uso — SL Asistencias</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --surface-2: #f8f9fb;
+    --ink: #1a1d23;
+    --ink-soft: #4b5563;
+    --ink-faint: #9099a5;
+    --accent: #245640;
+    --accent-ink: #245640;
+    --accent-soft: #e7f2ec;
+    --line: #e6e8ec;
+    --line-strong: #d4d7dd;
+    --good: #16a34a;
+    --good-soft: #e7f6ec;
+    --warn: #d97706;
+    --warn-soft: #fdf2e3;
+    --bad: #dc2626;
+    --bad-soft: #fdeaea;
+    --chip-bg: #f1f3f5;
+    --chip-ink: #4b5563;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 1px 2px rgba(16,24,40,.05), 0 4px 16px rgba(16,24,40,.08);
+    --maxw: 1160px;
+    --sans: 'Inter', 'Segoe UI', system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    --mono: "Cascadia Code", "Consolas", "SF Mono", ui-monospace, monospace;
+  }
+  /* Tema claro fijo: la guía siempre usa el blanco y verde del sistema, sin modo oscuro. */
+  :root[data-theme="light"] {
+    --bg: #ffffff; --surface: #ffffff; --surface-2: #f8f9fb; --ink: #1a1d23; --ink-soft: #4b5563;
+    --ink-faint: #9099a5; --accent: #245640; --accent-ink: #245640; --accent-soft: #e7f2ec;
+    --line: #e6e8ec; --line-strong: #d4d7dd; --good: #16a34a; --good-soft: #e7f6ec; --warn: #d97706;
+    --warn-soft: #fdf2e3; --bad: #dc2626; --bad-soft: #fdeaea; --chip-bg: #f1f3f5; --chip-ink: #4b5563;
+    --shadow: 0 1px 2px rgba(16,24,40,.05), 0 4px 16px rgba(16,24,40,.08);
+  }
+  /* (sin variante oscura: la guía se muestra siempre en claro) */
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- Header ---------- */
+  .masthead {
+    border-bottom: 1px solid var(--line);
+    background:
+      radial-gradient(120% 140% at 88% -10%, var(--accent-soft) 0%, transparent 55%),
+      var(--surface);
+  }
+  .masthead__inner {
+    max-width: var(--maxw);
+    margin: 0 auto;
+    padding: 30px 24px 26px;
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: .78rem;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--accent-ink);
+  }
+  .brand .dot {
+    width: 26px; height: 26px; flex: none;
+    border-radius: 7px;
+    background: var(--accent);
+    display: grid; place-items: center;
+    color: #fff;
+  }
+  .brand .dot { color: #fff; }
+  .brand .dot svg { width: 15px; height: 15px; }
+  h1.title {
+    font-size: clamp(1.9rem, 4.5vw, 3rem);
+    line-height: 1.08;
+    letter-spacing: -.02em;
+    margin: 16px 0 8px;
+    text-wrap: balance;
+    font-weight: 800;
+  }
+  .subtitle {
+    font-size: 1.08rem;
+    color: var(--ink-soft);
+    max-width: 60ch;
+    margin: 0;
+  }
+  .meta-row {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin-top: 18px;
+  }
+  .tag {
+    font-size: .8rem;
+    padding: 5px 11px;
+    border-radius: 999px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .tag b { color: var(--ink); font-weight: 650; }
+
+  /* ---------- Layout ---------- */
+  .shell {
+    max-width: var(--maxw);
+    margin: 0 auto;
+    padding: 0 24px 80px;
+    display: grid;
+    grid-template-columns: 244px minmax(0, 1fr);
+    gap: 48px;
+    align-items: start;
+  }
+  nav.toc {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    max-height: 100vh;
+    overflow-y: auto;
+    padding: 32px 0;
+    font-size: .92rem;
+  }
+  .toc h4 {
+    font-size: .72rem;
+    text-transform: uppercase;
+    letter-spacing: .13em;
+    color: var(--ink-faint);
+    margin: 22px 0 8px;
+    font-weight: 700;
+  }
+  .toc h4:first-child { margin-top: 0; }
+  .toc a {
+    display: flex;
+    gap: 9px;
+    align-items: baseline;
+    padding: 5px 10px;
+    border-radius: 7px;
+    color: var(--ink-soft);
+    text-decoration: none;
+    line-height: 1.35;
+    border-left: 2px solid transparent;
+    transition: background .15s, color .15s;
+  }
+  .toc a:hover { background: var(--surface-2); color: var(--ink); }
+  .toc a.active {
+    color: var(--accent-ink);
+    background: var(--accent-soft);
+    font-weight: 600;
+  }
+  .toc a .n {
+    font-family: var(--mono);
+    font-size: .78em;
+    color: var(--ink-faint);
+    flex: none;
+    min-width: 1.4em;
+  }
+  .toc a.active .n { color: var(--accent-ink); }
+
+  main { padding-top: 32px; min-width: 0; }
+
+  /* ---------- Sections ---------- */
+  section { scroll-margin-top: 20px; margin-bottom: 14px; }
+  .part-head {
+    margin: 46px 0 10px;
+    padding-top: 20px;
+    border-top: 2px solid var(--line-strong);
+  }
+  .part-head:first-of-type { border-top: none; }
+  .part-eyebrow {
+    font-size: .74rem; text-transform: uppercase; letter-spacing: .15em;
+    font-weight: 700; color: var(--accent-ink);
+  }
+  .part-head h2 {
+    font-size: 1.7rem; margin: 6px 0 4px; letter-spacing: -.01em; font-weight: 800;
+  }
+  .part-head p { margin: 0; color: var(--ink-soft); }
+
+  .sec-num {
+    font-family: var(--mono);
+    font-size: .8rem;
+    color: var(--accent);
+    font-weight: 600;
+    letter-spacing: .04em;
+  }
+  h3.sec-title {
+    font-size: 1.32rem;
+    margin: 6px 0 14px;
+    letter-spacing: -.01em;
+    font-weight: 750;
+    text-wrap: balance;
+  }
+  h4.sub {
+    font-size: 1.02rem;
+    margin: 22px 0 8px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  p { margin: 0 0 14px; max-width: 68ch; }
+  main a { color: var(--accent-ink); }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 22px 24px 8px;
+    box-shadow: var(--shadow);
+    margin: 14px 0 26px;
+  }
+  .card > *:first-child { margin-top: 0; }
+
+  .whereat {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: .84rem; color: var(--ink-soft);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    padding: 4px 11px; border-radius: 999px;
+    margin-bottom: 4px;
+  }
+  .whereat svg { width: 13px; height: 13px; color: var(--accent); flex: none; }
+
+  /* chips = literal UI text */
+  .ui {
+    font-family: var(--mono);
+    font-size: .84em;
+    background: var(--chip-bg);
+    color: var(--chip-ink);
+    padding: 1px 7px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  .ui-btn {
+    font-family: var(--mono);
+    font-size: .82em;
+    background: var(--accent);
+    color: #fff;
+    padding: 2px 9px;
+    border-radius: 6px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  /* .ui-btn: siempre texto blanco sobre verde (tema claro fijo). */
+
+  /* steps */
+  ol.steps { list-style: none; counter-reset: step; margin: 4px 0 18px; padding: 0; }
+  ol.steps > li {
+    counter-increment: step;
+    position: relative;
+    padding: 3px 0 14px 44px;
+    max-width: 66ch;
+  }
+  ol.steps > li::before {
+    content: counter(step);
+    position: absolute; left: 0; top: 0;
+    width: 28px; height: 28px;
+    background: var(--accent-soft);
+    color: var(--accent-ink);
+    border-radius: 50%;
+    display: grid; place-items: center;
+    font-family: var(--mono);
+    font-size: .82rem; font-weight: 700;
+  }
+  ol.steps > li::after {
+    content: ""; position: absolute; left: 13.5px; top: 30px; bottom: 2px;
+    width: 1.5px; background: var(--line);
+  }
+  ol.steps > li:last-child::after { display: none; }
+
+  ul.plain { margin: 4px 0 16px; padding-left: 20px; }
+  ul.plain li { margin-bottom: 7px; max-width: 66ch; }
+  ul.plain li::marker { color: var(--accent); }
+
+  /* definition-style feature list */
+  .feats { display: grid; gap: 0; margin: 6px 0 16px; }
+  .feats > div {
+    display: grid;
+    grid-template-columns: minmax(120px, 190px) 1fr;
+    gap: 16px;
+    padding: 11px 0;
+    border-top: 1px solid var(--line);
+  }
+  .feats > div:last-child { border-bottom: 1px solid var(--line); }
+  .feats dt { font-weight: 650; color: var(--ink); }
+  .feats dd { margin: 0; color: var(--ink-soft); }
+  @media (max-width: 540px) {
+    .feats > div { grid-template-columns: 1fr; gap: 3px; }
+  }
+
+  /* callouts */
+  .note {
+    border-radius: var(--radius-sm);
+    padding: 13px 16px 13px 15px;
+    margin: 16px 0;
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--accent);
+    background: var(--surface-2);
+    font-size: .96rem;
+  }
+  .note p { margin: 0; max-width: none; }
+  .note p + p { margin-top: 8px; }
+  .note .lbl {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-weight: 700; font-size: .82rem; text-transform: uppercase; letter-spacing: .06em;
+    margin-bottom: 5px; color: var(--accent-ink);
+  }
+  .note svg { width: 15px; height: 15px; flex: none; }
+  .note.tip { border-left-color: var(--good); background: var(--good-soft); }
+  .note.tip .lbl { color: var(--good); }
+  .note.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+  .note.warn .lbl { color: var(--warn); }
+  .note.danger { border-left-color: var(--bad); background: var(--bad-soft); }
+  .note.danger .lbl { color: var(--bad); }
+
+  /* scanner legend */
+  .legend { display: grid; gap: 12px; margin: 10px 0 20px; }
+  .legend .row {
+    display: grid; grid-template-columns: 130px 1fr; gap: 16px; align-items: center;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius-sm); padding: 14px 16px;
+  }
+  .swatch {
+    border-radius: 8px; padding: 10px 8px; text-align: center;
+    font-weight: 700; font-size: .82rem; color: #fff; border: 3px solid;
+  }
+  .swatch.green { background: rgba(22,163,74,.13); border-color: var(--good); color: var(--good); }
+  .swatch.red { background: rgba(220,38,38,.12); border-color: var(--bad); color: var(--bad); }
+  .swatch.amber { background: rgba(217,119,6,.12); border-color: var(--warn); color: var(--warn); }
+  .legend .row p { margin: 0; font-size: .95rem; }
+  @media (max-width: 540px) { .legend .row { grid-template-columns: 1fr; } }
+
+  /* faq */
+  details.faq {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 0 18px;
+    margin: 10px 0;
+    background: var(--surface);
+    overflow: hidden;
+  }
+  details.faq summary {
+    cursor: pointer;
+    padding: 15px 0;
+    font-weight: 650;
+    list-style: none;
+    display: flex; justify-content: space-between; align-items: center; gap: 14px;
+  }
+  details.faq summary::-webkit-details-marker { display: none; }
+  details.faq summary .plusmin {
+    flex: none; width: 22px; height: 22px; border-radius: 6px;
+    background: var(--accent-soft); color: var(--accent-ink);
+    display: grid; place-items: center; font-weight: 700; transition: transform .2s;
+  }
+  details.faq[open] summary .plusmin { transform: rotate(45deg); }
+  details.faq > p, details.faq > ul { margin-top: 0; }
+  details.faq[open] { padding-bottom: 8px; }
+
+  /* glossary */
+  .glossary > div {
+    padding: 13px 0; border-top: 1px solid var(--line);
+    display: grid; grid-template-columns: minmax(120px,180px) 1fr; gap: 18px;
+  }
+  .glossary > div:last-child { border-bottom: 1px solid var(--line); }
+  .glossary dt { font-weight: 700; }
+  .glossary dd { margin: 0; color: var(--ink-soft); }
+  @media (max-width: 540px) { .glossary > div { grid-template-columns: 1fr; gap: 2px; } }
+
+  footer {
+    max-width: var(--maxw); margin: 0 auto; padding: 26px 24px 60px;
+    color: var(--ink-faint); font-size: .88rem; border-top: 1px solid var(--line);
+  }
+
+  /* mobile nav */
+  .toc-toggle { display: none; }
+  @media (max-width: 900px) {
+    .shell { grid-template-columns: 1fr; gap: 0; }
+    nav.toc {
+      position: static; max-height: none; overflow: visible;
+      padding: 0; margin-top: 18px;
+    }
+    .toc-toggle {
+      display: flex; align-items: center; justify-content: space-between;
+      width: 100%; background: var(--surface); border: 1px solid var(--line);
+      border-radius: var(--radius-sm); padding: 13px 16px; font-size: 1rem;
+      font-weight: 650; color: var(--ink); cursor: pointer; font-family: var(--sans);
+    }
+    .toc-toggle svg { width: 18px; height: 18px; transition: transform .2s; }
+    nav.toc.closed .toc-list { display: none; }
+    nav.toc.open .toc-toggle svg { transform: rotate(180deg); }
+    .toc-list {
+      margin-top: 8px; padding: 8px; border: 1px solid var(--line);
+      border-radius: var(--radius-sm); background: var(--surface-2);
+    }
+    main { padding-top: 22px; }
+  }
+</style>
+</head>
+<body>
+
+
+<header class="masthead">
+  <div class="masthead__inner">
+    <span class="brand">
+      <span class="dot">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3m13-5v3a2 2 0 0 1-2 2h-3"/><circle cx="12" cy="12" r="3.2"/></svg>
+      </span>
+      SL Asistencias · Control de asistencia
+    </span>
+    <h1 class="title">Manual de uso</h1>
+    <p class="subtitle">Guía de uso del sistema SL Asistencias, organizada por secciones. Describe para qué sirve cada pantalla del programa y las acciones disponibles para el usuario, de forma clara y paso a paso.</p>
+    <div class="meta-row">
+      <span class="tag">Secciones del <b>panel</b></span>
+      <span class="tag">Estación de <b>escaneo</b></span>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <nav class="toc closed" id="toc" aria-label="Índice del manual">
+    <button class="toc-toggle" id="tocToggle" aria-expanded="false">
+      <span>Índice del manual</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
+    <div class="toc-list">
+      <h4>Para empezar</h4>
+      <a href="#que-es"><span class="n">1</span><span>Qué es el sistema</span></a>
+      <a href="#ingresar"><span class="n">2</span><span>Iniciar sesión</span></a>
+      <a href="#menu"><span class="n">3</span><span>El menú y cómo moverte</span></a>
+      <h4>Secciones del panel</h4>
+      <a href="#inicio"><span class="n">4</span><span>Inicio (Informe general)</span></a>
+      <a href="#trabajadores"><span class="n">5</span><span>Trabajadores</span></a>
+      <a href="#asistencias"><span class="n">6</span><span>Asistencias</span></a>
+      <a href="#incidencias"><span class="n">7</span><span>Incidencias</span></a>
+      <a href="#reportes"><span class="n">8</span><span>Reportes</span></a>
+      <a href="#empresas"><span class="n">9</span><span>Empresas</span></a>
+      <a href="#areas"><span class="n">10</span><span>Áreas de trabajo</span></a>
+      <a href="#dispositivos"><span class="n">11</span><span>Dispositivos</span></a>
+      <a href="#puertas"><span class="n">12</span><span>Puertas de acceso</span></a>
+      <a href="#usuarios"><span class="n">13</span><span>Usuarios</span></a>
+      <a href="#roles"><span class="n">14</span><span>Roles</span></a>
+      <a href="#scanner"><span class="n">15</span><span>Scanner</span></a>
+      <a href="#configuracion"><span class="n">16</span><span>Configuración</span></a>
+      <h4>Estación de escaneo</h4>
+      <a href="#kiosko"><span class="n">17</span><span>Qué es la estación</span></a>
+      <a href="#fichar"><span class="n">18</span><span>Fichar con el Escáner</span></a>
+      <a href="#registrar"><span class="n">19</span><span>Registrar un rostro</span></a>
+      <h4>Referencia</h4>
+      <a href="#colores"><span class="n">20</span><span>Colores y mensajes</span></a>
+      <a href="#problemas"><span class="n">21</span><span>Problemas frecuentes</span></a>
+      <a href="#glosario"><span class="n">22</span><span>Palabras útiles</span></a>
+    </div>
+  </nav>
+
+  <main>
+    <!-- ============ 1 ============ -->
+    <section id="que-es">
+      <span class="sec-num">01</span>
+      <h3 class="sec-title">Qué es el sistema</h3>
+      <p><b>SL Asistencias</b> sirve para registrar cuándo entran y salen los trabajadores usando la <b>cámara</b> y el <b>reconocimiento facial</b>. En vez de firmar una hoja o marcar una tarjeta, la persona se pone frente a la cámara y el programa la reconoce sola.</p>
+      <p>El sistema se divide en <b>secciones</b>, cada una para una tarea distinta. Esta guía las explica una por una. No necesitas verlas todas: cada usuario solo verá en su menú las secciones para las que tiene permiso.</p>
+      <div class="feats">
+        <div>
+          <dt>Secciones del panel</dt>
+          <dd>Se usan desde una computadora para <b>revisar y administrar</b>: trabajadores, asistencias, incidencias, reportes, catálogos (empresas, áreas, dispositivos, puertas), usuarios y ajustes.</dd>
+        </div>
+        <div>
+          <dt>Estación de escaneo</dt>
+          <dd>Es el equipo que está <b>en la puerta</b>, donde la gente pasa a fichar su cara. Solo sirve para escanear rostros y registrar caras nuevas.</dd>
+        </div>
+      </div>
+      <div class="note tip">
+        <span class="lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6m-5 3h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1v.2h6v-.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2Z"/></svg>Consejo</span>
+        <p>Si tu menú se ve distinto al de un compañero, es normal: cada persona solo ve las secciones que le corresponden según los permisos de su cuenta.</p>
+      </div>
+    </section>
+
+    <!-- ============ 2 ============ -->
+    <section id="ingresar">
+      <span class="sec-num">02</span>
+      <h3 class="sec-title">Iniciar sesión (entrar al programa)</h3>
+      <p>Cuando abres el programa, lo primero que aparece es una tarjeta en el centro que dice <span class="ui">Iniciar sesión</span>. Ahí escribes tu usuario y tu contraseña.</p>
+      <div class="card">
+        <ol class="steps">
+          <li>En el campo <span class="ui">Usuario</span>, escribe el nombre de usuario que te dieron.</li>
+          <li>En el campo <span class="ui">Contraseña</span>, escribe tu clave. Se ve con puntitos (•••) para que nadie la lea por encima de tu hombro.</li>
+          <li>Toca el botón <span class="ui-btn">Ingresar</span>. Mientras revisa tus datos, el botón cambia a <span class="ui">Ingresando…</span> y se bloquea un momento (no lo toques varias veces).</li>
+          <li>Si todo está bien, el programa te lleva solo a tu pantalla de inicio.</li>
+        </ol>
+      </div>
+      <div class="note warn">
+        <span class="lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>Si sale un recuadro rojo</span>
+        <p>Verás el mensaje <span class="ui">Usuario o contraseña incorrectos.</span>. Revisa que no tengas activadas las mayúsculas (Bloq Mayús) y vuelve a intentar. Si sigue sin entrar, avisa a la persona que administra el sistema para que revise tu cuenta.</p>
+      </div>
+    </section>
+
+    <!-- ============ 3 ============ -->
+    <section id="menu">
+      <span class="sec-num">03</span>
+      <h3 class="sec-title">El menú y cómo moverte</h3>
+      <p>A la izquierda de la pantalla hay una barra llamada <span class="ui">Navegación</span>. Desde ahí entras a cada sección con un solo clic. Tiene una <b>X</b> arriba para plegarla (esconderla) y darle más espacio a la pantalla; toca de nuevo para abrirla.</p>
+      <h4 class="sub">Lo que siempre aparece</h4>
+      <div class="feats">
+        <div><dt><span class="ui">Inicio</span></dt><dd>Arriba del todo (icono de casita). Te regresa a la pantalla principal.</dd></div>
+        <div><dt><span class="ui">Configuración</span></dt><dd>Abajo (icono de engranaje). Ajustes del equipo, la cámara y la voz.</dd></div>
+        <div><dt><span class="ui">Cerrar sesión</span></dt><dd>El último (icono de flecha saliendo). Te saca del programa de forma segura.</dd></div>
+      </div>
+      <h4 class="sub">Lo que cambia de una persona a otra</h4>
+      <p>En medio del menú aparecen solo las secciones a las que tienes permiso. Por eso el menú puede verse más largo o más corto según tu cuenta. Un equipo puesto <b>en la puerta</b> (estación de escaneo) muestra únicamente <span class="ui">Escáner</span> y <span class="ui">Registrar rostro</span>.</p>
+      <div class="note">
+        <span class="lbl" style="color:var(--accent-ink)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2v-4M3 9V5a2 2 0 0 1 2-2h4m6 0h4a2 2 0 0 1 2 2v4m0 6v4a2 2 0 0 1-2 2h-4"/><path d="m14 10-4 4m0-4 4 4"/></svg>Cerrar sesión al terminar</span>
+        <p>Siempre que dejes de usar el programa en una computadora que otras personas también usan, toca <span class="ui">Cerrar sesión</span>. Así nadie entra con tu cuenta por accidente.</p>
+      </div>
+    </section>
+
+    <!-- ============ PART: PANEL ============ -->
+    <div class="part-head" id="parte-panel">
+      <span class="part-eyebrow">Secciones del panel</span>
+      <h2>Las pantallas del sistema, una por una</h2>
+      <p>Cada sección se abre desde el menú. Muchas se parecen entre sí, así que conviene conocer los elementos que se repiten (los explicamos una sola vez aquí abajo).</p>
+    </div>
+
+    <div class="note">
+      <span class="lbl" style="color:var(--accent-ink)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16v-4m0-4h.01M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z"/></svg>Cosas que se repiten en varias secciones</span>
+      <p><b>Barra de filtros</b> arriba (empresa, área, estado y una caja de <span class="ui">Buscar</span>) para acotar lo que ves. <b>Botón «+ Nuevo…»</b> arriba a la derecha para dar de alta. En cada fila, los botones <span class="ui">Editar</span> y <span class="ui">Desactivar</span> (este último en rojo y siempre pide confirmación). En Empresas, Áreas, Dispositivos y Puertas hay además un <b>mapa</b> a la derecha. Al final de la tabla hay control de páginas, y si no hay nada dice <span class="ui">Sin registros.</span></p>
+    </div>
+
+    <!-- ============ 4 ============ -->
+    <section id="inicio">
+      <span class="sec-num">04</span>
+      <h3 class="sec-title">Inicio — el Informe general</h3>
+      <div class="card">
+        <span class="whereat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1Z"/></svg>Menú → Inicio</span>
+        <p>Es la pantalla de bienvenida. Se llama <span class="ui">Informe general</span> y da un <b>resumen rápido</b> de cómo va la asistencia, con números grandes fáciles de leer.</p>
+        <h4 class="sub">Arriba puedes elegir el período</h4>
+        <p>Hay dos casillas de fecha, <span class="ui">Desde</span> y <span class="ui">Hasta</span>. Todo lo que ves abajo corresponde a esas fechas. Cámbialas para ver otro rango de días.</p>
+        <h4 class="sub">Qué números vas a ver</h4>
+        <ul class="plain">
+          <li><b>Asistencias:</b> total de registros, entradas, salidas, cuántas fueron exitosas, rechazadas o fuera de área.</li>
+          <li><b>Incidencias:</b> total, y cuántas están pendientes, revisadas o justificadas.</li>
+          <li><b>Resumen de hoy:</b> cuántas personas están presentes hoy, el porcentaje de asistencia, retardos del día y quiénes tienen (o no) su rostro registrado.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============ 5 ============ -->
+    <section id="trabajadores">
+      <span class="sec-num">05</span>
+      <h3 class="sec-title">Trabajadores</h3>
+      <div class="card">
+        <span class="whereat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm13 10v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>Menú → Trabajadores</span>
+        <p>Aquí está la lista de todo el personal. Es donde <b>das de alta</b> gente nueva, <b>editas</b> sus datos y <b>registras su cara</b> para que el escáner los reconozca.</p>
+        <h4 class="sub">Buscar y filtrar</h4>
+        <ul class="plain">
+          <li>Caja <span class="ui">Buscar por nombre o nº de empleado…</span>: escribe el nombre o el número de nómina.</li>
+          <li>Filtro <span class="ui">Área</span> y <span class="ui">Estado</span> (activo, inactivo, suspendido).</li>
+          <li>Filtro <span class="ui">Rostro:</span> con las opciones <span class="ui">Con rostro</span> y <span class="ui">Sin rostro (faltan por registrar)</span>. Muy útil para ver a quién le falta la cara.</li>
+        </ul>
+        <h4 class="sub">Qué muestra la tabla</h4>
+        <p>Por cada persona: su nº de empleado, nombre, área, estado, si tiene rostro registrado (<span class="ui">Sí</span> / <span class="ui">No</span>) y los botones de acción.</p>
+        <h4 class="sub">Dar de alta un trabajador nuevo</h4>
+        <ol class="steps">
+          <li>Toca el botón <span class="ui-btn">+ Nuevo trabajador</span> (arriba a la derecha).</li>
+          <li>Se abre una ventana <span class="ui">Nuevo trabajador</span>. Rellena sus datos (nombre, empresa, área…).</li>
+          <li>Al guardar, el programa <b>abre solo la cámara</b> para registrarle el rostro en ese mismo momento. Sigue los pasos de la <a href="#registrar">sección 19</a>.</li>
+        </ol>
+        <h4 class="sub">Otras acciones (botones en cada fila)</h4>
+        <div class="feats">
+          <div><dt><span class="ui">Editar</span></dt><dd>Cambiar los datos de esa persona.</dd></div>
+          <div><dt><span class="ui">Registrar rostro</span></dt><dd>Aparece cuando la persona aún no tiene cara. Abre la cámara para capturarla.</dd></div>
+          <div><dt><span class="ui">Actualizar</span> / <span class="ui">Eliminar</span></dt><dd>Cuando ya tiene rostro: volver a tomar la foto, o borrar la cara guardada.</dd></div>
+          <div><dt><span class="ui">Desactivar</span></dt><dd>(En rojo.) Deja a la persona fuera de servicio sin borrarla.</dd></div>
+        </div>
+      </div>
+      <div class="note warn">
+        <span class="lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>Antes de borrar o desactivar</span>
+        <p>El programa te pide confirmación, por ejemplo <span class="ui">¿Desactivar a "Nombre Apellido"?</span> o <span class="ui">¿Eliminar el rostro de…? No es reversible.</span>. Léelo con calma: eliminar un rostro no se puede deshacer.</p>
+      </div>
+    </section>
+
+    <!-- ============ 6 ============ -->
+    <section id="asistencias">
+      <span class="sec-num">06</span>
+      <h3 class="sec-title">Asistencias</h3>
+      <div class="card">
+        <span class="whereat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l2 2 4-4m3-5H6a2 2 0 0 0-2 2v14l4-3h10a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Z"/></svg>Menú → Asistencias</span>
+        <p>Es la <b>lista de entradas y salidas</b> que se han fichado. Esta pantalla es solo de consulta: aquí <b>miras</b>, no editas.</p>
+        <h4 class="sub">Filtros</h4>
+        <ul class="plain">
+          <li><span class="ui">Desde</span> y <span class="ui">Hasta</span>: por defecto trae la <b>última semana</b>. Cámbialas para ver otras fechas.</li>
+          <li>Botones de color para <b>Estado</b> (exitoso, rechazado, manual, fuera_de_area…) y <b>Tipo</b> (entrada, salida, retardo). Cada uno muestra entre paréntesis cuántos hay.</li>
+          <li>Caja de <span class="ui">Buscar</span> por nombre, y filtro por <span class="ui">Área</span>.</li>
+          <li>Botón <span class="ui-btn">Actualizar</span> para recargar la lista.</li>
+        </ul>
+        <h4 class="sub">La tabla y el mapa</h4>
+        <p>La tabla muestra: empleado, área, puerta, tipo, fecha y hora, «confianza» (qué tan seguro estuvo el reconocimiento, en %), estado y observaciones. Al <b>hacer clic en una fila</b>, esa asistencia se marca en el <b>mapa</b> de la derecha: un punto <b style="color:var(--good)">verde</b> si fichó dentro del área, o <b style="color:var(--bad)">rojo</b> si fue fuera del área asignada.</p>
+        <h4 class="sub">Ver retardos</h4>
+        <p>Si tocas el botón <span class="ui">retardo</span>, la pantalla cambia a una tabla de llegadas tarde: muestra la hora esperada, la hora real y cuántos minutos de retardo.</p>
+      </div>
+    </section>
+
+    <!-- ============ 7 ============ -->
+    <section id="incidencias">
+      <span class="sec-num">07</span>
+      <h3 class="sec-title">Incidencias</h3>
+      <div class="card">
+        <span class="whereat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>Menú → Incidencias</span>
+        <p>Una <b>incidencia</b> es algo que hay que revisar: alguien que no fue reconocido, una falta, un retardo, un fichaje fuera del área, etc. Aquí las revisas y les pones estado.</p>
+        <h4 class="sub">Filtros</h4>
+        <ul class="plain">
+          <li>Desplegable de origen: <span class="ui">Todos los orígenes</span>, <span class="ui">Incidencias</span>, <span class="ui">Intentos</span>.</li>
+          <li>Fechas <span class="ui">Desde</span> / <span class="ui">Hasta</span> (arranca en la última semana) y caja de <span class="ui">Buscar</span>.</li>
+          <li>Botones de color de <b>Estado</b> (pendiente, revisada, justificada) y de <b>Tipo</b> con su contador.</li>
+        </ul>
+        <h4 class="sub">Cambiar el estado</h4>
+        <p>En cada fila hay un pequeño desplegable para marcar la incidencia como <span class="ui">pendiente</span>, <span class="ui">revisada</span> o <span class="ui">justificada</span>. Así llevas el control de lo que ya atendiste.</p>
+        <h4 class="sub">Ver la foto del evento</h4>
+        <ol class="steps">
+          <li>En la columna <b>Foto</b>, toca el botón <span class="ui-btn">Ver</span>.</li>
+          <li>Se abre la ventana <span class="ui">Foto del evento</span> con la imagen, el nombre, la fecha/hora y el % de parecido.</li>
+          <li>Si fue fuera de área, además verás un mapa con el punto donde ocurrió.</li>
+          <li>Toca <span class="ui">Cerrar</span> para volver.</li>
+        </ol>
+      </div>
+      <div class="note danger">
+        <span class="lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>Ojo con «justificada»</span>
+        <p>Marcar una incidencia como <span class="ui">justificada</span> <b>no se puede deshacer</b>. El programa te avisa: <span class="ui">¿Marcar como justificada? Una vez justificada no se podrá cambiar el estado.</span> Confírmalo solo cuando estés seguro.</p>
+      </div>
+    </section>
+
+    <!-- ============ 8 ============ -->
+    <section id="reportes">
+      <span class="sec-num">08</span>
+      <h3 class="sec-title">Reportes</h3>
+      <div class="card">
+        <span class="whereat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18M8 15v3m5-7v7m5-11v11"/></svg>Menú → Reportes</span>
+        <p>Aquí sacas la información en un archivo de <b>Excel</b> o <b>CSV</b> para guardarla, imprimirla o enviarla. Hay tres reportes listos:</p>
+        <div class="feats">
+          <div><dt><span class="ui">Asistencias</span></dt><dd>Entradas y salidas del período.</dd></div>
+          <div><dt><span class="ui">Incidencias</span></dt><dd>Las incidencias registradas en el período.</dd></div>
+          <div><dt><span class="ui">Retardos</span></dt><dd>Llegadas tarde: hora esperada contra hora real.</dd></div>
+        </div>
+        <h4 class="sub">Cómo descargar un reporte</h4>
+        <ol class="steps">
+          <li>Toca la tarjeta del reporte que quieres. Se abre una ventana.</li>
+          <li>Elige las fechas <span class="ui">Desde</span> y <span class="ui">Hasta</span>. Si quieres, filtra por un trabajador escribiendo su ID o nombre.</li>
+          <li>Abajo se muestra una <b>vista previa</b> (las primeras filas). Es solo un adelanto; el archivo descargado trae todo.</li>
+          <li>Toca <span class="ui-btn">Excel (XLSX)</span> o <span class="ui-btn">CSV</span>. Mientras prepara el archivo dice <span class="ui">Generando…</span> y luego se descarga solo.</li>
+        </ol>
+      </div>
+      <div class="note tip">
+        <span class="lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>¿Excel o CSV?</span>
+        <p>Si vas a abrirlo en la computadora para verlo bonito, elige <b>Excel</b>. El <b>CSV</b> es un formato más simple que sirve para pasar los datos a otros sistemas.</p>
+      </div>
+    </section>
+
+    <!-- ============ 9 ============ -->
+    <section id="empresas">
+      <span class="sec-num">09</span>
+      <h3 class="sec-title">Empresas</h3>
+      <div class="card">
+        <span class="whereat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M6 21V5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v16M18 21V9h1a1 1 0 0 1 1 1v11M9 8h3M9 12h3M9 16h3"/></svg>Menú → Empresas</span>
+        <p>Es el catálogo de las empresas u organizaciones del sistema. Desde aquí se dan de alta, se define su zona horaria y se dibuja en el mapa el terreno que ocupan.</p>
+        <h4 class="sub">Qué muestra la tabla</h4>
+        <p>ID, Empresa, Zona horaria, Ubicación (<span class="ui">Sí</span> si tiene terreno en el mapa), Estado y los botones.</p>
+        <h4 class="sub">Crear o editar una empresa</h4>
+        <ol class="steps">
+          <li>Toca <span class="ui-btn">+ Nueva empresa</span>. Se abre la ventana <span class="ui">Nueva empresa</span>.</li>
+          <li>Escribe el <span class="ui">Nombre de la empresa</span>, la <span class="ui">Zona horaria</span> y el <span class="ui">Estado</span> (Activo/Inactivo).</li>
+          <li>Marca el terreno: <b>dibújalo directamente en el mapa</b> o añade puntos a mano con <span class="ui">+ Agregar coordenada</span>. El sistema calcula las hectáreas y avisa si el terreno es muy chico o muy grande.</li>
+          <li>Guarda con <span class="ui-btn">Crear</span> (o <span class="ui-btn">Guardar</span> si estabas editando).</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ============ 10 ============ -->
+    <section id="areas">
+      <span class="sec-num">10</span>
+      <h3 class="sec-title">Áreas de trabajo</h3>
+      <div class="card">
+        <span class="whereat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.7-6-10a6 6 0 0 1 12 0c0 4.3-6 10-6 10Z"/><circle cx="12" cy="11" r="2.2"/></svg>Menú → Áreas de trabajo</span>
+        <p>Son las zonas dentro de una empresa (por ejemplo oficinas, empaque o campo). Cada área pertenece a una empresa, puede tener una hora de entrada y su propia ubicación en el mapa.</p>
+        <h4 class="sub">Qué muestra la tabla</h4>
+        <p>ID, Área, Descripción, Empresa, Hora de entrada, Estado y los botones.</p>
+        <h4 class="sub">Crear o editar un área</h4>
+        <ol class="steps">
+          <li>Toca <span class="ui-btn">+ Nueva área</span>.</li>
+          <li>Escribe el <span class="ui">Nombre del área</span>, la <span class="ui">Descripción</span>, elige la <span class="ui">Empresa</span> y la <span class="ui">Hora de entrada</span>.</li>
+          <li>Si marcas la casilla <span class="ui">Área administrativa (usa las coordenadas de la empresa)</span>, el área toma el mismo terreno de la empresa. Si no, <b>dibuja su propio polígono</b> en el mapa (misma regla de hectáreas que en Empresas).</li>
+          <li>Guarda.</li>
+        </ol>
+      </div>
+      <div class="note tip">
+        <span class="lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>¿Por qué importa el área?</span>
+        <p>El área define la «zona correcta» de cada persona. Por eso, cuando alguien ficha fuera de su área, el sistema lo marca en <b style="color:var(--bad)">rojo</b> como «fuera de área».</p>
+      </div>
+    </section>
+
+    <!-- ============ 11 ============ -->
+    <section id="dispositivos">
+      <span class="sec-num">11</span>
+      <h3 class="sec-title">Dispositivos</h3>
+      <div class="card">
+        <span class="whereat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M9 3v2m6-2v2M9 19v2m6-2v2M3 9h2m-2 6h2m14-6h2m-2 6h2"/></svg>Menú → Dispositivos</span>
+        <p>Es el catálogo de los aparatos de registro (escáner facial, lector de huella o lector de QR). Aquí se registra cada aparato, su dirección de red y a qué área pertenece.</p>
+        <h4 class="sub">Qué muestra la tabla</h4>
+        <p>ID, Nombre, Tipo, IP (dirección de red), Área, Estado y los botones.</p>
+        <h4 class="sub">Crear o editar un dispositivo</h4>
+        <ol class="steps">
+          <li>Toca <span class="ui-btn">+ Nuevo dispositivo</span>.</li>
+          <li>Escribe el <span class="ui">Nombre del dispositivo</span> y elige el <span class="ui">Tipo</span> (<span class="ui">Escáner facial</span>, <span class="ui">Huella</span> o <span class="ui">Escáner QR</span>).</li>
+          <li>Completa la <span class="ui">IP</span>, el <span class="ui">Puerto</span>, la <span class="ui">Empresa</span> y el <span class="ui">Área</span>. La <b>ubicación</b> (un punto en el mapa) es opcional.</li>
+          <li>Guarda.</li>
+        </ol>
+      </div>
+      <div class="note">
+        <span class="lbl" style="color:var(--accent-ink)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16v-4m0-4h.01M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z"/></svg>Datos técnicos</span>
+        <p>La <b>IP</b> y el <b>Puerto</b> son datos de red del aparato. Normalmente los configura quien instala los equipos; si no los conoces, déjalos como están o pregunta al soporte técnico.</p>
+      </div>
+    </section>
+
+    <!-- ============ 12 ============ -->
+    <section id="puertas">
+      <span class="sec-num">12</span>
+      <h3 class="sec-title">Puertas de acceso</h3>
+      <div class="card">
+        <span class="whereat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M6 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M14 12h.5"/></svg>Menú → Puertas de acceso</span>
+        <p>Es el catálogo de los puntos de acceso. Cada puerta se asocia a una empresa, un área y un dispositivo, y define si sirve para <b>registrar asistencia</b> o para <b>controlar el acceso</b>, y en qué sentido (entrada o salida).</p>
+        <h4 class="sub">Qué muestra la tabla</h4>
+        <p>ID, Nombre, Empresa, Área, Dispositivo, Tipo de acceso, Autorización (<span class="ui">Sí</span>/<span class="ui">No</span>), Estado y los botones.</p>
+        <h4 class="sub">Crear o editar una puerta</h4>
+        <ol class="steps">
+          <li>Toca <span class="ui-btn">+ Nueva puerta</span>.</li>
+          <li>Escribe el <span class="ui">Nombre de la puerta</span> y elige la <span class="ui">Empresa</span>, el <span class="ui">Área</span> y el <span class="ui">Dispositivo</span>.</li>
+          <li>Define el <span class="ui">Tipo de acceso</span> (<span class="ui">Entrada</span>, <span class="ui">Salida</span> o <span class="ui">Bidireccional</span>) y la <span class="ui">Función</span> (<span class="ui">Asistencia</span> o <span class="ui">Control de acceso</span>).</li>
+          <li>Guarda.</li>
+        </ol>
+      </div>
+      <div class="note tip">
+        <span class="lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Relación con el escáner</span>
+        <p>La <b>puerta</b> es la que el equipo de la puerta usa para saber dónde y en qué sentido registra. Por eso, en <a href="#configuracion">Configuración</a> se elige qué puerta usa cada estación de escaneo.</p>
+      </div>
+    </section>
+
+    <!-- ============ 13 ============ -->
+    <section id="usuarios">
+      <span class="sec-num">13</span>
+      <h3 class="sec-title">Usuarios</h3>
+      <div class="card">
+        <span class="whereat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Menú → Usuarios</span>
+        <p>Es la administración de las <b>cuentas</b> que pueden entrar al sistema. Aquí se crean usuarios, se les pone contraseña, se les asigna un <b>rol</b> (sus permisos) y la empresa a la que pertenecen.</p>
+        <h4 class="sub">Qué muestra la tabla</h4>
+        <p>ID, Usuario, Rol, Empresa, Estado y los botones.</p>
+        <h4 class="sub">Crear o editar un usuario</h4>
+        <ol class="steps">
+          <li>Toca <span class="ui-btn">+ Nuevo usuario</span>.</li>
+          <li>Escribe el <span class="ui">Nombre de usuario</span> y una <span class="ui">Contraseña</span> (al editar, si la dejas vacía, no se cambia).</li>
+          <li>Elige el <span class="ui">Rol</span> (define qué podrá ver y hacer) y la <span class="ui">Empresa</span>.</li>
+          <li>Guarda.</li>
+        </ol>
+      </div>
+      <div class="note warn">
+        <span class="lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>Sección de administrador</span>
+        <p>Crear cuentas y contraseñas es delicado. Esta sección suele estar reservada a quien administra el sistema; si la ves, maneja las contraseñas con cuidado.</p>
+      </div>
+    </section>
+
+    <!-- ============ 14 ============ -->
+    <section id="roles">
+      <span class="sec-num">14</span>
+      <h3 class="sec-title">Roles</h3>
+      <div class="card">
+        <span class="whereat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 5v6c0 5 3.5 8 8 11 4.5-3 8-6 8-11V5l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg>Menú → Roles</span>
+        <p>Un <b>rol</b> es un conjunto de permisos que luego se asigna a los usuarios. Sirve para decidir qué puede ver y hacer cada persona: por ejemplo, un rol puede permitir ver asistencias pero no crear trabajadores.</p>
+        <h4 class="sub">Qué muestra la tabla</h4>
+        <p>ID, Rol, Descripción, Permisos (etiquetas con cada permiso), Estado y los botones.</p>
+        <h4 class="sub">Crear o editar un rol</h4>
+        <ol class="steps">
+          <li>Toca <span class="ui-btn">+ Nuevo rol</span>. Escribe el <span class="ui">Nombre del rol</span> y una <span class="ui">Descripción</span>.</li>
+          <li>Para ir rápido, usa un botón preparado: <span class="ui">Acceso total</span>, <span class="ui">Solo lectura</span>, <span class="ui">Escritura</span> o <span class="ui">Solo scanner</span>.</li>
+          <li>Afina en la tabla de permisos marcando, por cada sección, las casillas <span class="ui">Ver</span>, <span class="ui">Crear / Editar</span> y <span class="ui">Borrar</span>. Hay también una casilla <span class="ui">Usar scanner</span>.</li>
+          <li>Guarda.</li>
+        </ol>
+      </div>
+      <div class="note">
+        <span class="lbl" style="color:var(--accent-ink)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16v-4m0-4h.01M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z"/></svg>Sección de administrador</span>
+        <p>Los roles son la base de la seguridad del sistema. Un rol sin permisos no podrá hacer nada. Normalmente solo el administrador toca esta sección.</p>
+      </div>
+    </section>
+
+    <!-- ============ 15 ============ -->
+    <section id="scanner">
+      <span class="sec-num">15</span>
+      <h3 class="sec-title">Scanner (el escáner desde tu computadora)</h3>
+      <div class="card">
+        <span class="whereat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3m13-5v3a2 2 0 0 1-2 2h-3"/><circle cx="12" cy="12" r="3.2"/></svg>Menú → Scanner</span>
+        <p>Es el escáner facial, pero usado <b>desde tu computadora con internet</b>. Funciona casi igual que el de la estación de la puerta y puede leer <b>varias caras a la vez</b>. Se usa sobre todo para probar o para fichar en el momento.</p>
+        <h4 class="sub">Cómo usarlo</h4>
+        <ol class="steps">
+          <li>Confirma arriba la <span class="ui">Puerta</span> y el <span class="ui">Registro</span> (<span class="ui">Entrada</span> o <span class="ui">Salida</span>). Si falta, toca <span class="ui">Configurar scanner</span>.</li>
+          <li>Toca <span class="ui-btn">Iniciar</span>. Se abre la cámara (dice <span class="ui">Cargando cámara y modelo…</span>).</li>
+          <li>La persona se pone de frente. Cuando la cara está bien, aparece un recuadro con su nombre y el % de parecido.</li>
+          <li>Sale un aviso: <span class="ui">Cara 1: Exitoso</span> con el nombre, o <span class="ui">Cara 1: Rechazado</span> con el motivo.</li>
+          <li>Al terminar, toca <span class="ui">Detener</span>.</li>
+        </ol>
+      </div>
+      <p>Los colores y mensajes son los mismos que en la estación de la puerta. Los tienes explicados en la <a href="#colores">sección 20</a>.</p>
+    </section>
+
+    <!-- ============ 16 ============ -->
+    <section id="configuracion">
+      <span class="sec-num">16</span>
+      <h3 class="sec-title">Configuración</h3>
+      <div class="card">
+        <span class="whereat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7.7 1.6 1.6 0 0 0-1 1.5V22a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 8 20.3a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0-.7-2.7 1.6 1.6 0 0 0-1.5-1H2a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-2.4 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 2.7-.7A1.6 1.6 0 0 0 10 2.1V2a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.4 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 .7 2.7h.2a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"/></svg>Menú → Configuración</span>
+        <p>Son los ajustes del <b>equipo donde estás trabajando</b>. Se guardan en esa computadora. La mayoría solo se toca una vez al montar la estación, pero conviene que sepas para qué sirven.</p>
+        <h4 class="sub">Sección «Scanner»</h4>
+        <p>Define la <span class="ui">Puerta</span>, si registra <span class="ui">Entrada</span> o <span class="ui">Salida</span>, la <span class="ui">Cámara</span> a usar y la calidad de imagen. Si tienes varias cámaras, toca <span class="ui-btn">Detectar cámaras</span> (te pedirá permiso de cámara) para elegir la correcta.</p>
+        <h4 class="sub">Sección «Voz del scanner»</h4>
+        <p>Activa o silencia la voz que anuncia los resultados («Aprobado, …» / «Acceso denegado»). Puedes elegir la voz, el volumen, la velocidad y probarla con el botón <span class="ui-btn">Probar</span>.</p>
+        <h4 class="sub">Sección «Datos para escanear (offline)»</h4>
+        <p>Sirve para la estación que trabaja <b>sin internet</b>. Muestra con ✓ verde o ✗ rojo si el equipo ya tiene descargado todo lo necesario. Si dice <span class="ui">Faltan datos</span>, toca <span class="ui-btn">Re-sincronizar (necesita internet)</span>.</p>
+        <h4 class="sub">Sección «Modo de conexión»</h4>
+        <p>Elige si el escáner usa el <b>servidor</b> (online) o funciona <b>en el propio equipo</b> (offline). Lo normal es dejarlo en <span class="ui">Automático</span>: si se cae internet, cambia solo al modo offline.</p>
+      </div>
+      <div class="note">
+        <span class="lbl" style="color:var(--accent-ink)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16v-4m0-4h.01M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z"/></svg>Regla sencilla</span>
+        <p>Si no sabes qué hace un ajuste, <b>no lo cambies</b>. Si la estación dejó de reconocer, casi siempre basta con <span class="ui-btn">Re-sincronizar</span> con internet. Para dudas mayores, avisa a quien administra el sistema.</p>
+      </div>
+    </section>
+
+    <!-- ============ PART: ESCANEO ============ -->
+    <div class="part-head" id="parte-escaneo">
+      <span class="part-eyebrow">Estación de escaneo</span>
+      <h2>El equipo de la puerta (Kiosko)</h2>
+      <p>Es el equipo donde la gente ficha. Su menú tiene solo dos cosas: <span class="ui">Escáner</span> para fichar, y <span class="ui">Registrar rostro</span> para dar de alta caras nuevas.</p>
+    </div>
+
+    <!-- ============ 17 ============ -->
+    <section id="kiosko">
+      <span class="sec-num">17</span>
+      <h3 class="sec-title">Qué es la estación de escaneo</h3>
+      <p>Piensa en ella como una <b>cuenta recortada</b>: hace una sola cosa, fichar personas, y por eso su pantalla es simple y grande. No puede ver reportes ni administrar nada; eso se hace desde el panel.</p>
+      <ul class="plain">
+        <li>Funciona <b>aunque se caiga el internet</b>: reconoce las caras en el propio equipo y guarda los fichajes; cuando vuelve la conexión, los sube solos.</li>
+        <li>Para que reconozca bien, el equipo necesita tener sus datos descargados. Eso se revisa en <a href="#configuracion">Configuración → «Datos para escanear»</a>.</li>
+      </ul>
+      <div class="note tip">
+        <span class="lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Al empezar el turno</span>
+        <p>Confirma que arriba diga la <b>puerta correcta</b> y si toca <span class="ui">Entrada</span> o <span class="ui">Salida</span>. Si en la mañana registras entradas y en la tarde salidas, hay que <b>cambiar ese ajuste</b> a media jornada (con el enlace <span class="ui">Cambiar</span>).</p>
+      </div>
+    </section>
+
+    <!-- ============ 18 ============ -->
+    <section id="fichar">
+      <span class="sec-num">18</span>
+      <h3 class="sec-title">Fichar con el Escáner</h3>
+      <div class="card">
+        <span class="whereat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3m13-5v3a2 2 0 0 1-2 2h-3"/><circle cx="12" cy="12" r="3.2"/></svg>Menú → Escáner</span>
+        <p>Es la pantalla principal de la estación. Con ella la gente ficha su entrada o su salida en segundos.</p>
+        <ol class="steps">
+          <li>Revisa arriba la <span class="ui">Puerta</span> y el <span class="ui">Registro</span> (Entrada o Salida). Si dice <span class="ui">No hay puerta configurada.</span>, toca <span class="ui">Configurar escáner</span> primero.</li>
+          <li>Toca el botón azul <span class="ui-btn">Iniciar</span>. La cámara se abre y llena la pantalla (dice <span class="ui">Abriendo cámara…</span>).</li>
+          <li>La persona se coloca de frente, cerca de la cámara. Aparecen guías como <span class="ui">Acerca tu rostro a la cámara</span> o <span class="ui">Acércate…</span> con un porcentaje que sube al acercarse.</li>
+          <li>Cuando la reconoce, sale un recuadro <b style="color:var(--good)">verde</b> con su nombre y el aviso <span class="ui">Fichaje registrado</span>. Si la voz está activa, dice «Aprobado, [nombre].» ¡Listo, ya fichó!</li>
+          <li>La siguiente persona se pone de frente. No hace falta tocar nada entre una y otra.</li>
+          <li>Al terminar, toca <span class="ui">Detener</span> para apagar la cámara.</li>
+        </ol>
+      </div>
+      <div class="note warn">
+        <span class="lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>Cosas normales que pueden pasar</span>
+        <p>Los botones se <b>ocultan solos</b> a los pocos segundos para que la pantalla quede limpia: toca cualquier parte para que vuelvan a aparecer. Si la misma persona se asoma dos veces seguidas, solo muestra <span class="ui">✓ Nombre</span> sin fichar de nuevo (así no se duplica).</p>
+      </div>
+    </section>
+
+    <!-- ============ 19 ============ -->
+    <section id="registrar">
+      <span class="sec-num">19</span>
+      <h3 class="sec-title">Registrar un rostro</h3>
+      <div class="card">
+        <span class="whereat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M8.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM19 8v6M22 11h-6"/></svg>Menú → Registrar rostro</span>
+        <p>Aquí se enseña una cara nueva al sistema para que después el escáner la reconozca. Arriba hay dos pestañas; elige la que corresponda:</p>
+        <div class="feats">
+          <div><dt><span class="ui">Asignar a trabajador</span></dt><dd>La persona ya existe en el sistema pero todavía no tiene cara. La buscas y la registras.</dd></div>
+          <div><dt><span class="ui">Nuevo (walk-in)</span></dt><dd>Para dar de alta a alguien nuevo en el momento, escribiendo su nombre, apellido y área.</dd></div>
+        </div>
+        <h4 class="sub">Paso a paso</h4>
+        <ol class="steps">
+          <li>Elige la pestaña correcta. En <span class="ui">Asignar a trabajador</span>, escribe el nombre, toca <span class="ui-btn">Buscar</span> y selecciónalo de la lista. En <span class="ui">Nuevo</span>, llena Nombre, Apellido y Área.</li>
+          <li>Toca <span class="ui-btn">📷 Tomar foto</span> (usar la cámara) o <span class="ui-btn">📁 Subir archivo</span> (elegir una foto guardada).</li>
+          <li>Si usas la cámara: la persona mira de frente, con buena luz, y tocas <span class="ui-btn">Capturar y registrar</span>.</li>
+          <li>Cuando sale bien, aparece en verde <span class="ui">✓ Rostro asignado</span> o <span class="ui">✓ Trabajador dado de alta</span>. ¡Ya quedó registrado!</li>
+        </ol>
+      </div>
+      <div class="note tip">
+        <span class="lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Para que la foto salga a la primera</span>
+        <p>Cara <b>de frente</b>, <b>buena luz</b> (sin una ventana muy brillante detrás), sin gorra ni lentes de sol, y sin cubrir la cara. Si sale <span class="ui">No se logró una captura estable</span> o <span class="ui">No se detectó un rostro claro</span>, acomódate y vuelve a intentar.</p>
+      </div>
+    </section>
+
+    <!-- ============ PART: REFERENCIA ============ -->
+    <div class="part-head" id="parte-ref">
+      <span class="part-eyebrow">Referencia rápida</span>
+      <h2>Para consultar cuando lo necesites</h2>
+      <p>Guarda esta parte a mano: los colores del escáner, los problemas más comunes y el significado de las palabras que verás en pantalla.</p>
+    </div>
+
+    <!-- ============ 20 ============ -->
+    <section id="colores">
+      <span class="sec-num">20</span>
+      <h3 class="sec-title">Colores y mensajes del escáner</h3>
+      <p>Mientras la cámara está encendida, el recuadro alrededor de la cara cambia de color para decirte, de un vistazo, qué pasó:</p>
+      <div class="legend">
+        <div class="row">
+          <span class="swatch green">VERDE</span>
+          <p><b>Reconocido.</b> El fichaje quedó registrado. Verás el nombre y un aviso <span class="ui">Fichaje registrado</span>. Si la voz está activa: «Aprobado, [nombre].»</p>
+        </div>
+        <div class="row">
+          <span class="swatch red">ROJO</span>
+          <p><b>No reconocido.</b> La persona no está registrada o la cámara no la vio bien. Aviso <span class="ui">No reconocido</span> y voz «Acceso denegado.» Pídele que se acomode y lo intente de nuevo; si sigue igual, hay que <a href="#registrar">registrar su rostro</a>.</p>
+        </div>
+        <div class="row">
+          <span class="swatch red">ROJO · Prueba de vida</span>
+          <p><b>Posible foto o pantalla.</b> El sistema sospecha que le mostraron una foto o un celular en vez de una persona real. Aviso <span class="ui">Prueba de vida</span> / <span class="ui">Posible foto/pantalla</span>. Debe fichar la persona en vivo.</p>
+        </div>
+        <div class="row">
+          <span class="swatch amber">Verificando…</span>
+          <p><b>Un momento.</b> El sistema está consultando al servidor como respaldo. Espera unos segundos a que decida.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 21 ============ -->
+    <section id="problemas">
+      <span class="sec-num">21</span>
+      <h3 class="sec-title">Problemas frecuentes</h3>
+
+      <details class="faq">
+        <summary>No puedo entrar: dice «Usuario o contraseña incorrectos» <span class="plusmin">+</span></summary>
+        <p>Revisa que no tengas activada la tecla Bloq Mayús y que estés escribiendo bien tu usuario. Si estás seguro de tus datos y aun así no entra, tu cuenta puede estar dada de baja: avisa a quien administra el sistema.</p>
+      </details>
+
+      <details class="faq">
+        <summary>La cámara no abre o dice «La cámara no está disponible» <span class="plusmin">+</span></summary>
+        <p>El navegador necesita <b>permiso</b> para usar la cámara: cuando pregunte, toca «Permitir». Si ya la negaste, búscala en el candado de la barra de direcciones y actívala. Revisa también que ninguna otra aplicación (videollamada, etc.) esté usando la cámara.</p>
+      </details>
+
+      <details class="faq">
+        <summary>El escáner no reconoce a una persona que sí está registrada <span class="plusmin">+</span></summary>
+        <p>Pídele que se acerque, se ponga de frente y con buena luz, sin gorra ni lentes de sol. Si sigue sin reconocerla, en la sección <a href="#trabajadores">Trabajadores</a> puedes usar <b>Actualizar</b> el rostro para tomar una foto nueva. En la estación, revisa en Configuración que los <b>datos estén descargados</b>.</p>
+      </details>
+
+      <details class="faq">
+        <summary>La estación dice que «Faltan datos» para escanear <span class="plusmin">+</span></summary>
+        <p>Conecta el equipo a internet y ve a <b>Configuración → «Datos para escanear (offline)»</b>. Toca <span class="ui">Re-sincronizar (necesita internet)</span> y espera a que todos los renglones queden con ✓ verde y aparezca <span class="ui">✓ Listo para escanear offline</span>.</p>
+      </details>
+
+      <details class="faq">
+        <summary>Marqué una incidencia como «justificada» por error <span class="plusmin">+</span></summary>
+        <p>No se puede deshacer desde el programa (por eso pide confirmación). Avisa a quien administra el sistema para ver qué opciones hay. La próxima vez, usa <span class="ui">revisada</span> si aún no estás seguro.</p>
+      </details>
+
+      <details class="faq">
+        <summary>Fiché a alguien y no aparece en Asistencias <span class="plusmin">+</span></summary>
+        <p>Primero revisa las <b>fechas</b> del filtro (por defecto trae solo la última semana) y toca <span class="ui">Actualizar</span>. Si la estación estaba sin internet, el fichaje se sube cuando vuelve la conexión, así que puede tardar un poco en verse.</p>
+      </details>
+    </section>
+
+    <!-- ============ 22 ============ -->
+    <section id="glosario">
+      <span class="sec-num">22</span>
+      <h3 class="sec-title">Palabras útiles</h3>
+      <dl class="glossary">
+        <div><dt>Fichar</dt><dd>Registrar la entrada o la salida de una persona con la cámara.</dd></div>
+        <div><dt>Sección</dt><dd>Cada pantalla del sistema (Trabajadores, Asistencias, Reportes…). Ves solo las que tu cuenta tiene permitidas.</dd></div>
+        <div><dt>Estación de escaneo</dt><dd>El equipo de la puerta donde la gente ficha. Solo escanea caras y registra rostros.</dd></div>
+        <div><dt>Rostro registrado</dt><dd>Cuando el sistema ya tiene la cara de una persona guardada y puede reconocerla.</dd></div>
+        <div><dt>Enrolar / Registrar rostro</dt><dd>Enseñarle al sistema una cara nueva tomando una foto.</dd></div>
+        <div><dt>Incidencia</dt><dd>Algo que hay que revisar: una falta, un retardo, un no reconocido, un fichaje fuera de área…</dd></div>
+        <div><dt>Estado</dt><dd>La etiqueta de un registro: activo/inactivo, o exitoso, rechazado, pendiente, revisada, justificada, etc.</dd></div>
+        <div><dt>Área</dt><dd>La zona de trabajo asignada (oficina, empaque, campo…). Define dónde debe fichar cada persona.</dd></div>
+        <div><dt>Fuera de área</dt><dd>Cuando alguien fichó en un lugar distinto al que tiene asignado. Aparece en rojo en el mapa.</dd></div>
+        <div><dt>Rol</dt><dd>Un conjunto de permisos que se asigna a una cuenta y define qué puede ver y hacer.</dd></div>
+        <div><dt>Confianza / Similitud</dt><dd>Un porcentaje que dice qué tan seguro estuvo el sistema al reconocer la cara. Más alto = más seguro.</dd></div>
+        <div><dt>Online / Offline</dt><dd>Online = con internet, usando el servidor. Offline = sin internet, reconociendo en el propio equipo.</dd></div>
+        <div><dt>Sincronizar</dt><dd>Poner al día el equipo: bajar la lista de trabajadores y subir los fichajes guardados.</dd></div>
+        <div><dt>Prueba de vida</dt><dd>Un chequeo para asegurarse de que es una persona real y no una foto o una pantalla.</dd></div>
+      </dl>
+    </section>
+  </main>
+</div>
+
+<footer>
+  Manual de uso de SL Asistencias · Guía del sistema organizada por secciones. Si algo en tu pantalla no coincide con esta guía, pregunta a quien administra el sistema.
+</footer>
+
+<script>
+  (function () {
+    // Mobile TOC toggle
+    var toc = document.getElementById('toc');
+    var toggle = document.getElementById('tocToggle');
+    if (toggle) {
+      toggle.addEventListener('click', function () {
+        var isOpen = toc.classList.toggle('open');
+        toc.classList.toggle('closed', !isOpen);
+        toggle.setAttribute('aria-expanded', String(isOpen));
+      });
+      toc.querySelectorAll('.toc-list a').forEach(function (a) {
+        a.addEventListener('click', function () {
+          if (window.matchMedia('(max-width: 900px)').matches) {
+            toc.classList.remove('open');
+            toc.classList.add('closed');
+            toggle.setAttribute('aria-expanded', 'false');
+          }
+        });
+      });
+    }
+
+    // Active section highlight
+    var links = Array.prototype.slice.call(document.querySelectorAll('.toc-list a'));
+    var map = {};
+    links.forEach(function (a) {
+      var id = a.getAttribute('href').slice(1);
+      var el = document.getElementById(id);
+      if (el) map[id] = a;
+    });
+    var targets = Object.keys(map).map(function (id) { return document.getElementById(id); });
+    if ('IntersectionObserver' in window) {
+      var current = null;
+      var obs = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            if (current) current.classList.remove('active');
+            var a = map[entry.target.id];
+            if (a) { a.classList.add('active'); current = a; }
+          }
+        });
+      }, { rootMargin: '-15% 0px -70% 0px', threshold: 0 });
+      targets.forEach(function (t) { obs.observe(t); });
+    }
+  })();
+</script>
+
+</body>
+</html>

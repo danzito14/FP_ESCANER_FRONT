@@ -3,7 +3,7 @@
     <h1>Reportes</h1>
   </header>
 
-  <p class="reportes-intro">Elige un reporte para ver una vista previa y descargarlo en Excel o CSV.</p>
+  <p class="reportes-intro">Elige un reporte para ver una vista previa y descargarlo (Excel/CSV; el de intentos es PDF con fotos).</p>
 
   <div class="reportes-grid">
     @for (r of reportes; track r.tipo) {
@@ -102,17 +102,27 @@
             @if (preview().length >= LIMITE_PREVIEW) {
               <small class="hint">Vista previa de las primeras {{ LIMITE_PREVIEW }} filas. La descarga incluye todo.</small>
             }
+            @if (def.soloPdf) {
+              <small class="hint">El PDF agrega una columna con la foto de cada intento e incluye todo el rango.</small>
+            }
           }
         </div>
 
         <div class="form-actions reporte-acciones">
           <button type="button" class="btn btn-ghost" (click)="cerrar()">Cerrar</button>
-          <button type="button" class="btn" (click)="descargar('csv')" [disabled]="descargando()">
-            <fa-icon [icon]="iconCsv" /> {{ descargando() === 'csv' ? 'Generando…' : 'CSV' }}
-          </button>
-          <button type="button" class="btn btn-primary" (click)="descargar('xlsx')" [disabled]="descargando()">
-            <fa-icon [icon]="iconXlsx" /> {{ descargando() === 'xlsx' ? 'Generando…' : 'Excel (XLSX)' }}
-          </button>
+          @if (def.soloPdf) {
+            @if (pdfProgreso()) { <span class="hint pdf-progreso">{{ pdfProgreso() }}</span> }
+            <button type="button" class="btn btn-primary" (click)="descargarPdf()" [disabled]="generandoPdf()">
+              <fa-icon [icon]="iconPdf" /> {{ generandoPdf() ? 'Generando PDF…' : 'Descargar PDF (con fotos)' }}
+            </button>
+          } @else {
+            <button type="button" class="btn" (click)="descargar('csv')" [disabled]="descargando()">
+              <fa-icon [icon]="iconCsv" /> {{ descargando() === 'csv' ? 'Generando…' : 'CSV' }}
+            </button>
+            <button type="button" class="btn btn-primary" (click)="descargar('xlsx')" [disabled]="descargando()">
+              <fa-icon [icon]="iconXlsx" /> {{ descargando() === 'xlsx' ? 'Generando…' : 'Excel (XLSX)' }}
+            </button>
+          }
         </div>
       </div>
     </div>

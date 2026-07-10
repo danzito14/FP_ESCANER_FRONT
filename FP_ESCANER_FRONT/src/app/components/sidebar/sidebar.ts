@@ -56,7 +56,8 @@ export class Sidebar {
     { titulo: 'Puertas', ruta: '/puertas', icono: faDoorOpen, scope: 'puertas:read' },
     { titulo: 'Asistencias', ruta: '/asistencias', icono: faClipboardCheck, scope: 'asistencias:read' },
     { titulo: 'Incidencias', ruta: '/incidencias', icono: faTriangleExclamation, scope: 'incidencias:read' },
-    { titulo: 'Intentos', ruta: '/intentos', icono: faUserShield, scope: 'incidencias:read' },
+    // Oculto por el momento (la info también está en Incidencias). Para reactivar, descomenta:
+    // { titulo: 'Intentos', ruta: '/intentos', icono: faUserShield, scope: 'incidencias:read' },
     { titulo: 'Reportes', ruta: '/reportes', icono: faChartColumn, scope: 'reportes:read' },
     { titulo: 'Scanner', ruta: '/scanner', icono: faExpand, scope: 'scanner:use' },
   ];
@@ -74,7 +75,7 @@ export class Sidebar {
     if (this.esKiosko()) {
       return [
         { titulo: 'Escáner', ruta: '/escaneo', icono: faExpand, scope: 'scanner:use' },
-        { titulo: 'Enrolar', ruta: '/enrolar', icono: faUserPlus, scope: 'scanner:use' },
+        { titulo: 'Registrar rostro', ruta: '/enrolar', icono: faUserPlus, scope: 'scanner:use' },
       ];
     }
     return this.todos.filter((i) => this.auth.tieneScope(i.scope));

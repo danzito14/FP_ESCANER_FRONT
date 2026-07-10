@@ -34,14 +34,14 @@ import { SyncService } from '../../core/sync.service';
         </label>
 
         <label class="campo">
-          <span>Tipo de fichaje *</span>
+          <span>Grupo de trabajadores *</span>
           <select [value]="cfg.tipoFichaje()" (change)="cfg.tipoFichaje.set($any($event.target).value)">
             <option value="oficina">Oficina</option>
             <option value="campo">Campo</option>
             <option value="empaque">Empaque</option>
             <option value="mixto">Mixto (oficina + empaque)</option>
           </select>
-          <small class="pista">Define qué padrón se descarga. "Mixto" baja oficina y empaque juntos.</small>
+          <small class="pista">Define qué grupo de trabajadores se descarga. "Mixto" baja oficina y empaque juntos.</small>
         </label>
 
         <label class="campo">
