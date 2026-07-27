@@ -15,6 +15,17 @@ export class CameraService {
   private readonly cfg = inject(ScannerConfigService);
   private stream: MediaStream | null = null;
 
+  /**
+   * Lienzo reutilizable para las capturas. Crear un canvas nuevo en cada frame
+   * (varias veces por segundo con la cámara abierta) rota memoria en el WebView y
+   * contribuye a que Android mate el proceso renderer. Reusar uno solo lo evita.
+   */
+  private lienzo: HTMLCanvasElement | null = null;
+  private get canvas(): HTMLCanvasElement {
+    if (!this.lienzo) this.lienzo = document.createElement('canvas');
+    return this.lienzo;
+  }
+
   get isSupported(): boolean {
     return this.platform.isBrowser && !!navigator.mediaDevices?.getUserMedia;
   }
@@ -73,7 +84,7 @@ export class CameraService {
 
   /** Captura el frame actual como data URL JPEG (con prefijo data:image/jpeg;base64,). */
   capture(video: HTMLVideoElement, quality = 0.9): string {
-    const canvas = document.createElement('canvas');
+    const canvas = this.canvas;
     canvas.width = video.videoWidth || 640;
     canvas.height = video.videoHeight || 480;
     const ctx = canvas.getContext('2d');
@@ -98,7 +109,7 @@ export class CameraService {
     const sw = Math.max(1, Math.min(vw - sx, Math.floor(w)));
     const sh = Math.max(1, Math.min(vh - sy, Math.floor(h)));
 
-    const canvas = document.createElement('canvas');
+    const canvas = this.canvas;
     canvas.width = sw;
     canvas.height = sh;
     const ctx = canvas.getContext('2d');
@@ -114,6 +125,18 @@ export class CameraService {
 
   /** Resolución (ideal) según la calidad elegida en Configuración. */
   private resolucionIdeal(): { width: number; height: number } {
+    const r = this.porCalidad();
+    // En la APK (tablets de gama baja tipo Galaxy Tab A8, 2.4 GB y marcadas como
+    // "low memory device") abrir la cámara alto revienta la memoria y el Low Memory
+    // Killer mata el proceso. Topamos a 480p en nativo: el reconocimiento va bien
+    // (el rostro se alinea a 112×112) y la huella baja ~3× respecto a 720p.
+    if (this.platform.isNative && r.width > 640) {
+      return { width: 640, height: 480 };
+    }
+    return r;
+  }
+
+  private porCalidad(): { width: number; height: number } {
     switch (this.cfg.calidad()) {
       case 'sd':
         return { width: 640, height: 480 };

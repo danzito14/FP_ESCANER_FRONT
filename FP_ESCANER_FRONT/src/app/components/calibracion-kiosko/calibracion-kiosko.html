@@ -1,0 +1,94 @@
+<div class="config-card calibracion">
+  <div class="config-titulo">
+    <fa-icon [icon]="iconSliders" />
+    <div>
+      <h2>Calibración del reconocimiento (esta PC)</h2>
+      <p>
+        Ajusta los umbrales del escáner de esta estación. Se aplican al instante, sin
+        reiniciar nada, y solo afectan a este equipo.
+      </p>
+    </div>
+  </div>
+
+  @if (!soportado()) {
+    <p class="config-aviso">
+      El servicio local de esta PC todavía no expone la calibración
+      (<code>/kiosk/config</code>). Actualiza la imagen de <code>kiosk_local</code> y vuelve
+      a entrar.
+    </p>
+  } @else if (cargando() && !efectiva()) {
+    <p class="config-aviso">Leyendo la configuración…</p>
+  } @else if (efectiva(); as cfg) {
+    @if (!cfg.CONFIG_RUNTIME_ACTIVO) {
+      <p class="alerta">
+        El ajuste en caliente está desactivado en esta estación: puedes ver los valores,
+        pero no se aplicarán hasta habilitarlo en el backend local.
+      </p>
+    }
+
+    @for (g of grupos; track g.titulo) {
+      <div class="grupo">
+        <h3>{{ g.titulo }}</h3>
+        <p class="grupo-desc">{{ g.descripcion }}</p>
+
+        @for (campo of g.campos; track campo.clave) {
+          <div class="campo" [class.modificado]="cambios()[campo.clave] !== undefined">
+            <div class="campo-cabecera">
+              <label [attr.for]="campo.clave">{{ campo.etiqueta }}</label>
+
+              @if (campo.tipo === 'bool') {
+                <input
+                  type="checkbox"
+                  [id]="campo.clave"
+                  [checked]="$any(valores()[campo.clave])"
+                  [disabled]="!cfg.CONFIG_RUNTIME_ACTIVO"
+                  (change)="setBool(campo.clave, $any($event.target).checked)"
+                />
+              } @else {
+                <input
+                  type="number"
+                  [id]="campo.clave"
+                  [value]="valores()[campo.clave]"
+                  [step]="campo.paso ?? 0.01"
+                  [attr.min]="campo.min"
+                  [attr.max]="campo.max"
+                  [disabled]="!cfg.CONFIG_RUNTIME_ACTIVO"
+                  (change)="setNum(campo.clave, $any($event.target).value)"
+                />
+              }
+            </div>
+            <small class="ayuda">{{ campo.ayuda }}</small>
+          </div>
+        }
+      </div>
+    }
+
+    <div class="acciones">
+      <button type="button" class="btn btn-sm" (click)="cargar()" [disabled]="cargando()">
+        {{ cargando() ? 'Leyendo…' : 'Releer del servicio' }}
+      </button>
+      <button type="button" class="btn btn-sm" (click)="deshacer()" [disabled]="!hayCambios()">
+        Descartar cambios
+      </button>
+      <button
+        type="button"
+        class="btn btn-sm btn-primary"
+        (click)="guardar()"
+        [disabled]="!hayCambios() || guardando() || !cfg.CONFIG_RUNTIME_ACTIVO"
+      >
+        {{ guardando() ? 'Aplicando…' : 'Aplicar cambios' }}
+      </button>
+    </div>
+
+    @if (aviso(); as ok) { <small class="hint ok">{{ ok }}</small> }
+    @if (error(); as err) { <small class="hint err">{{ err }}</small> }
+  } @else {
+    <p class="config-aviso">
+      No se pudo leer la configuración del servicio local.
+      @if (error(); as err) { <br />{{ err }} }
+    </p>
+    <div class="acciones">
+      <button type="button" class="btn btn-sm" (click)="cargar()">Reintentar</button>
+    </div>
+  }
+</div>

@@ -33,7 +33,12 @@ const RECURSOS: RecursoDef[] = [
   { key: 'dispositivos', label: 'Dispositivos', acciones: ['read', 'write', 'delete'] },
   { key: 'puertas', label: 'Puertas', acciones: ['read', 'write', 'delete'] },
   { key: 'incidencias', label: 'Incidencias', acciones: ['read', 'write'] },
-  { key: 'asistencias', label: 'Asistencias', acciones: ['read'] },
+  // write = justificar/cambiar estado de un intento (PUT /intentos/{id}). El back
+  // lo exige aunque el front gatee el botón con incidencias:write; hay que dar ambos.
+  { key: 'intentos', label: 'Intentos (rostros desconocidos)', acciones: ['read', 'write'] },
+  // write = alta manual (POST /asistencias): habilita los botones del resolver
+  // "rostro desconocido" (Conozco al trabajador / Asignar rostro). Sin delete.
+  { key: 'asistencias', label: 'Asistencias', acciones: ['read', 'write'] },
   { key: 'escaneos', label: 'Escaneos', acciones: ['read'] },
   { key: 'reportes', label: 'Reportes', acciones: ['read'] },
   // Sincronización SYS21: read = ver estado/fotos pendientes; write = resolver/ignorar y disparar.

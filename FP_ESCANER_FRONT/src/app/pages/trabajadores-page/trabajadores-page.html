@@ -6,7 +6,12 @@
 
   @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
 
-  @if (puedeVerSync()) { <app-emp-sync /> }
+  @if (puedeVerSync()) {
+    <div class="admin-tools">
+      <app-emp-sync />
+      @if (esAdmin()) { <app-limpiar-duplicados (hecho)="load()" /> }
+    </div>
+  }
 
   <app-filtros-tabla
     [esAdmin]="esAdmin()"
@@ -19,17 +24,16 @@
     [(estado)]="filtroEstado"
     [(texto)]="buscar"
     [placeholderBuscar]="'Buscar por nombre o nº de empleado…'"
-  />
-
-  <div class="filtro-rostro" style="display:flex;align-items:center;gap:.5rem;margin-bottom:1rem">
-    <label style="font-size:.82rem;font-weight:600;color:var(--text-muted)">Rostro:</label>
-    <select [value]="filtroRostro()" (change)="setRostro($any($event.target).value)"
-      style="padding:.4rem .6rem;border:1px solid var(--border-strong);border-radius:8px;background:var(--bg-card);color:var(--text-primary)">
-      <option value="">Todos</option>
-      <option value="con">Con rostro</option>
-      <option value="sin">Sin rostro (faltan por registrar)</option>
-    </select>
-  </div>
+  >
+    <div class="form-field">
+      <label>Rostro</label>
+      <select [value]="filtroRostro()" (change)="setRostro($any($event.target).value)">
+        <option value="">Todos</option>
+        <option value="con">Con rostro</option>
+        <option value="sin">Sin rostro (faltan por registrar)</option>
+      </select>
+    </div>
+  </app-filtros-tabla>
 
   @if (loading()) {
     <p class="loading">Cargando…</p>

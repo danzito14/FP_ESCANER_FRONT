@@ -1,0 +1,139 @@
+/* Tarjeta propia: al ser un componente hijo, los estilos de configuracion-page no
+   alcanzan este DOM (encapsulación de Angular), así que se replica lo mínimo. */
+.config-card {
+  max-width: 720px;
+  padding: 1.4rem 1.5rem;
+  margin-bottom: 1.25rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.config-titulo {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  margin-bottom: 1.25rem;
+
+  fa-icon {
+    font-size: 1.3rem;
+    color: var(--accent);
+    margin-top: 0.15rem;
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 1.15rem;
+  }
+
+  p {
+    margin: 0.2rem 0 0;
+    font-size: 0.88rem;
+    color: var(--text-muted);
+  }
+}
+
+.config-aviso {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.alerta {
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius);
+  background: rgba(217, 119, 6, 0.12);
+  color: #b45309;
+  font-size: 0.85rem;
+}
+
+.grupo {
+  margin-bottom: 1.4rem;
+
+  h3 {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+  }
+
+  .grupo-desc {
+    margin: 0.15rem 0 0.7rem;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+  }
+}
+
+.campo {
+  padding: 0.5rem 0.6rem;
+  border-left: 3px solid transparent;
+  border-radius: 0.35rem;
+
+  /* Marca lo tocado pero aún sin aplicar, para no perder de vista qué se va a mandar. */
+  &.modificado {
+    border-left-color: #d97706;
+    background: rgba(217, 119, 6, 0.07);
+  }
+
+  + .campo {
+    margin-top: 0.35rem;
+  }
+}
+
+.campo-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+
+  label {
+    flex: 1;
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+  }
+
+  input[type='number'] {
+    width: 7.5rem;
+    padding: 0.35rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 0.4rem;
+    font: inherit;
+    text-align: right;
+    background: var(--bg-card);
+    color: var(--text-primary);
+  }
+
+  input[type='checkbox'] {
+    width: 1.05rem;
+    height: 1.05rem;
+    accent-color: var(--accent);
+  }
+}
+
+.ayuda {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+}
+
+.hint {
+  display: block;
+  margin-top: 0.6rem;
+  font-size: 0.82rem;
+
+  &.ok {
+    color: #16a34a;
+  }
+
+  &.err {
+    color: #dc2626;
+  }
+}

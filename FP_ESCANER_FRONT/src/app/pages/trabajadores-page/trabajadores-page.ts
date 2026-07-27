@@ -5,6 +5,7 @@ import { Subscription } from 'rxjs';
 import { EmbeddingCapture } from '../../components/embedding-capture/embedding-capture';
 import { EmpSync } from '../../components/emp-sync/emp-sync';
 import { FiltrosTabla } from '../../components/filtros-tabla/filtros-tabla';
+import { LimpiarDuplicados } from '../../components/limpiar-duplicados/limpiar-duplicados';
 import { Paginacion, TAM_PAGINA } from '../../components/paginacion/paginacion';
 import { TrabajadorForm } from '../../components/trabajador-form/trabajador-form';
 import { AreaTrabajo } from '../../core/interfaces/area-trabajo';
@@ -24,7 +25,7 @@ import { PuedeDirective } from '../../core/directives/puede';
 
 @Component({
   selector: 'app-trabajadores-page',
-  imports: [TrabajadorForm, EmbeddingCapture, EmpSync, FiltrosTabla, PuedeDirective, Paginacion],
+  imports: [TrabajadorForm, EmbeddingCapture, EmpSync, LimpiarDuplicados, FiltrosTabla, PuedeDirective, Paginacion],
   templateUrl: './trabajadores-page.html',
   styleUrl: './trabajadores-page.scss',
 })

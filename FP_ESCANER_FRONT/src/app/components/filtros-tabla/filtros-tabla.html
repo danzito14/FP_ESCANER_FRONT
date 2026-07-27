@@ -46,6 +46,9 @@
     </div>
   }
 
+  <!-- Filtros extra específicos de cada página (ej. Rostro en Trabajadores). -->
+  <ng-content />
+
   <div class="form-field filtro-buscar">
     <label>Buscar</label>
     <input type="search" [placeholder]="placeholderBuscar()" [value]="texto()" (input)="onBuscar($event)" />

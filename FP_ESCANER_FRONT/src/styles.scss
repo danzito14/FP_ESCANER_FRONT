@@ -732,3 +732,12 @@ body.camara-activa .app-main {
   margin: 0;
   padding: 0;
 }
+/* El recuadro del escáner: sin fondo negro para no tapar la cámara nativa (va detrás). */
+body.camara-activa .video-wrap {
+  background: transparent !important;
+  border: 0;
+}
+/* En nativo el <video> está vacío (usamos captureSample); ocultarlo para ver la cámara. */
+body.camara-activa .video-wrap video {
+  display: none !important;
+}

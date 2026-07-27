@@ -48,3 +48,45 @@ export interface TrabajadorUpdate {
   permiso_escaneo?: PermisoEscaneo;
   nivel_acceso_interno?: NivelAccesoInterno | null;
 }
+
+/** Trabajador dentro de un grupo de duplicados (subconjunto de campos). */
+export interface TrabajadorDuplicado {
+  id_trabajador: number;
+  id_emp: string | null;
+  origen_nomina: string | null;
+  nombre: string;
+  apellido: string;
+  id_empresa: number | null;
+  /** true = tiene rostro registrado; si se borra, ese embedding se pierde. */
+  tiene_embedding: boolean;
+}
+
+/** Un grupo de duplicados: se conserva uno y se borran el resto. */
+export interface GrupoDuplicados {
+  /** Clave por la que se agruparon (ej. nombre normalizado). */
+  nombre_clave: string;
+  conservado: TrabajadorDuplicado;
+  eliminados: TrabajadorDuplicado[];
+}
+
+/** Duplicado que NO se pudo borrar (FK RESTRICT: tiene dependencias). */
+export interface DuplicadoNoEliminado {
+  id_trabajador: number;
+  nombre: string;
+  apellido: string;
+  motivo: string;
+}
+
+/** Respuesta de POST /trabajadores/limpiar-duplicados (super-admin). */
+export interface LimpiarDuplicadosResponse {
+  /** true = dry-run (simular=true): no borró nada, solo el plan. */
+  simulado: boolean;
+  grupos_con_duplicados: number;
+  /** Total de duplicados detectados (los que se borrarían al aplicar). */
+  duplicados_detectados: number;
+  /** Nº realmente borrado (0 en simulación). */
+  eliminados: number;
+  /** Los que se saltaron al aplicar por tener dependencias. */
+  no_eliminados: DuplicadoNoEliminado[];
+  detalle: GrupoDuplicados[];
+}

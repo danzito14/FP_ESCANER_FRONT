@@ -80,6 +80,17 @@ public class FaceEnginePlugin extends Plugin {
         });
     }
 
+    /** Fuerza el GC para liberar los bitmaps NATIVOS que el pipeline por-frame acumula.
+     *  En equipos con mucha RAM el GC no se dispara solo (no hay presión) y la memoria
+     *  crece hasta reventar; llamando esto cada ~30s desde el escáner se mantiene acotada. */
+    @PluginMethod
+    public void liberarMemoria(final PluginCall call) {
+        System.gc();
+        System.runFinalization();
+        System.gc();
+        call.resolve();
+    }
+
     private static String sha256Archivo(String path) throws Exception {
         java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
         try (java.io.InputStream is = new java.io.FileInputStream(path)) {

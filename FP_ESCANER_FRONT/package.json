@@ -1,6 +1,9 @@
 {
   "name": "fp-escaner-front",
   "version": "0.2.4",
+  "description": "SL Asistencias — estación de asistencias de escritorio (escáner facial local + panel)",
+  "author": "SL Agrícola",
+  "main": "electron/main.cjs",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
@@ -10,9 +13,51 @@
     "serve:ssr:FP_ESCANER_FRONT": "node dist/FP_ESCANER_FRONT/server/server.mjs",
     "build:web": "ng build --configuration mobile && node scripts/sync-mobile.mjs",
     "cap:sync": "npm run build:web && npx cap sync android",
-    "cap:open": "npx cap open android"
+    "cap:open": "npx cap open android",
+    "build:electron": "ng build --configuration electron && node scripts/sync-electron.mjs",
+    "electron:dev": "electron . --dev",
+    "electron:start": "electron .",
+    "dist:win": "npm run build:electron && electron-builder --win --publish never",
+    "postinstall": "patch-package"
   },
   "private": true,
+  "build": {
+    "appId": "cloud.slagricola.slasistencias.escritorio",
+    "productName": "SL Asistencias",
+    "copyright": "Copyright © 2026 SL Agrícola",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**/*",
+      "build/icon.ico",
+      "package.json",
+      "!node_modules/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "SL Asistencias",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "artifactName": "SL-Asistencias-Estacion-${version}-setup.${ext}",
+      "deleteAppDataOnUninstall": false
+    }},
   "packageManager": "npm@10.9.2",
   "dependencies": {
     "@angular/common": "^21.2.0",
@@ -54,7 +99,10 @@
     "@types/leaflet": "^1.9.21",
     "@types/leaflet-draw": "^1.0.13",
     "@types/node": "^20.17.19",
+    "electron": "^43.1.0",
+    "electron-builder": "^26.15.3",
     "jsdom": "^28.0.0",
+    "patch-package": "^8.0.1",
     "prettier": "^3.8.1",
     "typescript": "~5.9.2",
     "vitest": "^4.0.8"

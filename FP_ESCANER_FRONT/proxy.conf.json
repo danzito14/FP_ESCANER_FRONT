@@ -1,0 +1,7 @@
+{
+  "/kiosk": {
+    "target": "http://localhost:8100",
+    "secure": false,
+    "changeOrigin": true
+  }
+}

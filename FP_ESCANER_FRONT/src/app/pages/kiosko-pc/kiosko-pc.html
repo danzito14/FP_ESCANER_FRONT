@@ -1,0 +1,121 @@
+<section class="crud-page scanner">
+  <header class="crud-header">
+    <h1>Escáner (Escritorio)</h1>
+  </header>
+
+  @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
+
+  <div class="scanner-resumen">
+    @if (estado(); as e) {
+      <span><strong>Empresa:</strong> {{ e.meta['empresa'] || '—' }}</span>
+      <span><strong>Padrón:</strong> {{ e.trabajadores }} trabajadores</span>
+      <span><strong>Red:</strong> {{ e.hay_conexion ? 'en línea' : 'sin internet' }}</span>
+    } @else {
+      <span>Backend local no disponible (¿está corriendo el kiosk_local?).</span>
+    }
+    @if (cfg.idPuerta()) {
+      <span>
+        <strong>Puerta:</strong> {{ puertaNombre() }}
+        @if (!puertaValida()) { <strong class="puerta-invalida">⚠ fuera del padrón</strong> }
+      </span>
+    }
+    <span><strong>Registro:</strong> {{ cfg.tipoRegistro() === 'entrada' ? 'Entrada' : 'Salida' }}</span>
+    @if (camaraAbierta() && cfg.alcance() === 'largo') {
+      <span><strong>Modelo:</strong> {{ faceDet.modeloLargoActivo() ? 'largo alcance ✓' : 'corto (full-range no disponible)' }}</span>
+    }
+    <button
+      class="btn btn-ghost scanner-config-link"
+      type="button"
+      (click)="sincronizarRoster()"
+      [disabled]="sincronizando() || status() === 'detectando'"
+    >
+      <fa-icon [icon]="iconSync" /> {{ sincronizando() ? 'Sincronizando…' : 'Sincronizar padrón' }}
+    </button>
+    <a routerLink="/configuracion" class="scanner-config-link">Configurar</a>
+  </div>
+
+  <div class="scanner-stage">
+    <div class="video-wrap" [class.fullscreen]="camaraAbierta()" (click)="mostrarControles()">
+      <video #video playsinline muted></video>
+      <canvas #overlay class="overlay"></canvas>
+
+      <!-- Toasts (uno por cara), por encima del video -->
+      @if (toasts().length) {
+        <div class="scanner-toasts">
+          @for (t of toasts(); track t.id) {
+            <div class="scanner-toast" [class.ok]="t.exito" [class.fail]="!t.exito">
+              <div class="toast-head">
+                <strong>{{ t.titulo }}</strong>
+                @if (t.pct != null) { <span class="toast-pct">{{ t.pct }}%</span> }
+              </div>
+              <span class="toast-nombre">{{ t.nombre }}</span>
+              @if (t.mensaje) { <span class="toast-msg">{{ t.mensaje }}</span> }
+            </div>
+          }
+        </div>
+      }
+
+      @if (status() === 'idle') {
+        <div class="stage-overlay">
+          <p>Presiona <strong>Iniciar</strong> para fichar.</p>
+        </div>
+      }
+      @if (status() === 'cargando') {
+        <div class="stage-overlay">
+          <p>Cargando cámara y modelo…</p>
+        </div>
+      }
+      @if (status() === 'detectando') {
+        <div class="stage-hint" [class.detectado]="detectado()">
+          @if (enviando()) {
+            <span>Verificando…</span>
+          } @else if (capturando()) {
+            <span>📸 Capturando…</span>
+          } @else if (numRostros() === 0) {
+            <span>Acerca tu rostro a la cámara</span>
+          } @else if (detectado()) {
+            <span>✓ {{ numRostros() }} rostro(s) · mejor {{ (mejorScore() * 100) | number:'1.0-0' }}%</span>
+          } @else {
+            <span>Rostro detectado {{ (mejorScore() * 100) | number:'1.0-0' }}%</span>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  @if (notis().length) {
+    <div class="scanner-notis">
+      @for (n of notis(); track $index) { <div>{{ n }}</div> }
+    </div>
+  }
+
+  <div
+    class="scanner-actions"
+    [class.flotante]="camaraAbierta()"
+    [class.oculto]="camaraAbierta() && !controlesVisibles()"
+  >
+    <button
+      class="btn btn-ghost btn-voz"
+      type="button"
+      (click)="toggleVoz()"
+      [attr.aria-label]="voz.activa() ? 'Silenciar voz' : 'Activar voz'"
+      [title]="voz.activa() ? 'Silenciar voz' : 'Activar voz'"
+    >
+      <fa-icon [icon]="voz.activa() ? iconVoz : iconMute" />
+    </button>
+
+    @switch (status()) {
+      @case ('idle') {
+        <button class="btn btn-primary" (click)="iniciar()">Iniciar</button>
+      }
+      @case ('error') {
+        <button class="btn btn-primary" (click)="iniciar()">Reintentar</button>
+      }
+      @default {
+        <button class="btn btn-ghost" (click)="detener()" [disabled]="status() === 'cargando'">
+          Detener
+        </button>
+      }
+    }
+  </div>
+</section>

@@ -27,6 +27,11 @@
     font-weight: 600;
     text-decoration: none;
   }
+
+  /* Puerta configurada que no existe en el padrón local (fichar daría error). */
+  .puerta-invalida {
+    color: #dc2626;
+  }
 }
 
 .scanner-stage {

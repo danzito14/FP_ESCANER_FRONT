@@ -3,6 +3,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 
 import { AuthService } from '../../service/auth';
+import { PlatformService } from '../../service/platform';
 
 @Component({
   selector: 'app-login-page',
@@ -13,6 +14,7 @@ import { AuthService } from '../../service/auth';
 export class LoginPage {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
+  private readonly plataforma = inject(PlatformService);
   private readonly router = inject(Router);
 
   readonly loading = signal(false);
@@ -33,10 +35,11 @@ export class LoginPage {
 
     this.auth.login(this.form.getRawValue()).subscribe({
       next: () => {
-        // Kiosko (solo scanner:use, sin acceso al panel) → flujo offline; el resto → panel.
+        // Kiosko (solo scanner:use, sin acceso al panel) → el escáner de SU entorno
+        // (APK /descarga, escritorio /kiosko-pc, web /scanner); el resto → panel.
         const esKiosko =
           this.auth.puedeUsarScanner() && !this.auth.puedeVerDashboard();
-        this.router.navigate([esKiosko ? '/descarga' : '/usuarios']);
+        this.router.navigate([esKiosko ? this.plataforma.rutaKiosko : '/usuarios']);
       },
       error: (e) => {
         this.error.set(e?.error?.detail ?? 'Usuario o contraseña incorrectos.');

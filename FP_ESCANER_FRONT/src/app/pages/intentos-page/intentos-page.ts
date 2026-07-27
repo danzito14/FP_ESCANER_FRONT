@@ -35,8 +35,8 @@ export class IntentosPage implements OnDestroy {
   private readonly auth = inject(AuthService);
   private readonly http = inject(HttpClient);
 
-  /** Puede justificar/cambiar el estado de un intento (mismo scope que incidencias). */
-  readonly puedeEditar = computed(() => this.auth.puedeEscribir('incidencias'));
+  /** Puede justificar/cambiar el estado de un intento (el back exige intentos:write). */
+  readonly puedeEditar = computed(() => this.auth.puedeEscribir('intentos'));
   readonly estados: EstadoIncidencia[] = ['pendiente', 'revisada', 'justificada'];
   /** Estado real por id de intento (GET /intentos); el combinado lo trae null. */
   readonly estadosIntento = signal<Map<string, EstadoIncidencia>>(new Map());
