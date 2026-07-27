@@ -1,1 +1,22 @@
 /* Estilos compartidos de páginas CRUD en styles.scss (.crud-page, .data-table) */
+
+/* Tarjeta única que agrupa las herramientas de admin: SYS21 + Duplicados. */
+.admin-tools {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  padding: 0.9rem 1rem;
+  margin-bottom: 1.25rem;
+
+  app-emp-sync,
+  app-limpiar-duplicados {
+    display: block;
+  }
+
+  /* Separador entre la sección SYS21 y la de Duplicados. */
+  app-limpiar-duplicados {
+    margin-top: 0.9rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid var(--border);
+  }
+}

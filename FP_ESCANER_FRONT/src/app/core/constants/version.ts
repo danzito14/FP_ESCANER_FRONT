@@ -1,8 +1,9 @@
 /**
- * Versión del front (se muestra en el footer). Súbela en cada despliegue
- * (ej. 0.1.1, 0.1.2…) para identificar qué build está cargado.
+ * Versión del front (se muestra en el footer). El 4º número es el BUILD:
+ * súbelo en cada reconstrucción del APK (0.2.4.1, 0.2.4.2, …) para distinguir
+ * de un vistazo qué build está instalada en el dispositivo.
  */
-export const APP_VERSION = '0.2.4';
+export const APP_VERSION = '0.2.4.10';
 
 /** Versión del backend (informativa, se actualiza a mano). */
 export const API_VERSION = '0.2.0';

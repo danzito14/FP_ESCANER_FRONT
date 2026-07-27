@@ -7,6 +7,7 @@ import {
   faBuilding,
   faChartColumn,
   faClipboardCheck,
+  faDesktop,
   faDoorOpen,
   faExpand,
   faGear,
@@ -24,6 +25,7 @@ import {
 
 import { AuthService } from '../../service/auth';
 import { LayoutService } from '../../service/layout';
+import { PlatformService } from '../../service/platform';
 
 interface NavItem {
   titulo: string;
@@ -44,6 +46,7 @@ interface NavItem {
 export class Sidebar {
   protected readonly layout = inject(LayoutService);
   protected readonly auth = inject(AuthService);
+  private readonly plataforma = inject(PlatformService);
   private readonly router = inject(Router);
 
   private readonly todos: NavItem[] = [
@@ -60,6 +63,7 @@ export class Sidebar {
     // { titulo: 'Intentos', ruta: '/intentos', icono: faUserShield, scope: 'incidencias:read' },
     { titulo: 'Reportes', ruta: '/reportes', icono: faChartColumn, scope: 'reportes:read' },
     { titulo: 'Scanner', ruta: '/scanner', icono: faExpand, scope: 'scanner:use' },
+    { titulo: 'Escáner PC', ruta: '/kiosko-pc', icono: faDesktop, scope: 'scanner:use' },
   ];
 
   /** Kiosko puro = puede escanear pero no ver el panel. */
@@ -68,15 +72,22 @@ export class Sidebar {
   );
 
   /**
-   * Ítems visibles: si es kiosko, SIEMPRE el escáner offline (/escaneo, que busca local
-   * primero y cae al servidor solo como fallback si hay internet) + Enrolar. Si no, los del admin.
+   * Ítems visibles: si es kiosko, solo su escáner, y el de SU entorno — el flujo offline
+   * (/escaneo + /enrolar) únicamente en el APK, porque en escritorio/web no existe el
+   * plugin nativo; ahí van a /kiosko-pc (backend local) o /scanner (nube).
+   * Si no es kiosko, los módulos del admin según sus scopes.
    */
   readonly items = computed<NavItem[]>(() => {
     if (this.esKiosko()) {
-      return [
-        { titulo: 'Escáner', ruta: '/escaneo', icono: faExpand, scope: 'scanner:use' },
-        { titulo: 'Registrar rostro', ruta: '/enrolar', icono: faUserPlus, scope: 'scanner:use' },
-      ];
+      if (this.plataforma.isNative) {
+        return [
+          { titulo: 'Escáner', ruta: '/escaneo', icono: faExpand, scope: 'scanner:use' },
+          { titulo: 'Registrar rostro', ruta: '/enrolar', icono: faUserPlus, scope: 'scanner:use' },
+        ];
+      }
+      return this.plataforma.isElectron
+        ? [{ titulo: 'Escáner PC', ruta: '/kiosko-pc', icono: faDesktop, scope: 'scanner:use' }]
+        : [{ titulo: 'Escáner', ruta: '/scanner', icono: faExpand, scope: 'scanner:use' }];
     }
     return this.todos.filter((i) => this.auth.tieneScope(i.scope));
   });

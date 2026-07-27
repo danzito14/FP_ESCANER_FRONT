@@ -1,0 +1,13 @@
+diff --git a/node_modules/@capacitor-community/camera-preview/android/src/main/java/com/ahm/capacitor/camera/preview/CameraActivity.java b/node_modules/@capacitor-community/camera-preview/android/src/main/java/com/ahm/capacitor/camera/preview/CameraActivity.java
+index b46712c..82f5ba9 100644
+--- a/node_modules/@capacitor-community/camera-preview/android/src/main/java/com/ahm/capacitor/camera/preview/CameraActivity.java
++++ b/node_modules/@capacitor-community/camera-preview/android/src/main/java/com/ahm/capacitor/camera/preview/CameraActivity.java
+@@ -337,7 +337,7 @@ public class CameraActivity extends Fragment {
+ 
+         if (mPreview.mPreviewSize == null) {
+             mPreview.setCamera(mCamera, cameraCurrentlyLocked);
+-            eventListener.onCameraStarted();
++            if (eventListener != null) eventListener.onCameraStarted();
+         } else {
+             mPreview.switchCamera(mCamera, cameraCurrentlyLocked);
+             mCamera.startPreview();

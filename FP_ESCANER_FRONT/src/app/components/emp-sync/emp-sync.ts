@@ -29,10 +29,10 @@ import {
 
       <div class="sync-acciones">
         <button class="btn btn-sm" [disabled]="!!corriendo()" (click)="run()">
-          {{ corriendo() === 'run' ? 'Sincronizando…' : '↻ Sincronizar con SYS21' }}
+          {{ corriendo() === 'run' ? 'Sincronizando…' : 'Sincronizar con SYS21' }}
         </button>
         <button class="btn btn-sm" [disabled]="!!corriendo()" (click)="procesarFotos()">
-          {{ corriendo() === 'fotos' ? 'Procesando…' : '🖼 Procesar fotos' }}
+          {{ corriendo() === 'fotos' ? 'Procesando…' : 'Procesar fotos' }}
         </button>
         <button class="btn btn-sm btn-ghost" (click)="togglePendientes()">
           {{ abierto() ? 'Ocultar fotos pendientes' : 'Fotos pendientes' }}@if (abierto() && pendientes().length) { ({{ pendientes().length }}) }
@@ -113,7 +113,7 @@ import {
 
         <div class="sync-areas">
           <button class="btn btn-sm btn-ghost" (click)="toggleAreas()">
-            {{ verAreas() ? 'Ocultar áreas sin clasificar' : '🗺 Áreas sin clasificar (area_invalida)' }}
+            {{ verAreas() ? 'Ocultar áreas sin clasificar' : 'Áreas sin clasificar (area_invalida)' }}
           </button>
           @if (verAreas()) {
             @if (cargandoAreas()) {
@@ -138,10 +138,7 @@ import {
     </div>
   `,
   styles: [`
-    .sync-card {
-      border: 1px solid var(--border); border-radius: var(--radius);
-      background: var(--bg-card); padding: 0.9rem 1rem; margin-bottom: 1.25rem;
-    }
+    /* El marco de tarjeta lo provee el contenedor .admin-tools de la página. */
     .sync-head { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.6rem; }
     .sync-head strong { font-size: 0.95rem; }
     .sync-msg { font-size: 0.82rem; color: var(--success); }

@@ -831,13 +831,49 @@
         <h4 class="sub">Sección «Voz del scanner»</h4>
         <p>Activa o silencia la voz que anuncia los resultados («Aprobado, …» / «Acceso denegado»). Puedes elegir la voz, el volumen, la velocidad y probarla con el botón <span class="ui-btn">Probar</span>.</p>
         <h4 class="sub">Sección «Datos para escanear (offline)»</h4>
-        <p>Sirve para la estación que trabaja <b>sin internet</b>. Muestra con ✓ verde o ✗ rojo si el equipo ya tiene descargado todo lo necesario. Si dice <span class="ui">Faltan datos</span>, toca <span class="ui-btn">Re-sincronizar (necesita internet)</span>.</p>
+        <p>Sirve para la estación que trabaja <b>sin internet</b>. Muestra con ✓ verde o ✗ rojo si el equipo ya tiene descargado todo lo necesario. Si dice <span class="ui">Faltan datos</span>, toca <span class="ui-btn">Re-sincronizar (necesita internet)</span>. <b>Solo aparece en la tableta</b> (aplicación Android).</p>
         <h4 class="sub">Sección «Modo de conexión»</h4>
-        <p>Elige si el escáner usa el <b>servidor</b> (online) o funciona <b>en el propio equipo</b> (offline). Lo normal es dejarlo en <span class="ui">Automático</span>: si se cae internet, cambia solo al modo offline.</p>
+        <p>Elige si el escáner usa el <b>servidor</b> (online) o funciona <b>en el propio equipo</b> (offline). Lo normal es dejarlo en <span class="ui">Automático</span>: si se cae internet, cambia solo al modo offline. <b>Solo aparece en la tableta.</b></p>
+        <h4 class="sub">Sección «Datos de la estación (local)»</h4>
+        <p>Es el equivalente de lo anterior en la <b>aplicación de escritorio</b> (la PC con cámara). Te dice cuántos trabajadores y rostros tiene descargados ese equipo, si logra hablar con el servidor y <b>cuántos registros faltan por subir</b>, separados en fichajes y rechazos.</p>
+        <p>Tener registros pendientes <b>no es una falla</b>: es lo normal mientras no hay internet, y se suben solos cuando vuelve. El botón <span class="ui-btn">Subir pendientes ahora</span> únicamente adelanta ese envío. Si el padrón quedó viejo, usa <span class="ui-btn">Sincronizar padrón</span>.</p>
       </div>
       <div class="note">
         <span class="lbl" style="color:var(--accent-ink)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16v-4m0-4h.01M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z"/></svg>Regla sencilla</span>
         <p>Si no sabes qué hace un ajuste, <b>no lo cambies</b>. Si la estación dejó de reconocer, casi siempre basta con <span class="ui-btn">Re-sincronizar</span> con internet. Para dudas mayores, avisa a quien administra el sistema.</p>
+      </div>
+
+      <h4 class="sub">Calibración del reconocimiento (solo administrador)</h4>
+      <div class="card">
+        <span class="whereat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>Menú → Configuración → al final de la página</span>
+        <p>Este apartado <b>solo lo ve el administrador</b> y <b>solo aparece en la aplicación de escritorio</b>. Sirve para afinar qué tan exigente es el escáner de <b>ese equipo</b> (los cambios no afectan a las demás estaciones ni al servidor).</p>
+        <p>Los cambios se aplican <b>al instante</b>: no hay que reiniciar nada. Lo que toques queda marcado en ámbar hasta que pulses <span class="ui-btn">Aplicar cambios</span>; si te arrepientes, <span class="ui-btn">Descartar cambios</span> lo deja como estaba.</p>
+
+        <h4 class="sub">Los cuatro grupos</h4>
+        <ul class="plain">
+          <li><b>Calidad de la imagen.</b> Descarta fotos malas antes de intentar reconocer: borrosas, con la cara muy pequeña o cortada por el borde. Si la cámara del equipo es modesta, pedir demasiada calidad hace que nadie pase.</li>
+          <li><b>Anti-spoof.</b> Intenta detectar que le muestren una foto impresa o una pantalla. Es el ajuste que, mal calibrado, <b>rechaza a personas reales</b> cuando hay poca luz.</li>
+          <li><b>Reconocimiento.</b> Qué tan parecida debe ser la cara a la registrada. Más exigente evita confundir personas; menos exigente reconoce más fácil.</li>
+          <li><b>Prueba de vida.</b> Compara las cinco fotos que toma el escáner de un tirón: una persona se mueve un poco, una foto impresa no. Si se pide demasiado movimiento, quien se queda muy quieto es rechazado.</li>
+        </ul>
+
+        <h4 class="sub">Cómo calibrar sin romper nada</h4>
+        <ol class="steps">
+          <li>Anota los valores que hay <b>antes</b> de tocar (o toma una foto de la pantalla).</li>
+          <li>Cambia <b>un solo valor</b> y pulsa <span class="ui-btn">Aplicar cambios</span>.</li>
+          <li>Ve al escáner y ficha dos o tres veces, con personas distintas si puedes.</li>
+          <li>Si no mejoró, regresa el valor anterior antes de probar otro. Cambiar varios a la vez hace imposible saber cuál ayudó.</li>
+        </ol>
+
+        <h4 class="sub">Los dos casos típicos</h4>
+        <ul class="plain">
+          <li><b>«Me marca como foto» a una persona real.</b> Apaga primero <span class="ui">Anti-spoof pasivo</span> y prueba. Si con eso pasa, ese era el culpable. Si sigue igual, baja poco a poco el <span class="ui">Movimiento mínimo entre fotos</span>.</li>
+          <li><b>«No me reconoce» a alguien que sí está registrado.</b> Baja un poco la <span class="ui">Similitud mínima</span>. Ojo: bajarla demasiado hace que empiece a confundir personas parecidas. Antes de tocarla, revisa que la persona tenga su rostro bien registrado y que haya luz suficiente.</li>
+        </ul>
+      </div>
+      <div class="note warn">
+        <span class="lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>Antes de bajar la exigencia</span>
+        <p>Aflojar estos valores hace que el sistema acepte más fácil, y eso incluye aceptar <b>a quien no debe</b>. Si el problema es la luz o la cámara, arréglalo ahí primero: mover los umbrales oculta el síntoma pero deja la puerta más débil. Y si el apartado dice que el ajuste en caliente está desactivado, no insistas — hay que habilitarlo en el servicio del equipo.</p>
       </div>
     </section>
 

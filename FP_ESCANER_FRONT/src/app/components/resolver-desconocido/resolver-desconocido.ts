@@ -44,8 +44,15 @@ export class ResolverDesconocido {
   /** Emite al resolver para que el padre recargue y cierre el modal. */
   readonly resuelto = output<void>();
 
-  /** Crear asistencia requiere asistencias:write; asignar rostro, trabajadores:write. */
-  readonly puedeAsistencia = computed(() => this.auth.puedeEscribir('asistencias'));
+  /**
+   * Resolver un desconocido crea la asistencia manual (asistencias:write) Y marca el
+   * intento como justificada (PUT /intentos → intentos:write): requiere AMBOS, o el
+   * flujo mostraría el formulario y fallaría con 403 en el último paso.
+   * Asignar el rostro necesita además trabajadores:write.
+   */
+  readonly puedeResolver = computed(
+    () => this.auth.puedeEscribir('asistencias') && this.auth.puedeEscribir('intentos'),
+  );
   readonly puedeRostro = computed(() => this.auth.puedeEscribir('trabajadores'));
 
   readonly flujo = signal<Flujo>(null);

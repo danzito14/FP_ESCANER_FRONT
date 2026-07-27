@@ -8,5 +8,7 @@ export interface FaceEnginePlugin {
   /** Anti-spoof MiniFASNet on-device. bbox = [x1,y1,x2,y2] px. */
   checkLiveness(o: { path: string; bbox: number[] }):
     Promise<{ esReal: boolean; scoreReal: number; label: number }>;
+  /** Fuerza el recolector de basura para soltar los bitmaps nativos acumulados por frame. */
+  liberarMemoria(): Promise<void>;
 }
 export const FaceEngine = registerPlugin<FaceEnginePlugin>('FaceEngine');

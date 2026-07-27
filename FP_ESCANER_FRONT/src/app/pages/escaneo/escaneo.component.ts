@@ -20,10 +20,12 @@ import {
 } from '@capacitor-mlkit/face-detection';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Geolocation } from '@capacitor/geolocation';
+import { CameraPreview } from '@capacitor-community/camera-preview';
 
 import { firstValueFrom } from 'rxjs';
 
 import { CameraService, stripDataUrl, dataUrlToBlob } from '../../service/camera';
+import { PlatformService } from '../../service/platform';
 import { ScannerService } from '../../service/escaneo';
 import { ScannerConfigService } from '../../service/scanner-config';
 import { VozService } from '../../service/voz';
@@ -49,7 +51,9 @@ const COOLDOWN_MS = 8000; // no re-fichar a la misma persona seguido
 const COOLDOWN_INTENTO_MS = 8000; // no registrar el mismo intento cada frame
 const COOLDOWN_FALLBACK_MS = 6000; // mín. entre llamadas de fallback al servidor
 const MAX_POSE = 25; // grados
-const TICK_MS = 700; // ~1.4 fps (ML Kit por archivo es pesado)
+const TICK_MS = 1200; // ~0.8 fps (ML Kit por archivo es pesado; menos = menos memoria)
+/** Lado máx. (px) al que reducimos el frame antes de ML Kit/FaceEngine: menos bitmap nativo. */
+const MAX_LADO = 600;
 const FRAMES_SALIDA = 4; // frames sin cara para soltar la presencia (~2.8s; evita parpadeo)
 const UMBRAL_DETECCION = 0.75; // calidad mínima de la cara (tamaño+frontal) para escanear (= SCORE_MIN web)
 
@@ -164,6 +168,7 @@ export class EscaneoComponent implements OnDestroy {
   private readonly log = inject(LogService);
   private readonly scanner = inject(ScannerService);
   private readonly conexion = inject(ConexionService);
+  private readonly platform = inject(PlatformService);
 
   readonly iconVoz = faVolumeHigh;
   readonly iconMute = faVolumeXmark;
@@ -199,6 +204,15 @@ export class EscaneoComponent implements OnDestroy {
   private cooldownFallback = 0;   // último llamado de fallback al servidor
   private geo: { lon: number; lat: number } | null = null;
   private poligono: string | null = null;
+  /** true si se soltó la cámara por pasar la app a segundo plano (para reanudar al volver). */
+  private pausadoPorFondo = false;
+  /** true en la APK: usa la cámara NATIVA (camera-preview) en vez de getUserMedia web. */
+  private readonly usaNativa = this.platform.isNative;
+  /** Ancho/alto del frame de la cámara nativa (px), medidos una sola vez (para el recuadro). */
+  private frameWNativo = 0;
+  private frameHNativo = 0;
+  /** Lienzo reutilizable para reducir el frame antes de ML Kit. */
+  private lienzoReducir: HTMLCanvasElement | null = null;
 
   constructor() {
     // Nombres de puerta/dispositivo para el resumen (con :read o scanner:use).
@@ -208,6 +222,12 @@ export class EscaneoComponent implements OnDestroy {
     this.auth
       .listarSiAlguno(['dispositivos:read', 'scanner:use'], this.dispositivoService.list())
       .subscribe({ next: (d: Dispositivo[]) => this.resolverNombres(null, d), error: () => {} });
+
+    // Al pasar a segundo plano soltamos la cámara: retenerla en background es lo que
+    // más empuja a Android a matar el proceso. Se reanuda al volver al primer plano.
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', this.onVisibility);
+    }
   }
 
   private resolverNombres(puertas: PuertaAcceso[] | null, disps: Dispositivo[] | null): void {
@@ -226,7 +246,7 @@ export class EscaneoComponent implements OnDestroy {
       this.error.set('Configura una puerta en Configuración antes de iniciar.');
       return;
     }
-    if (!this.camera.isSupported) {
+    if (!this.usaNativa && !this.camera.isSupported) {
       this.error.set('La cámara no está disponible en este dispositivo.');
       return;
     }
@@ -254,7 +274,7 @@ export class EscaneoComponent implements OnDestroy {
           (pos) => { if (pos) this.geo = { lon: pos.coords.longitude, lat: pos.coords.latitude }; });
       } catch { this.geo = null; }
 
-      await this.camera.start(this.video()!.nativeElement);
+      await this.abrirCamara();
       this.status.set('detectando');
       this.mostrarControles();
       this.timer = setInterval(() => this.tick(), TICK_MS);
@@ -270,7 +290,7 @@ export class EscaneoComponent implements OnDestroy {
     if (this.watchId) { Geolocation.clearWatch({ id: this.watchId }); this.watchId = undefined; }
     clearTimeout(this.controlesTimer);
     this.controlesVisibles.set(true);
-    this.camera.stop();
+    void this.cerrarCamara();
     this.voz.callar();
     this.manejado = false;
     this.ultimoBox = null;
@@ -279,18 +299,148 @@ export class EscaneoComponent implements OnDestroy {
     this.status.set('idle');
   }
 
+  /**
+   * App a segundo plano (o de vuelta): soltamos la cámara y paramos el bucle al
+   * ocultarse para que Android no mate el proceso; se reanuda al volver.
+   */
+  private readonly onVisibility = (): void => {
+    if (document.hidden) {
+      if (this.status() === 'detectando' && !this.pausadoPorFondo) {
+        this.pausadoPorFondo = true;
+        clearInterval(this.timer); // para el bucle de captura
+        this.voz.callar();
+        // Web: soltar getUserMedia. NATIVO: NO tocar CameraPreview aquí — el plugin
+        // maneja su propio lifecycle y hacer start/stop tras onSaveInstanceState
+        // CRASHEA (IllegalStateException al commitear el fragment al volver de fondo).
+        if (!this.usaNativa) void this.cerrarCamara();
+      }
+    } else if (this.pausadoPorFondo) {
+      this.pausadoPorFondo = false;
+      if (this.usaNativa) {
+        // El plugin reanuda la cámara solo; solo reanudamos el bucle de captura.
+        if (this.status() === 'detectando') this.timer = setInterval(() => this.tick(), TICK_MS);
+      } else {
+        void this.reanudar();
+      }
+    }
+  };
+
+  /** Reabre la cámara y el bucle tras volver del segundo plano. */
+  private async reanudar(): Promise<void> {
+    if (this.status() !== 'detectando') return;
+    try {
+      await this.abrirCamara();
+      this.timer = setInterval(() => this.tick(), TICK_MS);
+    } catch (e: any) {
+      this.error.set(e?.message ?? 'No se pudo reabrir la cámara.');
+      this.status.set('error');
+    }
+  }
+
+  /**
+   * Abre la cámara: NATIVA (camera-preview, detrás del WebView) en la APK — así el
+   * pipeline de video NO vive en el renderer de Chromium y deja de matarlo — o
+   * getUserMedia en la web (dev). En nativo pone el fondo transparente para verla.
+   */
+  private async abrirCamara(): Promise<void> {
+    if (this.usaNativa) {
+      this.setFondoTransparente(true);
+      // Sin width/height → el plugin usa pantalla completa (evita líos de DPI).
+      await CameraPreview.start({
+        position: 'front',
+        toBack: true,
+        disableAudio: true,
+        lockAndroidOrientation: true,
+        storeToFile: false,
+      });
+    } else {
+      await this.camera.start(this.video()!.nativeElement);
+    }
+  }
+
+  private async cerrarCamara(): Promise<void> {
+    if (this.usaNativa) {
+      this.setFondoTransparente(false);
+      try { await CameraPreview.stop(); } catch { /* ya estaba parada */ }
+    } else {
+      this.camera.stop();
+    }
+  }
+
+  /** Un frame como data URL JPEG, de la cámara nativa (captureSample) o del <video> web. */
+  private async capturarDataUrl(quality = 0.9): Promise<string> {
+    if (this.usaNativa) {
+      const s = await CameraPreview.captureSample({ quality: Math.round(quality * 100) });
+      return this.reducirDataUrl(`data:image/jpeg;base64,${s.value}`);
+    }
+    return this.camera.capture(this.video()!.nativeElement, quality);
+  }
+
+  /**
+   * Reduce el frame a MAX_LADO px (en el renderer, proceso aparte) para achicar el
+   * bitmap nativo que decodifica ML Kit/FaceEngine → mucha menos memoria por frame.
+   */
+  private reducirDataUrl(dataUrl: string): Promise<string> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const escala = MAX_LADO / Math.max(img.naturalWidth, img.naturalHeight);
+        if (escala >= 1) { resolve(dataUrl); return; } // ya es pequeña
+        if (!this.lienzoReducir) this.lienzoReducir = document.createElement('canvas');
+        const c = this.lienzoReducir;
+        c.width = Math.round(img.naturalWidth * escala);
+        c.height = Math.round(img.naturalHeight * escala);
+        const ctx = c.getContext('2d');
+        if (!ctx) { resolve(dataUrl); return; }
+        ctx.drawImage(img, 0, 0, c.width, c.height);
+        resolve(c.toDataURL('image/jpeg', 0.8));
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    });
+  }
+
+  /** Ancho (px) del frame de la cámara nativa; se mide una sola vez (para calidadCara). */
+  private anchoNativo(dataUrl: string): Promise<number> {
+    if (this.frameWNativo) return Promise.resolve(this.frameWNativo);
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        this.frameWNativo = img.naturalWidth || 640;
+        this.frameHNativo = img.naturalHeight || 480;
+        resolve(this.frameWNativo);
+      };
+      img.onerror = () => resolve(640);
+      img.src = dataUrl;
+    });
+  }
+
+  /**
+   * Reusa la clase `camara-activa` de styles.scss (hecha para camera-preview toBack):
+   * fondo transparente + oculta header/footer para ver la cámara nativa detrás.
+   */
+  private setFondoTransparente(on: boolean): void {
+    document.body.classList.toggle('camara-activa', on);
+  }
+
   private async tick(): Promise<void> {
     if (this.procesando) return;
-    const v = this.video()?.nativeElement;
-    if (!v || v.readyState < 2) return;
+
+    if (!this.usaNativa) {
+      const v = this.video()?.nativeElement;
+      if (!v || v.readyState < 2) return;
+    }
     this.procesando = true;
     let uri: string | undefined;
     try {
-      // Frame del <video> → archivo (ML Kit y FaceEngine trabajan sobre archivo).
-      const dataUrl = this.camera.capture(v, 0.9);
+      // Frame (cámara nativa o <video>) → archivo (ML Kit y FaceEngine usan archivo).
+      const dataUrl = await this.capturarDataUrl(0.9);
       const w = await Filesystem.writeFile({
         path: `scan_${Date.now()}.jpg`, data: stripDataUrl(dataUrl), directory: Directory.Cache });
       uri = w.uri;
+      const frameW = this.usaNativa
+        ? await this.anchoNativo(dataUrl)
+        : (this.video()!.nativeElement.videoWidth || 640);
 
       const { faces } = await FaceDetection.processImage({
         path: uri, performanceMode: PerformanceMode.Accurate,
@@ -317,26 +467,26 @@ export class EscaneoComponent implements OnDestroy {
       // Ya se manejó ESTA presencia (fichó local o consultó al server) → mantiene el recuadro y
       // NO vuelve a registrar/consultar hasta que la cara se vaya o cambie de persona.
       if (this.manejado) {
-        if (this.ultimoBox) this.dibujarBox(v, b, this.ultimoBox.color, this.ultimoBox.label);
+        if (this.ultimoBox) this.dibujarBox(b,this.ultimoBox.color, this.ultimoBox.label);
         return;
       }
 
       // Pose no frontal / sin landmarks → recuadro neutro, aún no reconoce.
       if (Math.abs(f.headEulerAngleY ?? 0) > MAX_POSE || Math.abs(f.headEulerAngleX ?? 0) > MAX_POSE) {
         this.calidadPct.set(0);
-        this.dibujarBox(v, b, '#ffffff'); return;
+        this.dibujarBox(b,'#ffffff'); return;
       }
       const kps = ordenarKps(f.landmarks);
-      if (!kps) { this.calidadPct.set(0); this.dibujarBox(v, b, '#ffffff'); return; }
+      if (!kps) { this.calidadPct.set(0); this.dibujarBox(b,'#ffffff'); return; }
 
       // Calidad (proxy de "detección"): NO escanea hasta el 75% (= SCORE_MIN del scanner web).
-      const calidad = this.calidadCara(f, v.videoWidth);
+      const calidad = this.calidadCara(f, frameW);
       this.calidadPct.set(Math.round(calidad * 100));
       if (calidad < UMBRAL_DETECCION) {
-        this.dibujarBox(v, b, '#ffffff', `${Math.round(calidad * 100)}%`);
+        this.dibujarBox(b,'#ffffff', `${Math.round(calidad * 100)}%`);
         return;
       }
-      this.dibujarBox(v, b, '#facc15'); // amarillo: analizando (calidad ok)
+      this.dibujarBox(b,'#facc15'); // amarillo: analizando (calidad ok)
 
       // Anti-spoof: se calcula y loguea siempre; solo BLOQUEA si el toggle está ON.
       const bbox = [b.left, b.top, b.right, b.bottom];
@@ -352,7 +502,7 @@ export class EscaneoComponent implements OnDestroy {
           this.subida.subirPendientes();
         }
         this.resultado(false, 'Prueba de vida', '—', null, 'Posible foto/pantalla');
-        this.marcar(v, b, '#dc2626', 'Prueba de vida');
+        this.marcar(b,'#dc2626', 'Prueba de vida');
         return;
       }
 
@@ -374,24 +524,24 @@ export class EscaneoComponent implements OnDestroy {
         } else {
           this.ultimo.set({ exito: true, texto: `✓ ${nombre} · ${pct}%` }); // volvió pronto: sin doble registro
         }
-        this.marcar(v, b, '#16a34a', `${nombre} · ${pct}%`);
+        this.marcar(b,'#16a34a', `${nombre} · ${pct}%`);
       } else {
         // Local no lo reconoció.
         const hayNet = this.conexion.hayInternet();
         if (hayNet && Date.now() - this.cooldownFallback > COOLDOWN_FALLBACK_MS) {
           // UNA consulta al SERVIDOR por presencia (multi-frame + liveness activo). El server REGISTRA.
           this.cooldownFallback = Date.now();
-          const online = await this.buscarEnServidor(v, dataUrl);
+          const online = await this.buscarEnServidor(dataUrl);
           if (online) {
             // El servidor YA registró (asistencia o intento) → el APK SOLO muestra (sin doble registro).
             if (online.acceso && online.trabajador) {
               const nombre = `${online.trabajador.nombre} ${online.trabajador.apellido}`;
               const pct = online.confianza != null ? Math.round(online.confianza * 100) : null;
               this.resultado(true, 'Fichaje (servidor)', nombre, pct);
-              this.marcar(v, b, '#16a34a', pct != null ? `${nombre} · ${pct}%` : nombre);
+              this.marcar(b,'#16a34a', pct != null ? `${nombre} · ${pct}%` : nombre);
             } else {
               this.resultado(false, 'No reconocido', '—', null, online.mensaje ?? 'No reconocido');
-              this.marcar(v, b, '#dc2626', 'No reconocido');
+              this.marcar(b,'#dc2626', 'No reconocido');
             }
             return;
           }
@@ -401,14 +551,14 @@ export class EscaneoComponent implements OnDestroy {
         if (hayNet) {
           // Con internet pero aún no se pudo consultar (dentro del cooldown/error) → espera:
           // NO marca ni registra local (para no chocar con lo que el server ya maneja).
-          this.dibujarBox(v, b, '#facc15', 'Verificando…');
+          this.dibujarBox(b,'#facc15', 'Verificando…');
         } else {
           // OFFLINE → intento local 'desconocido' (una vez por presencia; queda "manejado").
           await this.eventos.registrarIntento({ tipo: 'desconocido', sim: r?.sim ?? null,
             lat: this.geo?.lat ?? null, lon: this.geo?.lon ?? null });
           this.subida.subirPendientes();
           this.resultado(false, 'No reconocido', '—', null, 'Rostro no reconocido');
-          this.marcar(v, b, '#dc2626', 'No reconocido');
+          this.marcar(b,'#dc2626', 'No reconocido');
         }
       }
     } catch { /* frame malo, sigue */ }
@@ -420,14 +570,26 @@ export class EscaneoComponent implements OnDestroy {
 
   /** Dibuja el recuadro de la cara sobre el <video> (espejado, el video va con scaleX(-1)). */
   private dibujarBox(
-    v: HTMLVideoElement,
     b: { left: number; top: number; right: number; bottom: number },
     color: string, label?: string,
   ): void {
     const canvas = this.overlay()?.nativeElement;
     if (!canvas) return;
-    if (canvas.width !== v.videoWidth) canvas.width = v.videoWidth;
-    if (canvas.height !== v.videoHeight) canvas.height = v.videoHeight;
+    // Lienzo lógico: en nativo, dimensiones del frame de captureSample (ya medidas);
+    // en web, las del <video>. El CSS lo escala con object-fit:cover igual que el
+    // preview, así el recuadro cae sobre la cara. Se espeja por código (mx) para la
+    // vista selfie.
+    let cw: number, ch: number;
+    if (this.usaNativa) {
+      if (!this.frameWNativo || !this.frameHNativo) return;
+      cw = this.frameWNativo; ch = this.frameHNativo;
+    } else {
+      const v = this.video()?.nativeElement;
+      if (!v) return;
+      cw = v.videoWidth; ch = v.videoHeight;
+    }
+    if (canvas.width !== cw) canvas.width = cw;
+    if (canvas.height !== ch) canvas.height = ch;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -458,12 +620,12 @@ export class EscaneoComponent implements OnDestroy {
    * habilita el liveness ACTIVO del servidor (además del anti-spoof) y ataja el replay de video.
    * El servidor reconoce (global+super) y REGISTRA el evento; el APK solo muestra la respuesta.
    */
-  private async buscarEnServidor(v: HTMLVideoElement, primerDataUrl: string): Promise<AccesoResponse | null> {
+  private async buscarEnServidor(primerDataUrl: string): Promise<AccesoResponse | null> {
     try {
       const blobs: Blob[] = [dataUrlToBlob(primerDataUrl)];
       for (let i = 0; i < 3; i++) {
         await new Promise((r) => setTimeout(r, 150));       // micro-pausa → movimiento entre frames
-        blobs.push(dataUrlToBlob(this.camera.capture(v, 0.9)));
+        blobs.push(dataUrlToBlob(await this.capturarDataUrl(0.9)));
       }
       const params: AccesoParams = {
         id_puerta: this.cfg.idPuerta(),
@@ -484,14 +646,13 @@ export class EscaneoComponent implements OnDestroy {
 
   /** Marca ESTA presencia como manejada: mantiene el recuadro y no re-registra/consulta hasta que se vaya. */
   private marcar(
-    v: HTMLVideoElement,
     b: { left: number; top: number; right: number; bottom: number },
     color: string, label: string,
   ): void {
     this.manejado = true;
     this.ultimoBox = { color, label };
     this.ultimoCentro = { cx: (b.left + b.right) / 2, cy: (b.top + b.bottom) / 2 };
-    this.dibujarBox(v, b, color, label);
+    this.dibujarBox(b, color, label);
   }
 
   /** Suelta la presencia (la cara se fue o cambió de persona): listo para la siguiente. */
@@ -550,6 +711,9 @@ export class EscaneoComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('visibilitychange', this.onVisibility);
+    }
     this.detener();
   }
 }

@@ -157,6 +157,8 @@
     }
   </div>
 
+  <!-- Kit offline del APK: SQLite + modelo en disco vía plugins nativos. Solo existe ahí. -->
+  @if (plataforma.isNative) {
   <div class="config-card">
     <div class="config-titulo">
       <fa-icon [icon]="iconDatos" />
@@ -216,7 +218,114 @@
       <p class="config-aviso">Verificando…</p>
     }
   </div>
+  }
 
+  <!-- Estación de escritorio: el padrón vive en el backend local (kiosk_local :8100). -->
+  @if (plataforma.isElectron) {
+  <div class="config-card">
+    <div class="config-titulo">
+      <fa-icon [icon]="iconDatos" />
+      <div>
+        <h2>Datos de la estación (local)</h2>
+        <p>Padrón descargado en esta PC, contra el que se reconoce sin internet.</p>
+      </div>
+    </div>
+
+    @if (estadoKiosko(); as e) {
+      <div class="voz-controls">
+        <div style="display:flex;align-items:center;gap:8px">
+          <fa-icon [icon]="e.trabajadores > 0 ? iconOk : iconNo"
+            [style.color]="e.trabajadores > 0 ? '#16a34a' : '#dc2626'" />
+          Trabajadores en el padrón local: {{ e.trabajadores }}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <fa-icon [icon]="e.embeddings_activos > 0 ? iconOk : iconNo"
+            [style.color]="e.embeddings_activos > 0 ? '#16a34a' : '#dc2626'" />
+          Rostros registrados: {{ e.embeddings_activos }}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <fa-icon [icon]="e.hay_conexion ? iconOk : iconNo"
+            [style.color]="e.hay_conexion ? '#16a34a' : '#dc2626'" />
+          <!-- El backend local marca hay_conexion=false tanto si no hay red como si el
+               servidor contesta con error; por eso el texto no habla de "internet". -->
+          Conexión con la nube:
+          {{ e.hay_conexion ? 'en línea' : 'sin respuesta del servidor (se ficha local)' }}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <fa-icon [icon]="puertaOk() ? iconOk : iconNo"
+            [style.color]="puertaOk() ? '#16a34a' : '#dc2626'" />
+          Puerta del dispositivo: {{ puertaOk() ? 'configurada' : 'SIN configurar (arriba)' }}
+        </div>
+
+        <!-- Cola local: tener pendientes NO es un error (es lo normal sin internet),
+             por eso se marca en ámbar y no en rojo. -->
+        @if (reportaPendientes()) {
+          <div style="display:flex;align-items:center;gap:8px">
+            <fa-icon [icon]="pendientesTotal() === 0 ? iconOk : iconSync"
+              [style.color]="pendientesTotal() === 0 ? '#16a34a' : '#d97706'" />
+            @if (pendientesTotal() === 0) {
+              Sin registros pendientes: todo subido a la nube
+            } @else {
+              Pendientes de subir: {{ pendientesAsistencias() }} fichaje(s) ·
+              {{ pendientesIntentos() }} rechazo(s)
+            }
+          </div>
+        }
+
+        <small class="hint">
+          Empresa: {{ e.meta['empresa'] || '—' }} · Versión del padrón: {{ e.meta['roster_version'] || '—' }}
+        </small>
+
+        <p [style.font-weight]="600" [style.color]="kioskoListo() ? '#16a34a' : '#dc2626'">
+          {{ kioskoListo()
+            ? '✓ Listo para fichar sin internet'
+            : '✗ El padrón local está vacío — sincroniza con internet' }}
+        </p>
+
+        <div class="config-cam-acciones">
+          <button type="button" class="btn btn-sm" (click)="verificarKiosko()"
+            [disabled]="verificandoKiosko()">
+            {{ verificandoKiosko() ? 'Verificando…' : 'Verificar de nuevo' }}
+          </button>
+          <button type="button" class="btn btn-sm" (click)="sincronizarKiosko()"
+            [disabled]="sincronizandoKiosko()">
+            <fa-icon [icon]="iconSync" />
+            {{ sincronizandoKiosko() ? 'Sincronizando…' : 'Sincronizar padrón (necesita internet)' }}
+          </button>
+          @if (reportaPendientes()) {
+            <button type="button" class="btn btn-sm" (click)="subirPendientesKiosko()"
+              [disabled]="subiendoKiosko() || pendientesTotal() === 0">
+              {{ subiendoKiosko()
+                ? 'Subiendo…'
+                : 'Subir ' + pendientesTotal() + ' pendiente(s) ahora' }}
+            </button>
+          }
+        </div>
+        @if (avisoKiosko(); as ok) { <small class="hint" style="color:#16a34a">{{ ok }}</small> }
+        @if (errorKiosko(); as err) { <small class="hint" style="color:#dc2626">{{ err }}</small> }
+      </div>
+    } @else if (verificandoKiosko()) {
+      <p class="config-aviso">Verificando…</p>
+    } @else {
+      <p class="config-aviso">
+        No se pudo hablar con el servicio local de esta PC (kiosk_local).
+        @if (errorKiosko(); as err) { <br />{{ err }} }
+      </p>
+      <div class="config-cam-acciones">
+        <button type="button" class="btn btn-sm" (click)="verificarKiosko()">Reintentar</button>
+      </div>
+    }
+  </div>
+
+  <!-- Calibrar mueve umbrales de reconocimiento: solo el admin, no el operador del kiosko. -->
+  @if (esAdmin()) {
+    <app-calibracion-kiosko />
+  }
+  }
+
+  <!-- Solo el APK elige entre servidor y motor on-device: en escritorio decide el
+       backend local (reconoce local y cae a la nube) y en web siempre es el servidor. -->
+  @if (plataforma.isNative) {
   <div class="config-card">
     <div class="config-titulo">
       <fa-icon [icon]="iconWifi" />
@@ -250,6 +359,7 @@
       </small>
     </div>
   </div>
+  }
 
   @if (esAdmin()) {
     <div class="config-card">

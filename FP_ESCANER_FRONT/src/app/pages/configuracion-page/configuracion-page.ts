@@ -13,11 +13,15 @@ import {
   faWifi,
 } from '@fortawesome/free-solid-svg-icons';
 
+import { CalibracionKiosko } from '../../components/calibracion-kiosko/calibracion-kiosko';
 import { Dispositivo } from '../../core/interfaces/dispositivo';
+import { KioskEstado, KioskSyncEventosResponse } from '../../core/interfaces/kiosko-local';
 import { PuertaAcceso } from '../../core/interfaces/puerta-acceso';
 import { AuthService } from '../../service/auth';
 import { CameraService, etiquetaCamara } from '../../service/camera';
 import { DispositivoService } from '../../service/dispositivo';
+import { KioskoLocalService } from '../../service/kiosko-local';
+import { PlatformService } from '../../service/platform';
 import { PuertaAccesoService } from '../../service/puerta-acceso';
 import {
   CalidadCamara,
@@ -44,7 +48,7 @@ interface ResumenDatos {
 
 @Component({
   selector: 'app-configuracion-page',
-  imports: [DecimalPipe, FaIconComponent],
+  imports: [DecimalPipe, FaIconComponent, CalibracionKiosko],
   templateUrl: './configuracion-page.html',
   styleUrl: './configuracion-page.scss',
 })
@@ -58,6 +62,8 @@ export class ConfiguracionPage {
   protected readonly conexion = inject(ConexionService);
   private readonly db = inject(DbService);
   private readonly modelo = inject(ModeloService);
+  protected readonly plataforma = inject(PlatformService);
+  private readonly kiosko = inject(KioskoLocalService);
   protected readonly sync = inject(SyncService);
   private readonly subida = inject(SubidaService);
   protected readonly log = inject(LogService);
@@ -86,6 +92,35 @@ export class ConfiguracionPage {
   });
   /** ¿La config del dispositivo (puerta) está puesta? */
   readonly puertaOk = computed(() => this.cfg.idPuerta() > 0);
+
+  /**
+   * Estado de la estación de ESCRITORIO. El bloque de arriba ("datos offline") lee el
+   * kit del APK (SQLite y modelo en disco vía plugins de Capacitor), que en Electron y
+   * en el navegador no existe: por eso ahí se quedaba en "Verificando…" para siempre.
+   * En Electron el equivalente lo sirve `kiosk_local` (:8100).
+   */
+  readonly estadoKiosko = signal<KioskEstado | null>(null);
+  readonly verificandoKiosko = signal(false);
+  readonly sincronizandoKiosko = signal(false);
+  readonly subiendoKiosko = signal(false);
+  readonly errorKiosko = signal<string | null>(null);
+  readonly avisoKiosko = signal<string | null>(null);
+  readonly kioskoListo = computed(() => (this.estadoKiosko()?.embeddings_activos ?? 0) > 0);
+
+  /** Fichajes exitosos en la cola local. */
+  readonly pendientesAsistencias = computed(
+    () => this.estadoKiosko()?.pendientes_asistencias ?? 0,
+  );
+  /** Rechazos (no reconocido, foto, sin movimiento) en la cola local. */
+  readonly pendientesIntentos = computed(() => this.estadoKiosko()?.pendientes_intentos ?? 0);
+  readonly pendientesTotal = computed(
+    () => this.pendientesAsistencias() + this.pendientesIntentos(),
+  );
+  /** Si el backend local es viejo no manda contadores: entonces no se muestra la fila. */
+  readonly reportaPendientes = computed(() => {
+    const e = this.estadoKiosko();
+    return !!e && (e.pendientes_asistencias != null || e.pendientes_intentos != null);
+  });
 
   /** Opciones de rostros simultáneos (MIN_ROSTROS..MAX_ROSTROS). */
   readonly opcionesRostros = Array.from(
@@ -126,8 +161,77 @@ export class ConfiguracionPage {
       .subscribe({ next: (data) => this.dispositivos.set(data), error: () => {} });
     // Enumera cámaras ya disponibles (etiquetas vacías hasta dar permiso).
     this.camera.listarCamaras().then((c) => this.camaras.set(c));
-    // Verifica los datos offline al abrir.
-    this.verificar();
+    // Cada entorno verifica lo suyo: el APK su kit offline, el escritorio su backend
+    // local. En el navegador no hay nada que escanear offline, así que no se consulta.
+    if (this.plataforma.isNative) this.verificar();
+    else if (this.plataforma.isElectron) this.verificarKiosko();
+  }
+
+  /** Lee el estado de la estación de escritorio (padrón local + conexión). */
+  verificarKiosko(): void {
+    this.verificandoKiosko.set(true);
+    this.errorKiosko.set(null);
+    this.kiosko.estado().subscribe({
+      next: (e) => {
+        this.estadoKiosko.set(e);
+        this.verificandoKiosko.set(false);
+      },
+      error: (e) => {
+        this.estadoKiosko.set(null);
+        this.errorKiosko.set(this.mensajeError(e));
+        this.verificandoKiosko.set(false);
+      },
+    });
+  }
+
+  /** Baja el padrón de la nube a la BD local del escritorio (necesita internet). */
+  async sincronizarKiosko(): Promise<void> {
+    if (this.sincronizandoKiosko()) return;
+    this.sincronizandoKiosko.set(true);
+    this.errorKiosko.set(null);
+    try {
+      await new Promise<void>((resolve, reject) => {
+        this.kiosko.rosterSync(this.cfg.tipoFichaje()).subscribe({
+          next: () => resolve(),
+          error: reject,
+        });
+      });
+      this.verificarKiosko();
+    } catch (e) {
+      this.errorKiosko.set(`No se pudo sincronizar el padrón: ${this.mensajeError(e)}`);
+    } finally {
+      this.sincronizandoKiosko.set(false);
+    }
+  }
+
+  /** Fuerza subir YA la cola local (fichajes + rechazos) a la nube. */
+  async subirPendientesKiosko(): Promise<void> {
+    if (this.subiendoKiosko()) return;
+    this.subiendoKiosko.set(true);
+    this.errorKiosko.set(null);
+    this.avisoKiosko.set(null);
+    try {
+      const r = await new Promise<KioskSyncEventosResponse>((resolve, reject) => {
+        this.kiosko.syncEventos().subscribe({ next: resolve, error: reject });
+      });
+      const subidos = r.insertados ?? r.subidos ?? 0;
+      this.avisoKiosko.set(
+        `Subidos ${subidos}` +
+          (r.duplicados ? `, ${r.duplicados} ya estaban` : '') +
+          (r.rechazados ? `, ${r.rechazados} rechazados por el servidor` : ''),
+      );
+      this.verificarKiosko();
+    } catch (e) {
+      this.errorKiosko.set(`No se pudieron subir los pendientes: ${this.mensajeError(e)}`);
+    } finally {
+      this.subiendoKiosko.set(false);
+    }
+  }
+
+  private mensajeError(e: unknown): string {
+    if (e instanceof Error) return e.message;
+    const err = e as { error?: { detail?: string }; message?: string };
+    return err?.error?.detail ?? err?.message ?? 'Error inesperado.';
   }
 
   /** Re-lee qué hay descargado (modelo + roster) para escanear offline. */

@@ -5,6 +5,7 @@ import {
   guestGuard,
   kioskoInicioGuard,
   scopeGuard,
+  soloNativoGuard,
 } from './core/guards/auth';
 import { rosterListoGuard } from './core/roster-listo.guard';
 
@@ -109,22 +110,29 @@ export const routes: Routes = [
         (m) => m.ConfiguracionPage,
       ),
   },
-  // ── Kiosko offline (APK) — gateado por scanner:use + roster/modelo listos ──
+  // ── Kiosko de escritorio (Electron/PC) — reconoce vía backend local :8100 ──
+  {
+    path: 'kiosko-pc',
+    canActivate: [scopeGuard('scanner:use')],
+    loadComponent: () =>
+      import('./pages/kiosko-pc/kiosko-pc').then((m) => m.KioskoPcComponent),
+  },
+  // ── Kiosko offline (APK) — solo nativo + scanner:use + roster/modelo listos ──
   {
     path: 'descarga',
-    canActivate: [scopeGuard('scanner:use')],
+    canActivate: [scopeGuard('scanner:use'), soloNativoGuard],
     loadComponent: () =>
       import('./pages/descarga/descarga.component').then((m) => m.DescargaComponent),
   },
   {
     path: 'escaneo',
-    canActivate: [scopeGuard('scanner:use'), rosterListoGuard],
+    canActivate: [scopeGuard('scanner:use'), soloNativoGuard, rosterListoGuard],
     loadComponent: () =>
       import('./pages/escaneo/escaneo.component').then((m) => m.EscaneoComponent),
   },
   {
     path: 'enrolar',
-    canActivate: [scopeGuard('scanner:use'), rosterListoGuard],
+    canActivate: [scopeGuard('scanner:use'), soloNativoGuard, rosterListoGuard],
     loadComponent: () =>
       import('./pages/enrolamiento/enrolamiento.component').then(
         (m) => m.EnrolamientoComponent,

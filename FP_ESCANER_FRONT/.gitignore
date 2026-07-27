@@ -9,6 +9,10 @@
 # Capacitor (carpeta SPA generada para el APK)
 /www
 
+# Electron (renderer generado + instaladores)
+/electron/renderer
+/release
+
 # Node
 /node_modules
 npm-debug.log
