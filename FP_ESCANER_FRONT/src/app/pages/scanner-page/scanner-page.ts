@@ -13,7 +13,7 @@ import { DispositivoService } from '../../service/dispositivo';
 import { ScannerService } from '../../service/escaneo';
 import { GeolocationService } from '../../service/geolocation';
 import { PuertaAccesoService } from '../../service/puerta-acceso';
-import { Frame, ScannerBase, Track } from './scanner-base';
+import { Frame, ScannerBase, Track, VOZ_RECHAZO, vozAprobado } from './scanner-base';
 
 /**
  * Escáner de NUBE: detecta con MediaPipe (motor común en ScannerBase) y manda la
@@ -125,10 +125,10 @@ export class ScannerPage extends ScannerBase {
       nombre,
       pct: conf != null ? Math.round(conf * 100) : null,
       mensaje: motivo ?? res.mensaje,
+      // La voz solo identifica a quien pasa; el motivo del rechazo no se dice en voz alta.
       frase: res.acceso
-        ? `Aprobado, ${nombre}.`
-        : (motivo ??
-          (res.trabajador ? `Denegado, ${nombre}.` : 'Acceso denegado. Rostro no reconocido.')),
+        ? vozAprobado(res.trabajador?.nombre, res.trabajador?.apellido)
+        : VOZ_RECHAZO,
     });
   }
 

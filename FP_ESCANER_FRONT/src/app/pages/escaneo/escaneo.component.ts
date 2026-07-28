@@ -44,6 +44,7 @@ import { ConexionService } from '../../core/conexion.service';
 import { AccesoParams, AccesoResponse } from '../../core/interfaces/escaneo';
 import { ordenarKps } from '../../core/face-kps.util';
 import { dentroDeArea } from '../../core/geo.util';
+import { VOZ_RECHAZO, vozAprobado } from '../scanner-page/scanner-base';
 
 const UMBRAL = 0.5; // match coseno (= motor.py)
 const UMBRAL_LIVENESS = 0.5; // anti-spoof: score_real mínimo
@@ -520,7 +521,7 @@ export class EscaneoComponent implements OnDestroy {
           await this.eventos.registrarAsistencia({ id_trabajador: r.id, sim: r.sim, dentro,
             lat: this.geo?.lat ?? null, lon: this.geo?.lon ?? null });
           this.subida.subirPendientes();
-          this.resultado(true, 'Fichaje registrado', nombre, pct);
+          this.resultado(true, 'Fichaje registrado', nombre, pct, undefined, vozAprobado(r.nombre, r.apellido));
         } else {
           this.ultimo.set({ exito: true, texto: `✓ ${nombre} · ${pct}%` }); // volvió pronto: sin doble registro
         }
@@ -537,7 +538,8 @@ export class EscaneoComponent implements OnDestroy {
             if (online.acceso && online.trabajador) {
               const nombre = `${online.trabajador.nombre} ${online.trabajador.apellido}`;
               const pct = online.confianza != null ? Math.round(online.confianza * 100) : null;
-              this.resultado(true, 'Fichaje (servidor)', nombre, pct);
+              this.resultado(true, 'Fichaje (servidor)', nombre, pct, undefined,
+                vozAprobado(online.trabajador.nombre, online.trabajador.apellido));
               this.marcar(b,'#16a34a', pct != null ? `${nombre} · ${pct}%` : nombre);
             } else {
               this.resultado(false, 'No reconocido', '—', null, online.mensaje ?? 'No reconocido');
@@ -678,13 +680,24 @@ export class EscaneoComponent implements OnDestroy {
     return tamano * 0.5 + frontal * 0.5;
   }
 
-  /** Empuja un toast + hint + voz (como el online). */
-  private resultado(exito: boolean, titulo: string, nombre: string, pct: number | null, mensaje?: string): void {
+  /**
+   * Empuja un toast + hint + voz (como el online). `nombreVoz` permite anunciar solo
+   * primer nombre y primer apellido cuando `nombre` viene completo.
+   */
+  private resultado(
+    exito: boolean,
+    titulo: string,
+    nombre: string,
+    pct: number | null,
+    mensaje?: string,
+    nombreVoz?: string,
+  ): void {
     const id = ++this.toastSeq;
     this.toasts.update((arr) => [{ id, exito, titulo, nombre, pct, mensaje }, ...arr].slice(0, 4));
     setTimeout(() => this.toasts.update((arr) => arr.filter((x) => x.id !== id)), 5000);
     this.ultimo.set({ exito, texto: exito ? `✓ ${nombre}` : `${titulo}: ${mensaje ?? nombre}` });
-    this.voz.decir(exito ? `Aprobado, ${nombre}.` : (mensaje ?? 'Acceso denegado.'));
+    // Igual que el escáner de nube: al aceptar solo el nombre; al rechazar, ni el motivo.
+    this.voz.decir(exito ? (nombreVoz ?? nombre) : VOZ_RECHAZO);
   }
 
   toggleVoz(): void {

@@ -11,7 +11,13 @@ import { AuthService } from '../../service/auth';
 import { dataUrlToBlob } from '../../service/camera';
 import { KioskoLocalService } from '../../service/kiosko-local';
 import { PuertaAccesoService } from '../../service/puerta-acceso';
-import { Frame, ScannerBase, Track } from '../scanner-page/scanner-base';
+import {
+  Frame,
+  ScannerBase,
+  Track,
+  VOZ_RECHAZO,
+  vozAprobado,
+} from '../scanner-page/scanner-base';
 
 /**
  * Escáner de la estación de ESCRITORIO (Electron/PC + webcam). Se comporta IGUAL que
@@ -176,9 +182,10 @@ export class KioskoPcComponent extends ScannerBase implements OnInit {
       nombre,
       pct: sim != null ? Math.round(sim * 100) : null,
       mensaje: motivo ?? res.mensaje,
+      // La voz solo identifica a quien pasa; el motivo del rechazo no se dice en voz alta.
       frase: res.acceso
-        ? `Aprobado, ${nombre}.`
-        : (motivo ?? res.mensaje ?? 'Acceso denegado. Rostro no reconocido.'),
+        ? vozAprobado(res.trabajador?.nombre, res.trabajador?.apellido)
+        : VOZ_RECHAZO,
     });
   }
 

@@ -79,15 +79,24 @@ export class Sidebar {
    */
   readonly items = computed<NavItem[]>(() => {
     if (this.esKiosko()) {
+      // El escáner normal está disponible en todos los entornos: en la estación de
+      // escritorio apunta al backend local, así que también ficha sin internet.
+      const normal: NavItem = {
+        titulo: 'Escáner',
+        ruta: '/scanner',
+        icono: faExpand,
+        scope: 'scanner:use',
+      };
       if (this.plataforma.isNative) {
         return [
-          { titulo: 'Escáner', ruta: '/escaneo', icono: faExpand, scope: 'scanner:use' },
+          { titulo: 'Escáner offline', ruta: '/escaneo', icono: faExpand, scope: 'scanner:use' },
+          normal,
           { titulo: 'Registrar rostro', ruta: '/enrolar', icono: faUserPlus, scope: 'scanner:use' },
         ];
       }
       return this.plataforma.isElectron
-        ? [{ titulo: 'Escáner PC', ruta: '/kiosko-pc', icono: faDesktop, scope: 'scanner:use' }]
-        : [{ titulo: 'Escáner', ruta: '/scanner', icono: faExpand, scope: 'scanner:use' }];
+        ? [normal, { titulo: 'Escáner PC', ruta: '/kiosko-pc', icono: faDesktop, scope: 'scanner:use' }]
+        : [normal];
     }
     return this.todos.filter((i) => this.auth.tieneScope(i.scope));
   });
