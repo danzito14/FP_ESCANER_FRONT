@@ -1,7 +1,14 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 
 import { PlatformService } from './platform';
 import { ScannerConfigService } from './scanner-config';
+
+/** Ajustes que la cámara entregó realmente (pueden no ser los pedidos). */
+export interface AjustesCamara {
+  ancho: number;
+  alto: number;
+  fps: number;
+}
 
 /**
  * Acceso a la cámara para el scanner: abrir stream y capturar un frame.
@@ -14,6 +21,9 @@ export class CameraService {
   private readonly platform = inject(PlatformService);
   private readonly cfg = inject(ScannerConfigService);
   private stream: MediaStream | null = null;
+
+  /** Lo que la cámara está entregando de verdad (null si está cerrada). */
+  readonly ajustes = signal<AjustesCamara | null>(null);
 
   /**
    * Lienzo reutilizable para las capturas. Crear un canvas nuevo en cada frame
@@ -58,6 +68,54 @@ export class CameraService {
     }
     video.srcObject = this.stream;
     await video.play();
+    await this.afinarPista();
+  }
+
+  /**
+   * Exprime la cámara ya abierta: si soporta más resolución de la concedida, la sube
+   * (getUserMedia con `ideal` a veces se queda corto, sobre todo con webcams USB), y
+   * pide enfoque/exposición/balance continuos, que es lo que evita la imagen lavada o
+   * desenfocada con la que el filtro de calidad rechaza el rostro.
+   * Todo es "si se puede": lo que el navegador o el driver no soporte se ignora.
+   */
+  private async afinarPista(): Promise<void> {
+    const track = this.stream?.getVideoTracks()[0];
+    if (!track) return;
+
+    try {
+      const cap = track.getCapabilities?.() as
+        | (MediaTrackCapabilities & { focusMode?: string[]; exposureMode?: string[]; whiteBalanceMode?: string[] })
+        | undefined;
+      const pedido = this.resolucionIdeal();
+      const avanzado: MediaTrackConstraintSet[] = [];
+
+      // Sube a lo máximo que soporte el hardware, sin pasar de lo pedido en Configuración.
+      const maxW = cap?.width?.max;
+      const maxH = cap?.height?.max;
+      const actual = track.getSettings();
+      if (maxW && maxH && (actual.width ?? 0) < Math.min(maxW, pedido.width)) {
+        avanzado.push({
+          width: Math.min(maxW, pedido.width),
+          height: Math.min(maxH, pedido.height),
+        });
+      }
+      if (cap?.focusMode?.includes('continuous')) avanzado.push({ focusMode: 'continuous' } as MediaTrackConstraintSet);
+      if (cap?.exposureMode?.includes('continuous')) avanzado.push({ exposureMode: 'continuous' } as MediaTrackConstraintSet);
+      if (cap?.whiteBalanceMode?.includes('continuous')) {
+        avanzado.push({ whiteBalanceMode: 'continuous' } as MediaTrackConstraintSet);
+      }
+
+      if (avanzado.length) await track.applyConstraints({ advanced: avanzado });
+    } catch {
+      // Driver que no admite ajustes: se sigue con lo que dio getUserMedia.
+    }
+
+    const s = track.getSettings();
+    this.ajustes.set({
+      ancho: s.width ?? 0,
+      alto: s.height ?? 0,
+      fps: Math.round(s.frameRate ?? 0),
+    });
   }
 
   /** Lista las cámaras (videoinput). Las etiquetas solo aparecen con permiso. */
@@ -121,6 +179,7 @@ export class CameraService {
   stop(): void {
     this.stream?.getTracks().forEach((t) => t.stop());
     this.stream = null;
+    this.ajustes.set(null);
   }
 
   /** Resolución (ideal) según la calidad elegida en Configuración. */
