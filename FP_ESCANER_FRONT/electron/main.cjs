@@ -75,7 +75,14 @@ function servirEstatico(req, res) {
 function iniciarServidor() {
   return new Promise((resolve) => {
     const server = http.createServer((req, res) => {
-      if (req.url.startsWith('/kiosk') || req.url.startsWith('/health')) {
+      // '/scanner' va al backend LOCAL, no a la nube: la estación corre el mismo `back`
+      // (MODO_KIOSKO) y expone las MISMAS rutas /scanner/*. Por eso el escáner normal
+      // funciona con y sin internet sin cambiar de pantalla ni de código.
+      if (
+        req.url.startsWith('/kiosk') ||
+        req.url.startsWith('/scanner') ||
+        req.url.startsWith('/health')
+      ) {
         return proxy(req, res, KIOSK_API, 'kiosk_local no disponible');
       }
       if (req.url.startsWith('/api')) {

@@ -7,4 +7,7 @@ export const environment = {
   // Kiosko de escritorio: el back local (kiosk_local :8100). Vacío = ruta relativa
   // servida por el proxy de dev (proxy.conf.json) para evitar CORS en `ng serve`.
   kioskLocalUrl: '',
+  // Escáner en dev: contra la nube de dev (8005), como hasta ahora. Para probar el
+  // camino LOCAL (back en MODO_KIOSKO) pon '' y el proxy de dev lo manda al 8100.
+  scannerUrl: 'http://localhost:8005/api',
 };
