@@ -16,6 +16,29 @@ import { PlatformService } from '../../service/platform';
 import { ScannerConfigService } from '../../service/scanner-config';
 import { VozService } from '../../service/voz';
 
+/**
+ * Lo que la voz dice al RECHAZAR. Una sola palabra, sin el motivo: en la puerta lo
+ * escucha todo el mundo, y decir en voz alta "posible foto" o "rostro no reconocido"
+ * expone a la persona. El motivo queda en pantalla, para quien opera.
+ */
+export const VOZ_RECHAZO = 'Rechazado';
+
+/**
+ * Primer nombre y primer apellido, que es lo que anuncia la voz al aceptar.
+ * Los registros suelen traer nombres compuestos ("HECTOR ROLANDO VALDEZ SOTO");
+ * leerlos completos hace la fila lenta y suena a lista de raya.
+ */
+export function nombreCorto(nombre?: string | null, apellido?: string | null): string {
+  const pri = (s?: string | null) => (s ?? '').trim().split(/\s+/)[0] ?? '';
+  return [pri(nombre), pri(apellido)].filter(Boolean).join(' ');
+}
+
+/** Lo que la voz dice al ACEPTAR: "Aprobado, <primer nombre> <primer apellido>." */
+export function vozAprobado(nombre?: string | null, apellido?: string | null): string {
+  const corto = nombreCorto(nombre, apellido);
+  return corto ? `Aprobado, ${corto}.` : 'Aprobado.';
+}
+
 export type EstadoScanner = 'idle' | 'cargando' | 'detectando' | 'error';
 export type EstadoCara = 'detectando' | 'capturando' | 'enviando' | 'ok' | 'rechazado';
 

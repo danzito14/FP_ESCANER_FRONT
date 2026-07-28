@@ -1,6 +1,6 @@
 {
   "name": "fp-escaner-front",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "SL Asistencias — estación de asistencias de escritorio (escáner facial local + panel)",
   "author": "SL Agrícola",
   "main": "electron/main.cjs",
@@ -39,7 +39,9 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "build/icon.ico"
@@ -57,7 +59,8 @@
       "installerHeaderIcon": "build/icon.ico",
       "artifactName": "SL-Asistencias-Estacion-${version}-setup.${ext}",
       "deleteAppDataOnUninstall": false
-    }},
+    }
+  },
   "packageManager": "npm@10.9.2",
   "dependencies": {
     "@angular/common": "^21.2.0",
