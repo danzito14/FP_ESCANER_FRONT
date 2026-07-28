@@ -44,6 +44,18 @@ export class KioskoPcComponent extends ScannerBase implements OnInit {
    */
   protected override readonly intervaloCapturaMs = 200;
 
+  /**
+   * Frame COMPLETO (no recorte), IGUAL que la web. Motivo: el anti-spoof (MiniFASNet)
+   * necesita su contexto 2.7× alrededor de la cara; con un recorte ese contexto se sale
+   * de la imagen y el modelo da FALSO spoof (rechaza caras reales). Con el frame completo
+   * el anti-spoof se comporta como en la nube. El filtro de calidad del backend queda
+   * apagado en el escritorio (como la web) para no rechazar planos generales de webcam.
+   * (Con varias caras el ScannerBase igual recorta para aislar cada una.)
+   */
+  protected override readonly recortarSiempre = false;
+  /** Menos compresión: el JPEG suave baja la nitidez del frame. */
+  protected override readonly calidadJpeg = 0.95;
+
   readonly estado = signal<KioskEstado | null>(null);
   readonly sincronizando = signal(false);
   readonly puertas = signal<PuertaAcceso[]>([]);

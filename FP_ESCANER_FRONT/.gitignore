@@ -10,6 +10,8 @@
 /www
 
 # Electron (renderer generado + instaladores)
+# El .exe se publica como Release de GitHub, NO se versiona: un binario de ~100 MB
+# se queda en el historial para siempre aunque después se borre.
 /electron/renderer
 /release
 

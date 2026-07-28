@@ -83,6 +83,8 @@ export abstract class ScannerBase implements OnDestroy {
   protected readonly overlay = viewChild<ElementRef<HTMLCanvasElement>>('overlay');
 
   readonly isBrowser = this.platform.isBrowser;
+  /** Resolución/fps que la cámara está entregando realmente (para el resumen). */
+  readonly ajustesCamara = this.camera.ajustes;
   readonly status = signal<EstadoScanner>('idle');
   readonly error = signal<string | null>(null);
   readonly detectado = signal(false);
@@ -112,6 +114,15 @@ export abstract class ScannerBase implements OnDestroy {
    * prueba de vida; demasiado espaciadas y la persona se cansa de esperar.
    */
   protected readonly intervaloCapturaMs: number = 100;
+  /**
+   * Recortar alrededor del rostro incluso cuando hay una sola cara. Manda menos
+   * píxeles pero casi todos útiles: el filtro de nitidez del backend mide TODA la
+   * imagen, así que un frame completo con la cara pequeña se lee como "borroso"
+   * aunque el rostro se vea bien.
+   */
+  protected readonly recortarSiempre: boolean = false;
+  /** Calidad del JPEG. Comprimir de más suaviza bordes y baja la nitidez medida. */
+  protected readonly calidadJpeg: number = 0.9;
 
   protected tracks: Track[] = [];
   private controlesTimer: ReturnType<typeof setTimeout> | undefined;
@@ -369,13 +380,14 @@ export abstract class ScannerBase implements OnDestroy {
     for (let foto = 1; foto <= TOTAL_CAPTURAS; foto++) {
       const v = this.video()?.nativeElement;
       if (v) {
-        // Una sola cara → frame completo (probado). Varias → recorte con margen para aislarla.
+        // Varias caras → recorte obligado para aislar la que toca. Con una sola,
+        // depende de la página (ver `recortarSiempre`).
         const dataUrl =
-          this.tracks.length <= 1
-            ? this.camera.capture(v)
+          this.tracks.length <= 1 && !this.recortarSiempre
+            ? this.camera.capture(v, this.calidadJpeg)
             : (() => {
                 const r = this.regionConMargen(t.box, v);
-                return this.camera.captureRegion(v, r.x, r.y, r.w, r.h);
+                return this.camera.captureRegion(v, r.x, r.y, r.w, r.h, this.calidadJpeg);
               })();
         frames.push({ dataUrl, score: t.box.score });
         this.notificar(

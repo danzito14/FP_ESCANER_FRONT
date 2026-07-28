@@ -39,6 +39,13 @@ export const MAX_ROSTROS = 10;
 export class ScannerConfigService {
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
+  /** Electron: lo marca el preload (ver electron/preload.cjs), con respaldo por user-agent. */
+  private esEscritorio(): boolean {
+    if (!this.isBrowser) return false;
+    const flag = (globalThis as unknown as { kioskoPC?: { escritorio?: boolean } }).kioskoPC;
+    return !!flag?.escritorio || /electron/i.test(globalThis.navigator?.userAgent ?? '');
+  }
+
   readonly idPuerta = signal(0);
   readonly idDispositivo = signal(0);
   readonly tipoRegistro = signal<TipoRegistro>('entrada');
@@ -46,8 +53,12 @@ export class ScannerConfigService {
   readonly tipoFichaje = signal<TipoFichaje>('oficina');
   /** deviceId de la cámara elegida ('' = predeterminada / frontal). */
   readonly camaraId = signal('');
-  /** Resolución pedida a la cámara (por defecto HD 720p). */
-  readonly calidad = signal<CalidadCamara>('hd');
+  /**
+   * Resolución pedida a la cámara. En escritorio arranca en Full HD: hay CPU de sobra
+   * y una webcam decente entrega más detalle, que es lo que necesita el filtro de
+   * nitidez del reconocimiento. En tableta/web se queda en HD por memoria.
+   */
+  readonly calidad = signal<CalidadCamara>(this.esEscritorio() ? 'fhd' : 'hd');
   /** Alcance de detección de rostros (por defecto largo, acorde a HD). */
   readonly alcance = signal<AlcanceDeteccion>('largo');
   /** Rostros que se detectan/escanean a la vez (entre MIN_ROSTROS y MAX_ROSTROS). */

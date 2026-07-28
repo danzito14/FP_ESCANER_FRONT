@@ -20,6 +20,10 @@
       </span>
     }
     <span><strong>Registro:</strong> {{ cfg.tipoRegistro() === 'entrada' ? 'Entrada' : 'Salida' }}</span>
+    @if (ajustesCamara(); as cam) {
+      <!-- Resolución REAL entregada: puede ser menor que la pedida en Configuración. -->
+      <span><strong>Cámara:</strong> {{ cam.ancho }}×{{ cam.alto }} @ {{ cam.fps }} fps</span>
+    }
     @if (camaraAbierta() && cfg.alcance() === 'largo') {
       <span><strong>Modelo:</strong> {{ faceDet.modeloLargoActivo() ? 'largo alcance ✓' : 'corto (full-range no disponible)' }}</span>
     }
