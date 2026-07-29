@@ -18,6 +18,7 @@
     "electron:dev": "electron . --dev",
     "electron:start": "electron .",
     "dist:win": "npm run build:electron && electron-builder --win --publish never",
+    "dist:linux": "npm run build:electron && electron-builder --linux --publish never",
     "postinstall": "patch-package"
   },
   "private": true,
@@ -32,6 +33,7 @@
     "files": [
       "electron/**/*",
       "build/icon.ico",
+      "build/icon.png",
       "package.json",
       "!node_modules/**/*"
     ],
@@ -59,6 +61,38 @@
       "installerHeaderIcon": "build/icon.ico",
       "artifactName": "SL-Asistencias-Estacion-${version}-setup.${ext}",
       "deleteAppDataOnUninstall": false
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "category": "Utility",
+      "synopsis": "Estación de asistencias con reconocimiento facial",
+      "artifactName": "SL-Asistencias-Estacion-${version}.${ext}"
+    },
+    "deb": {
+      "depends": [
+        "libgtk-3-0",
+        "libnotify4",
+        "libnss3",
+        "libxss1",
+        "libxtst6",
+        "libatspi2.0-0",
+        "libsecret-1-0",
+        "xdg-utils"
+      ]
     }
   },
   "packageManager": "npm@10.9.2",
