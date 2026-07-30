@@ -14,6 +14,15 @@ const http = require('node:http');
 const https = require('node:https');
 const fs = require('node:fs');
 
+// VOZ EN LINUX: la app usa la Web Speech API (ver src/app/service/voz.ts). En Windows y
+// Android el motor de voz lo pone el sistema, pero en Linux Chromium habla a través de
+// speech-dispatcher y NO lo activa por su cuenta: sin este switch, getVoices() devuelve
+// una lista vacía y la estación se queda muda. Requiere los paquetes 'speech-dispatcher'
+// y 'espeak-ng' instalados (van como dependencias del .deb).
+if (process.platform === 'linux') {
+  app.commandLine.appendSwitch('enable-speech-dispatcher');
+}
+
 const DEV = process.argv.includes('--dev');
 const KIOSK_API = process.env.KIOSK_API_URL || 'http://localhost:8100';
 const CLOUD_API = process.env.CLOUD_API_URL || 'https://sl-asistencias.slagricola.cloud';
