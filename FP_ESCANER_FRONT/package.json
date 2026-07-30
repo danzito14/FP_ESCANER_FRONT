@@ -91,7 +91,9 @@
         "libxtst6",
         "libatspi2.0-0",
         "libsecret-1-0",
-        "xdg-utils"
+        "xdg-utils",
+        "speech-dispatcher",
+        "espeak-ng"
       ]
     }
   },
