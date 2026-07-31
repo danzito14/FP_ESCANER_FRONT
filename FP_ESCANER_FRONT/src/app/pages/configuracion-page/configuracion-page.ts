@@ -20,6 +20,7 @@ import { PuertaAcceso } from '../../core/interfaces/puerta-acceso';
 import { AuthService } from '../../service/auth';
 import { CameraService, etiquetaCamara } from '../../service/camera';
 import { DispositivoService } from '../../service/dispositivo';
+import { EscritorioService } from '../../service/escritorio';
 import { KioskoLocalService } from '../../service/kiosko-local';
 import { PlatformService } from '../../service/platform';
 import { PuertaAccesoService } from '../../service/puerta-acceso';
@@ -64,6 +65,7 @@ export class ConfiguracionPage {
   private readonly modelo = inject(ModeloService);
   protected readonly plataforma = inject(PlatformService);
   private readonly kiosko = inject(KioskoLocalService);
+  private readonly escritorio = inject(EscritorioService);
   protected readonly sync = inject(SyncService);
   private readonly subida = inject(SubidaService);
   protected readonly log = inject(LogService);
@@ -164,7 +166,30 @@ export class ConfiguracionPage {
     // Cada entorno verifica lo suyo: el APK su kit offline, el escritorio su backend
     // local. En el navegador no hay nada que escanear offline, así que no se consulta.
     if (this.plataforma.isNative) this.verificar();
-    else if (this.plataforma.isElectron) this.verificarKiosko();
+    else if (this.plataforma.isElectron) {
+      this.verificarKiosko();
+      // Config de arranque: la guarda el proceso principal de Electron, no localStorage,
+      // porque la necesita antes de crear la ventana (ver electron/main.cjs).
+      void this.escritorio.leerConfig().then((c) => {
+        if (!c) return;
+        this.arrancarEnEscaner.set(c.rutaInicio === '/scanner');
+        this.arrancarPantallaCompleta.set(c.pantallaCompleta);
+      });
+    }
+  }
+
+  // ── Arranque de la estación (solo escritorio) ───────────────────────────────
+  readonly arrancarEnEscaner = signal(true);
+  readonly arrancarPantallaCompleta = signal(true);
+
+  setArrancarEnEscaner(activo: boolean): void {
+    this.arrancarEnEscaner.set(activo);
+    void this.escritorio.guardarConfig({ rutaInicio: activo ? '/scanner' : '/' });
+  }
+
+  setArrancarPantallaCompleta(activo: boolean): void {
+    this.arrancarPantallaCompleta.set(activo);
+    void this.escritorio.guardarConfig({ pantallaCompleta: activo });
   }
 
   /** Lee el estado de la estación de escritorio (padrón local + conexión). */
