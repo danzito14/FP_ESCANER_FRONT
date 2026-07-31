@@ -25,6 +25,7 @@ interface ScannerCfg {
   alcance: AlcanceDeteccion;
   maxRostros: number;
   livenessOffline: boolean;
+  autoIniciar: boolean;
 }
 
 /** Límites de rostros simultáneos. */
@@ -66,6 +67,13 @@ export class ScannerConfigService {
   /** Aplicar la prueba de vida (anti-foto) on-device en el escáner OFFLINE. Experimental
    *  (default OFF porque el modelo aún no está calibrado y rechaza caras reales). */
   readonly livenessOffline = signal(false);
+  /**
+   * Abrir la cámara al entrar al escáner, sin pulsar "Iniciar". Es lo que permite que una
+   * estación desatendida quede lista para fichar tras un corte de luz. Default ON solo en
+   * ESCRITORIO: ahí Electron ya concedió el permiso de cámara y no aparece ningún diálogo.
+   * En web/APK el navegador exige un gesto del usuario, así que se queda el botón.
+   */
+  readonly autoIniciar = signal(this.esEscritorio());
 
   constructor() {
     this.cargar();
@@ -81,6 +89,7 @@ export class ScannerConfigService {
           alcance: this.alcance(),
           maxRostros: this.maxRostros(),
           livenessOffline: this.livenessOffline(),
+          autoIniciar: this.autoIniciar(),
         };
         localStorage.setItem(KEY, JSON.stringify(cfg));
         // Espejo a las claves individuales que lee el kit offline (eventos/geofence/descarga).
@@ -118,6 +127,7 @@ export class ScannerConfigService {
         this.maxRostros.set(Math.min(MAX_ROSTROS, Math.max(MIN_ROSTROS, Math.round(c.maxRostros))));
       }
       if (typeof c.livenessOffline === 'boolean') this.livenessOffline.set(c.livenessOffline);
+      if (typeof c.autoIniciar === 'boolean') this.autoIniciar.set(c.autoIniciar);
     } catch {
       // Config corrupta: se ignora.
     }

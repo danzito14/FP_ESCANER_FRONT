@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, Injector, afterNextRender, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FaIconComponent } from '@fortawesome/angular-fontawesome';
@@ -12,6 +12,7 @@ import { dataUrlToBlob } from '../../service/camera';
 import { DispositivoService } from '../../service/dispositivo';
 import { ScannerService } from '../../service/escaneo';
 import { GeolocationService } from '../../service/geolocation';
+import { PlatformService } from '../../service/platform';
 import { PuertaAccesoService } from '../../service/puerta-acceso';
 import { Frame, ScannerBase, Track, VOZ_RECHAZO, vozAprobado } from './scanner-base';
 
@@ -31,6 +32,8 @@ export class ScannerPage extends ScannerBase {
   private readonly puertaService = inject(PuertaAccesoService);
   private readonly dispositivoService = inject(DispositivoService);
   private readonly auth = inject(AuthService);
+  private readonly plataforma = inject(PlatformService);
+  private readonly injector = inject(Injector);
 
   readonly puertas = signal<PuertaAcceso[]>([]);
   readonly dispositivos = signal<Dispositivo[]>([]);
@@ -47,6 +50,15 @@ export class ScannerPage extends ScannerBase {
     this.auth
       .listarSiAlguno(['dispositivos:read', 'scanner:use'], this.dispositivoService.list())
       .subscribe({ next: (data) => this.dispositivos.set(data), error: () => {} });
+
+    // ESTACIÓN DESATENDIDA: abre la cámara sola al entrar, sin pulsar "Iniciar". Es lo
+    // que hace que tras un corte de luz el kiosko quede listo para fichar sin nadie
+    // delante. Solo en escritorio (Electron), donde el permiso de cámara está concedido
+    // por el proceso principal y no aparece ningún diálogo; en web/APK se conserva el
+    // botón, porque el navegador exige un gesto del usuario para abrir la cámara.
+    if (this.cfg.autoIniciar() && this.plataforma.isElectron) {
+      afterNextRender(() => { void this.iniciar(); }, { injector: this.injector });
+    }
   }
 
   /** Nombre de la puerta configurada (para el resumen). */

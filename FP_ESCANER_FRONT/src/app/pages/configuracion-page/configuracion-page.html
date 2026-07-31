@@ -317,6 +317,40 @@
     }
   </div>
 
+  <!-- Arranque desatendido: es lo que hace que tras un corte de luz la estación quede
+       lista para fichar sin que nadie toque nada. -->
+  <div class="config-card">
+    <div class="config-titulo">
+      <fa-icon [icon]="iconDatos" />
+      <div>
+        <h2>Arranque de la estación</h2>
+        <p>Cómo abre la aplicación al encender la computadora.</p>
+      </div>
+    </div>
+
+    <div class="voz-controls">
+      <label style="display:flex;align-items:center;gap:8px">
+        <input type="checkbox" [checked]="arrancarEnEscaner()"
+          (change)="setArrancarEnEscaner($any($event.target).checked)" />
+        Abrir directamente en el escáner
+      </label>
+      <label style="display:flex;align-items:center;gap:8px">
+        <input type="checkbox" [checked]="arrancarPantallaCompleta()"
+          (change)="setArrancarPantallaCompleta($any($event.target).checked)" />
+        Abrir a pantalla completa
+      </label>
+      <label style="display:flex;align-items:center;gap:8px">
+        <input type="checkbox" [checked]="cfg.autoIniciar()"
+          (change)="cfg.autoIniciar.set($any($event.target).checked)" />
+        Encender la cámara sola (sin pulsar «Iniciar»)
+      </label>
+      <small class="hint">
+        Las dos primeras se aplican al próximo arranque de la aplicación.
+        F11 sale de pantalla completa si necesitas dar soporte.
+      </small>
+    </div>
+  </div>
+
   <!-- Calibrar mueve umbrales de reconocimiento: solo el admin, no el operador del kiosko. -->
   @if (esAdmin()) {
     <app-calibracion-kiosko />

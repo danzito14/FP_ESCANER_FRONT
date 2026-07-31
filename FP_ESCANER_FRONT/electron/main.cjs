@@ -24,6 +24,46 @@ if (process.platform === 'linux') {
 }
 
 const DEV = process.argv.includes('--dev');
+
+// ── Config de la ESTACIÓN (ruta de arranque y pantalla completa) ──────────────
+// Vive en un JSON dentro de userData y NO en localStorage, porque el proceso principal
+// la necesita ANTES de cargar la ventana (y localStorage solo existe dentro de ella).
+// La app la lee/escribe por IPC desde Configuración, así que se cambia sin reinstalar.
+// Las variables de entorno mandan sobre el archivo: útil para probar sin tocar la config.
+const CONFIG_DEFECTO = { rutaInicio: '/scanner', pantallaCompleta: true };
+
+function rutaConfig() {
+  return path.join(app.getPath('userData'), 'estacion.json');
+}
+
+function leerConfig() {
+  let guardada = {};
+  try {
+    guardada = JSON.parse(fs.readFileSync(rutaConfig(), 'utf8'));
+  } catch {
+    // No existe o está corrupta: se usan los valores por defecto.
+  }
+  const cfg = { ...CONFIG_DEFECTO, ...guardada };
+  if (process.env.SL_RUTA_INICIO) cfg.rutaInicio = process.env.SL_RUTA_INICIO;
+  if (process.env.SL_PANTALLA_COMPLETA) cfg.pantallaCompleta = process.env.SL_PANTALLA_COMPLETA !== '0';
+  if (!String(cfg.rutaInicio).startsWith('/')) cfg.rutaInicio = CONFIG_DEFECTO.rutaInicio;
+  cfg.pantallaCompleta = !!cfg.pantallaCompleta;
+  return cfg;
+}
+
+function guardarConfig(parcial) {
+  const cfg = { ...leerConfig(), ...(parcial || {}) };
+  const limpia = {
+    rutaInicio: String(cfg.rutaInicio).startsWith('/') ? cfg.rutaInicio : CONFIG_DEFECTO.rutaInicio,
+    pantallaCompleta: !!cfg.pantallaCompleta,
+  };
+  try {
+    fs.writeFileSync(rutaConfig(), JSON.stringify(limpia, null, 2));
+  } catch (e) {
+    console.error('[config] no se pudo guardar:', e.message);
+  }
+  return limpia;
+}
 const KIOSK_API = process.env.KIOSK_API_URL || 'http://localhost:8100';
 const CLOUD_API = process.env.CLOUD_API_URL || 'https://sl-asistencias.slagricola.cloud';
 const RENDERER_DIR = path.join(__dirname, 'renderer');
@@ -120,9 +160,18 @@ function aplicarPantallaCompleta(win, activar) {
 }
 
 async function crearVentana() {
-  const startUrl = DEV ? 'http://localhost:4200' : await iniciarServidor();
+  const base = DEV ? 'http://localhost:4200' : await iniciarServidor();
+  const cfg = leerConfig();
+  // Ruta de arranque: en una estación desatendida interesa caer directo en el escáner
+  // tras un corte de luz, sin que nadie navegue. Angular resuelve la ruta porque el
+  // servidor estático devuelve index.html para cualquier path (ver servirEstatico).
+  // Si no hay sesión guardada, el guard de la ruta redirige a /login por su cuenta.
+  const startUrl = base + cfg.rutaInicio;
   const win = new BrowserWindow({
     show: false,
+    // Kiosko: arranca a pantalla completa. F11 la suelta (ver abajo), que es la salida
+    // de emergencia para dar soporte sin tener que matar el proceso.
+    fullscreen: cfg.pantallaCompleta,
     autoHideMenuBar: true,
     backgroundColor: '#101418',
     // Mismo icono que usará el instalador (build/icon.ico); si falta, Electron pone el suyo.
@@ -134,9 +183,19 @@ async function crearVentana() {
     },
   });
   win.setMenuBarVisibility(false);
+
+  // F11 alterna pantalla completa. Sin esto, una estación en modo kiosko no se puede
+  // sacar de pantalla completa desde teclado y hay que cerrar la app para dar soporte.
+  win.webContents.on('before-input-event', (evento, entrada) => {
+    if (entrada.type === 'keyDown' && entrada.key === 'F11') {
+      evento.preventDefault();
+      aplicarPantallaCompleta(win, !win.isFullScreen());
+    }
+  });
+
   if (DEV) win.webContents.openDevTools({ mode: 'detach' });
   await win.loadURL(startUrl);
-  win.maximize(); // ventana grande pero con barra de título: aún no es pantalla completa
+  if (!cfg.pantallaCompleta) win.maximize();
   win.show();
 }
 
@@ -145,6 +204,10 @@ app.whenReady().then(() => {
   ipcMain.handle('kiosko:pantalla-completa', (e, activar) => {
     aplicarPantallaCompleta(BrowserWindow.fromWebContents(e.sender), activar);
   });
+
+  // Config de la estación, editable desde la pantalla de Configuración de la app.
+  ipcMain.handle('kiosko:leer-config', () => leerConfig());
+  ipcMain.handle('kiosko:guardar-config', (_e, parcial) => guardarConfig(parcial));
 
   // Kiosko: concede cámara (y pantalla completa) sin diálogos.
   session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => {
