@@ -127,11 +127,13 @@ function iniciarServidor() {
       // '/scanner' va al backend LOCAL, no a la nube: la estación corre el mismo `back`
       // (MODO_KIOSKO) y expone las MISMAS rutas /scanner/*. Por eso el escáner normal
       // funciona con y sin internet sin cambiar de pantalla ni de código.
-      if (
-        req.url.startsWith('/kiosk') ||
-        req.url.startsWith('/scanner') ||
-        req.url.startsWith('/health')
-      ) {
+      //
+      // OJO con el choque de nombres: '/scanner' es TAMBIÉN una ruta de Angular. Abrir la
+      // app en esa pantalla es un GET y hay que servir index.html; la API del escáner son
+      // todos POST. Sin este filtro por método, cargar la ventana en /scanner acababa en
+      // kiosk_local y devolvía 405 Method Not Allowed con la pantalla en blanco.
+      const esApiEscaner = req.url.startsWith('/scanner') && req.method !== 'GET';
+      if (esApiEscaner || req.url.startsWith('/kiosk') || req.url.startsWith('/health')) {
         return proxy(req, res, KIOSK_API, 'kiosk_local no disponible');
       }
       if (req.url.startsWith('/api')) {
