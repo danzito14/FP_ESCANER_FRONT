@@ -122,15 +122,32 @@
           Voz activada
         </label>
 
-        <label>
-          <span>Voz</span>
-          <select (change)="voz.setVoz($any($event.target).value)">
-            <option value="" [selected]="voz.vozNombre() === ''">Automática (español)</option>
-            @for (v of voz.voces(); track v.voiceURI) {
-              <option [value]="v.name" [selected]="v.name === voz.vozNombre()">{{ v.name }} — {{ v.lang }}</option>
-            }
-          </select>
-        </label>
+        @if (voz.vozLocalDisponible()) {
+          <!-- Voz neuronal instalada en la estación: se ofrece SOLO ésta, porque suena
+               mejor que cualquiera del sistema y es igual en todas las máquinas. -->
+          <label>
+            <span>Voz</span>
+            <select (change)="voz.vozLocal.set($any($event.target).value)">
+              @for (v of voz.vocesLocales(); track v.id) {
+                <option [value]="v.id" [selected]="v.id === voz.vozLocal()">{{ v.etiqueta }}</option>
+              }
+            </select>
+          </label>
+          <small class="hint">
+            Voz natural instalada en esta estación. La velocidad y el tono son propios de
+            cada voz, así que esos controles no le aplican.
+          </small>
+        } @else {
+          <label>
+            <span>Voz</span>
+            <select (change)="voz.setVoz($any($event.target).value)">
+              <option value="" [selected]="voz.vozNombre() === ''">Automática (español)</option>
+              @for (v of voz.voces(); track v.voiceURI) {
+                <option [value]="v.name" [selected]="v.name === voz.vozNombre()">{{ v.name }} — {{ v.lang }}</option>
+              }
+            </select>
+          </label>
+        }
 
         <label>
           <span>Volumen: {{ (voz.volumen() * 100) | number: '1.0-0' }}%</span>

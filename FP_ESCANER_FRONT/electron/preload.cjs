@@ -13,4 +13,9 @@ contextBridge.exposeInMainWorld('kioskoPC', {
   pantallaCompleta: (on) => ipcRenderer.invoke('kiosko:pantalla-completa', !!on),
   leerConfig: () => ipcRenderer.invoke('kiosko:leer-config'),
   guardarConfig: (cfg) => ipcRenderer.invoke('kiosko:guardar-config', cfg),
+  // Voz neuronal local (piper): devuelve el WAV en un ArrayBuffer, o null si no hay
+  // motor/modelos instalados, en cuyo caso el front usa la voz del sistema.
+  vozDisponible: () => ipcRenderer.invoke('voz:disponible'),
+  vozListar: () => ipcRenderer.invoke('voz:listar'),
+  vozHablar: (texto, voz) => ipcRenderer.invoke('voz:hablar', texto, voz),
 });

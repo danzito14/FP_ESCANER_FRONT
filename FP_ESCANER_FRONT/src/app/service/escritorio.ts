@@ -10,12 +10,21 @@ export interface ConfigEstacion {
   pantallaCompleta: boolean;
 }
 
+/** Voz neuronal local disponible en la estación (piper). */
+export interface VozLocal {
+  id: string;
+  etiqueta: string;
+}
+
 /** API que expone el preload de Electron (ver electron/preload.cjs). */
 interface PuenteKioskoPC {
   escritorio?: boolean;
   pantallaCompleta?: (on: boolean) => Promise<void>;
   leerConfig?: () => Promise<ConfigEstacion>;
   guardarConfig?: (cfg: Partial<ConfigEstacion>) => Promise<ConfigEstacion>;
+  vozDisponible?: () => Promise<boolean>;
+  vozListar?: () => Promise<VozLocal[]>;
+  vozHablar?: (texto: string, voz: string) => Promise<ArrayBuffer | null>;
 }
 
 /**
@@ -46,5 +55,22 @@ export class EscritorioService {
 
   async guardarConfig(cfg: Partial<ConfigEstacion>): Promise<ConfigEstacion | null> {
     return (await this.puente?.guardarConfig?.(cfg)) ?? null;
+  }
+
+  // ── Voz neuronal local (piper) ──────────────────────────────────────────────
+  // Solo existe en escritorio y solo si el instalador bajó el motor y los modelos.
+  // Cuando no está, VozService usa la Web Speech API como siempre.
+
+  async vozDisponible(): Promise<boolean> {
+    return (await this.puente?.vozDisponible?.()) ?? false;
+  }
+
+  async vozListar(): Promise<VozLocal[]> {
+    return (await this.puente?.vozListar?.()) ?? [];
+  }
+
+  /** WAV de la frase, o null si no se pudo sintetizar (el front debe tener respaldo). */
+  async vozHablar(texto: string, voz: string): Promise<ArrayBuffer | null> {
+    return (await this.puente?.vozHablar?.(texto, voz)) ?? null;
   }
 }
