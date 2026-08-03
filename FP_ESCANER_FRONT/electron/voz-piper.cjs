@@ -19,7 +19,6 @@
 const { spawn } = require('node:child_process');
 const crypto = require('node:crypto');
 const fs = require('node:fs');
-const os = require('node:os');
 const path = require('node:path');
 
 // Voces del sistema. El nombre que ve el usuario NO es el del archivo: así se puede
@@ -142,20 +141,37 @@ class VozPiper {
     }
 
     const modelo = this.rutaModelo(id);
-    if (!modelo || !fs.existsSync(modelo)) return null;
-    // Se escribe a un temporal y se renombra: si la app muere a medias, la caché nunca
-    // queda con un WAV truncado que después se reproduciría cortado para siempre.
-    const temporal = path.join(os.tmpdir(), `voz-${process.pid}-${Date.now()}.wav`);
-    const ok = await this.ejecutar(limpio, modelo, VOCES[id].args, temporal);
-    if (!ok) return null;
-    try {
-      const datos = fs.readFileSync(temporal);
-      fs.renameSync(temporal, destino);
-      return datos;
-    } catch {
-      try { fs.unlinkSync(temporal); } catch { /* nada que limpiar */ }
+    if (!modelo || !fs.existsSync(modelo)) {
+      console.error('[voz] falta el modelo', modelo);
       return null;
     }
+    // Se escribe a un temporal y se renombra: si la app muere a medias, la caché nunca
+    // queda con un WAV truncado que después se reproduciría cortado para siempre.
+    //
+    // El temporal va DENTRO de la carpeta de caché, no en /tmp: en Linux /tmp suele ser
+    // tmpfs, o sea otro sistema de archivos, y rename() entre dispositivos distintos
+    // falla con EXDEV. Eso dejaba la estación sin voz neuronal y en silencio (se caía al
+    // respaldo del sistema sin decir por qué). Pasó en una instalación real.
+    const temporal = path.join(this.dirCache, `.tmp-${process.pid}-${Date.now()}.wav`);
+    const ok = await this.ejecutar(limpio, modelo, VOCES[id].args, temporal);
+    if (!ok) return null;
+
+    let datos;
+    try {
+      datos = fs.readFileSync(temporal);
+    } catch (e) {
+      console.error('[voz] no se pudo leer el audio generado:', e.message);
+      return null;
+    }
+    // La caché es una OPTIMIZACIÓN: si no se puede guardar, se devuelve el audio igual.
+    // Antes un fallo aquí dejaba a la estación sin voz neuronal, que es peor remedio.
+    try {
+      fs.renameSync(temporal, destino);
+    } catch (e) {
+      console.error('[voz] no se pudo cachear (se reproduce igual):', e.message);
+      try { fs.unlinkSync(temporal); } catch { /* nada que limpiar */ }
+    }
+    return datos;
   }
 
   ejecutar(texto, modelo, args, salida) {
