@@ -13,6 +13,7 @@ const path = require('node:path');
 const http = require('node:http');
 const https = require('node:https');
 const fs = require('node:fs');
+const { VozPiper } = require('./voz-piper.cjs');
 
 // VOZ EN LINUX: la app usa la Web Speech API (ver src/app/service/voz.ts). En Windows y
 // Android el motor de voz lo pone el sistema, pero en Linux Chromium habla a través de
@@ -210,6 +211,16 @@ app.whenReady().then(() => {
   // Config de la estación, editable desde la pantalla de Configuración de la app.
   ipcMain.handle('kiosko:leer-config', () => leerConfig());
   ipcMain.handle('kiosko:guardar-config', (_e, parcial) => guardarConfig(parcial));
+
+  // Voz neuronal local (piper). Devuelve el WAV; el renderer lo reproduce. Si no hay
+  // motor o modelos, devuelve null y el front usa la voz del sistema.
+  const voz = new VozPiper(path.join(app.getPath('userData'), 'voz-cache'));
+  ipcMain.handle('voz:disponible', () => voz.disponible());
+  ipcMain.handle('voz:listar', () => voz.voces());
+  ipcMain.handle('voz:hablar', async (_e, texto, cual) => {
+    const wav = await voz.hablar(texto, cual);
+    return wav ? wav.buffer.slice(wav.byteOffset, wav.byteOffset + wav.byteLength) : null;
+  });
 
   // Kiosko: concede cámara (y pantalla completa) sin diálogos.
   session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => {

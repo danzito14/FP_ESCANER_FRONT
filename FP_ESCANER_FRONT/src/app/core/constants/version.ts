@@ -4,7 +4,7 @@
  * Para cambiar la versión usa `npm version <x.y.z>`. El 4º número es el BUILD y
  * se autoincrementa al reconstruir la misma versión.
  */
-export const APP_VERSION = '0.2.8.2';
+export const APP_VERSION = '0.2.8.3';
 
 /** Versión del backend (informativa, se actualiza a mano). */
 export const API_VERSION = '0.2.0';
