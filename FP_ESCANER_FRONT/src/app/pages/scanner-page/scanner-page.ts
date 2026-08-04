@@ -87,6 +87,18 @@ export class ScannerPage extends ScannerBase {
     } catch {
       this.lat = undefined;
       this.lng = undefined;
+      // En web y APK la ubicación es OBLIGATORIA para fichar: es lo que permite saber
+      // DÓNDE se tomó la asistencia y lo que sostiene la validación de geocerca del
+      // backend. Sin coordenadas, esa validación queda "indeterminada" y no penaliza,
+      // así que permitirlo sería dejar abierta justo la vía que se quiere cerrar.
+      // El escritorio queda exento: no tiene GPS, no se mueve, y el backend le sella
+      // la ubicación de la puerta.
+      if (!this.plataforma.isElectron) {
+        throw new Error(
+          'Activa la ubicación para registrar asistencia. Revisa que el GPS esté ' +
+          'encendido y que le hayas dado permiso de ubicación a la aplicación.',
+        );
+      }
     }
   }
 

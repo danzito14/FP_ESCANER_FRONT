@@ -268,12 +268,29 @@ export class EscaneoComponent implements OnDestroy {
         const n = await this.db.getPuertaNombre(idPuerta);
         if (n) this.puertaNombre.set(n);
       }
-      // Ubicación de ALTA PRECISIÓN, actualizada en vivo (es un dispositivo móvil).
+      // Ubicación OBLIGATORIA para fichar: es lo que permite saber DÓNDE se tomó la
+      // asistencia y lo que sostiene la geocerca del backend (sin coordenadas esa
+      // validación queda indeterminada y no penaliza a nadie). Se exige una primera
+      // lectura ANTES de abrir la cámara: si no llega, no se ficha.
+      // watchPosition por sí solo NO servía de guardia: su catch únicamente cubre el
+      // alta del seguimiento, así que con el permiso denegado se seguía escaneando sin
+      // ubicación y el fichaje llegaba al servidor sin coordenadas.
+      try {
+        const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 15000 });
+        this.geo = { lon: pos.coords.longitude, lat: pos.coords.latitude };
+      } catch {
+        this.geo = null;
+        throw new Error(
+          'Activa la ubicación para registrar asistencia. Revisa que el GPS esté ' +
+          'encendido y que le hayas dado permiso de ubicación a la aplicación.',
+        );
+      }
+      // Ya con una lectura válida, seguimiento en vivo (es un dispositivo móvil).
       try {
         this.watchId = await Geolocation.watchPosition(
           { enableHighAccuracy: true, timeout: 10000 },
           (pos) => { if (pos) this.geo = { lon: pos.coords.longitude, lat: pos.coords.latitude }; });
-      } catch { this.geo = null; }
+      } catch { /* el seguimiento es opcional: ya hay una lectura inicial válida */ }
 
       await this.abrirCamara();
       this.status.set('detectando');
