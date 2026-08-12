@@ -10,5 +10,4 @@ export const environment = {
   scannerUrl: 'https://sl-asistencias.slagricola.cloud/api',
 };
 
-// npm run build:web
-// sudo cp -r www/* /var/www/sl-asistencias/
+// npm run build:web && sudo cp -r www/* /var/www/sl-asistencias/
