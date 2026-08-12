@@ -41,7 +41,7 @@ export class EmpresaForm {
     estado: this.fb.nonNullable.control('activo' as Estado),
     coordenadas: this.fb.nonNullable.array<ReturnType<EmpresaForm['buildCoord']>>(
       [],
-      areaHectareasValidator(5, 150),
+      areaHectareasValidator(0.1, 300),
     ),
   });
 

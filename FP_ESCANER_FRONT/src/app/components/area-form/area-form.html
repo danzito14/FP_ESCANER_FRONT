@@ -70,13 +70,13 @@
 
           @if (coordenadas.length >= 3) {
             <p class="area-info" [class.area-error]="coordenadas.invalid">
-              Área: {{ areaHa.toFixed(2) }} ha (permitido: 5 – 150 ha)
+              Área: {{ areaHa.toFixed(2) }} ha (permitido: 0.1 – 300 ha)
             </p>
             @if (coordenadas.errors?.['areaMin']) {
-              <small class="error">El área es muy pequeña; debe ser de al menos 5 ha.</small>
+              <small class="error">El área es muy pequeña; debe ser de al menos 0.1 ha.</small>
             }
             @if (coordenadas.errors?.['areaMax']) {
-              <small class="error">El área es muy grande; no puede superar 150 ha.</small>
+              <small class="error">El área es muy grande; no puede superar 300 ha.</small>
             }
           }
         </fieldset>
