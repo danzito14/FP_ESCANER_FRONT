@@ -59,7 +59,7 @@ export class AreaForm {
     estado: this.fb.nonNullable.control('activo' as Estado),
     coordenadas: this.fb.nonNullable.array<ReturnType<AreaForm['buildCoord']>>(
       [],
-      areaHectareasValidator(5, 150),
+      areaHectareasValidator(0.1, 300),
     ),
   });
 
@@ -111,7 +111,7 @@ export class AreaForm {
       // Reinicia las coordenadas para dibujar manualmente desde cero.
       this.coordenadas.clear();
       this.adminWkt.set(undefined);
-      this.coordenadas.setValidators(areaHectareasValidator(5, 150));
+      this.coordenadas.setValidators(areaHectareasValidator(0.1, 300));
     }
     this.coordenadas.updateValueAndValidity();
   }
