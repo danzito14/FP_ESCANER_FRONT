@@ -66,4 +66,27 @@ export class MatchService {
     const t = this.base[idx];
     return { id: t.id, nombre: t.nombre, apellido: t.apellido, sim: mejor };
   }
+
+  /**
+   * DIAGNÓSTICO de paridad: top-3 candidatos + estadísticas de la distribución.
+   * Si el rostro escaneado SÍ está enrolado, su coseno debería destacarse del resto.
+   * Si todos los cosenos son bajos y están apretados (max≈media), el embedding del
+   * device NO vive en el mismo espacio que el del servidor → paridad rota.
+   */
+  diagnostico(emb: Float32Array): string {
+    if (!this.base.length) return 'roster vacío';
+    const q = l2norm(emb);
+    const sims = this.base.map((b, i) => {
+      const n = Math.min(q.length, b.emb.length);
+      let dot = 0;
+      for (let k = 0; k < n; k++) dot += q[k] * b.emb[k];
+      return { i, sim: Number.isFinite(dot) ? dot : -1 };
+    }).sort((a, b) => b.sim - a.sim);
+
+    const media = sims.reduce((a, x) => a + x.sim, 0) / sims.length;
+    const top = sims.slice(0, 3)
+      .map(x => `${this.base[x.i].nombre} ${this.base[x.i].apellido} ${x.sim.toFixed(3)}`)
+      .join(' / ');
+    return `top3: ${top} | media ${media.toFixed(3)} | min ${sims[sims.length - 1].sim.toFixed(3)} | n=${this.base.length}`;
+  }
 }

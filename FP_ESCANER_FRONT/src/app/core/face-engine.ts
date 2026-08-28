@@ -10,5 +10,7 @@ export interface FaceEnginePlugin {
     Promise<{ esReal: boolean; scoreReal: number; label: number }>;
   /** Fuerza el recolector de basura para soltar los bitmaps nativos acumulados por frame. */
   liberarMemoria(): Promise<void>;
+  /** DIAGNÓSTICO: bytes asignados en el heap nativo del proceso (para localizar fugas). */
+  memoriaNativa(): Promise<{ asignada: number; total: number }>;
 }
 export const FaceEngine = registerPlugin<FaceEnginePlugin>('FaceEngine');

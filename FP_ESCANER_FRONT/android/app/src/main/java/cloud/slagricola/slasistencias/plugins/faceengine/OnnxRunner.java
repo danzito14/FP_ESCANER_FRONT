@@ -19,6 +19,8 @@ public class OnnxRunner {
         {38.2946f,51.6963f},{73.5318f,51.5014f},{56.0252f,71.7366f},
         {41.5493f,92.3655f},{70.7299f,92.2041f}
     };
+    /** true = intentar NNAPI. Ver nota en el constructor: en gama baja suele ser contraproducente. */
+    private static final boolean USAR_NNAPI = false;
     private final OrtEnvironment env;
     private final OrtSession session;
     private final String inputName;
@@ -26,7 +28,15 @@ public class OnnxRunner {
     public OnnxRunner(Context ctx, String modelPath) throws Exception {
         env = OrtEnvironment.getEnvironment();
         OrtSession.SessionOptions opt = new OrtSession.SessionOptions();
-        try { opt.addNnapi(); } catch (Throwable ignore) {}     // acelera si el device soporta
+        // NNAPI: en SoCs sin NPU (p.ej. Snapdragon 429 de la Tab A 8.0) NNAPI cae a una
+        // implementación de referencia en CPU que suele ser MÁS LENTA que el EP de CPU de
+        // ONNX Runtime, y además cambia la numérica (riesgo de paridad del embedding).
+        // Se deja apagado por defecto y se activa solo si el device lo justifica.
+        if (USAR_NNAPI) { try { opt.addNnapi(); } catch (Throwable ignore) {} }
+        try {
+            opt.setIntraOpNumThreads(Math.max(1, Runtime.getRuntime().availableProcessors()));
+            opt.setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT);
+        } catch (Throwable ignore) {}
         session = env.createSession(modelPath, opt);
         inputName = session.getInputNames().iterator().next();
     }
@@ -51,13 +61,16 @@ public class OnnxRunner {
             M = Calib3d.estimateAffinePartial2D(src, dst);   // similitud: rot+escala+trasl
             Imgproc.warpAffine(img, al, M, new Size(112,112));   // BGR 112×112
 
-            float[] chw = new float[3*112*112];
-            byte[] px = new byte[3];
+            // Lectura EN BLOQUE: 1 sola llamada JNI en vez de 112*112 = 12.544.
+            // El Mat de warpAffine es continuo y CV_8UC3, así que sale entero de un tirón.
+            // Numéricamente idéntico al bucle por-pixel: NO afecta la paridad del embedding.
             int hw = 112*112;
-            for (int y=0;y<112;y++) for (int x=0;x<112;x++){
-                al.get(y,x,px);                               // BGR
-                int i = y*112+x;
-                float b=px[0]&0xFF, g=px[1]&0xFF, r=px[2]&0xFF;
+            float[] chw = new float[3*hw];
+            byte[] buf = new byte[hw*3];
+            al.get(0, 0, buf);                                // BGR entrelazado
+            for (int i=0;i<hw;i++){
+                int o = i*3;
+                float b=buf[o]&0xFF, g=buf[o+1]&0xFF, r=buf[o+2]&0xFF;
                 chw[i]        = (r-127.5f)/127.5f;            // R (swapRB)
                 chw[hw+i]     = (g-127.5f)/127.5f;            // G
                 chw[2*hw+i]   = (b-127.5f)/127.5f;            // B
