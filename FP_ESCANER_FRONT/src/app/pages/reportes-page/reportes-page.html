@@ -72,6 +72,37 @@
               </select>
             </div>
           }
+          @if (def.usaTipoRegistro) {
+            <div class="form-field">
+              <label>Tipo</label>
+              <select [value]="tipoRegistro()" (change)="onTipoRegistro($event)">
+                <option value="">Entradas y salidas</option>
+                <option value="entrada">Solo entradas</option>
+                <option value="salida">Solo salidas</option>
+              </select>
+            </div>
+          }
+          @if (def.usaRostro) {
+            <div class="form-field">
+              <label>Rostro</label>
+              <select [value]="rostro()" (change)="onRostro($event)">
+                <option value="">Todos</option>
+                <option value="con">Con rostro</option>
+                <option value="sin">Sin rostro</option>
+              </select>
+            </div>
+          }
+          @if (def.usaEmpresa && esAdmin()) {
+            <div class="form-field">
+              <label>Empresa</label>
+              <select [value]="idEmpresa()" (change)="onEmpresa($event)">
+                <option [value]="0">Todas</option>
+                @for (e of empresas(); track e.id_empresa) {
+                  <option [value]="e.id_empresa">{{ e.nombre_empresa }}</option>
+                }
+              </select>
+            </div>
+          }
         </div>
 
         <!-- Vista previa -->

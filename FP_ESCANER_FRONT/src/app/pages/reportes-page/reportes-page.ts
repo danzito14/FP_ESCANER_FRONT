@@ -9,9 +9,11 @@ import {
   faFilePdf,
   faTriangleExclamation,
   faUserSecret,
+  faUsers,
 } from '@fortawesome/free-solid-svg-icons';
 import { firstValueFrom } from 'rxjs';
 
+import { Empresa } from '../../core/interfaces/empresa';
 import { EventoCombinado } from '../../core/interfaces/evento-combinado';
 import { Trabajador } from '../../core/interfaces/trabajador';
 import { rangoUltimaSemana } from '../../core/utils/fechas';
@@ -20,7 +22,15 @@ import { AsistenciaService } from '../../service/asistencia';
 import { AuthService } from '../../service/auth';
 import { IncidenciaService } from '../../service/incidencia';
 import { ReporteIntentosPdfService } from '../../service/reporte-intentos-pdf';
-import { FormatoReporte, ReporteService, TipoReporte } from '../../service/reporte';
+import {
+  FormatoReporte,
+  OpcionesReporte,
+  ReporteService,
+  RostroReporte,
+  TipoRegistroReporte,
+  TipoReporte,
+} from '../../service/reporte';
+import { EmpresaService } from '../../service/empresa';
 import { TrabajadorService } from '../../service/trabajador';
 
 interface ReporteDef {
@@ -33,6 +43,12 @@ interface ReporteDef {
   usaTrabajador?: boolean;
   /** Permite filtrar por tipo de incidencia. */
   usaTipo?: boolean;
+  /** Permite filtrar entrada/salida (asistencias). */
+  usaTipoRegistro?: boolean;
+  /** Permite filtrar con/sin rostro (trabajadores). */
+  usaRostro?: boolean;
+  /** Super-admin puede elegir empresa (id_empresa); a los demás los acota el token. */
+  usaEmpresa?: boolean;
   /** Reporte que solo se descarga como PDF (con fotos), generado en el cliente. */
   soloPdf?: boolean;
   columnas: string[];
@@ -49,12 +65,24 @@ const TIPOS_INCIDENCIA = [
   'area_incorrecta',
 ];
 
+const p2 = (n: number) => String(n).padStart(2, '0');
+
 function fmtFechaHora(s?: string | null): string {
   if (!s) return '—';
   const d = new Date(s);
   if (isNaN(d.getTime())) return s;
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  return `${p2(d.getDate())}/${p2(d.getMonth() + 1)}/${d.getFullYear()} ${p2(d.getHours())}:${p2(d.getMinutes())}`;
+}
+
+/** [fecha, hora] por separado, como las columnas del reporte de asistencias. */
+function fechaYHora(s?: string | null): [string, string] {
+  if (!s) return ['—', '—'];
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return [s, '—'];
+  return [
+    `${p2(d.getDate())}/${p2(d.getMonth() + 1)}/${d.getFullYear()}`,
+    `${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`,
+  ];
 }
 
 @Component({
@@ -68,6 +96,7 @@ export class ReportesPage {
   private readonly asistenciaService = inject(AsistenciaService);
   private readonly incidenciaService = inject(IncidenciaService);
   private readonly trabajadorService = inject(TrabajadorService);
+  private readonly empresaService = inject(EmpresaService);
   private readonly pdf = inject(ReporteIntentosPdfService);
   private readonly auth = inject(AuthService);
 
@@ -75,14 +104,20 @@ export class ReportesPage {
   readonly iconCsv = faFileCsv;
   readonly iconPdf = faFilePdf;
   readonly tiposIncidencia = TIPOS_INCIDENCIA;
+  readonly esAdmin = this.auth.esAdmin;
 
   /** Trabajadores para el filtro (se cargan si hay permiso). */
   readonly trabajadores = signal<Trabajador[]>([]);
+  /** Empresas para el filtro (solo super-admin). */
+  readonly empresas = signal<Empresa[]>([]);
 
   constructor() {
     this.auth
       .listarSiAlguno(['trabajadores:read', 'reportes:read'], this.trabajadorService.list({ limit: 500 }))
       .subscribe({ next: (data) => this.trabajadores.set(data), error: () => {} });
+    if (this.esAdmin()) {
+      this.empresaService.list().subscribe({ next: (data) => this.empresas.set(data), error: () => {} });
+    }
   }
 
   readonly reportes: ReporteDef[] = [
@@ -93,7 +128,9 @@ export class ReportesPage {
       icono: faClipboardCheck,
       usaFechas: true,
       usaTrabajador: true,
-      columnas: ['Trabajador', 'Tipo', 'Fecha / hora', 'Estado'],
+      usaTipoRegistro: true,
+      usaEmpresa: true,
+      columnas: ['N° empleado', 'Trabajador', 'Empresa', 'Puerta', 'Tipo', 'Fecha', 'Hora', 'Estado'],
     },
     {
       tipo: 'incidencias',
@@ -123,6 +160,16 @@ export class ReportesPage {
       usaTrabajador: true,
       columnas: ['Trabajador', 'Área', 'Fecha', 'Hora esperada', 'Hora real', 'Retardo'],
     },
+    {
+      tipo: 'trabajadores',
+      titulo: 'Trabajadores',
+      descripcion: 'Padrón de trabajadores; filtra con o sin rostro registrado.',
+      icono: faUsers,
+      usaFechas: false,
+      usaRostro: true,
+      usaEmpresa: true,
+      columnas: ['N° empleado', 'Nombre', 'Apellido', 'Estado', 'Tiene rostro'],
+    },
   ];
 
   /** Reporte abierto en el modal (null = cerrado). */
@@ -133,6 +180,10 @@ export class ReportesPage {
   /** Filtros opcionales: trabajador (0 = todos) y tipo de incidencia ('' = todos). */
   readonly idTrabajador = signal(0);
   readonly tipoIncidencia = signal('');
+  /** Entrada/salida ('' = ambas), con/sin rostro ('' = todos), empresa (0 = todas; solo admin). */
+  readonly tipoRegistro = signal<TipoRegistroReporte>('');
+  readonly rostro = signal<RostroReporte>('');
+  readonly idEmpresa = signal(0);
   /** Buscador de trabajador (por ID o nombre) con resultados en vivo. */
   readonly busquedaTrab = signal('');
   readonly mostrarResTrab = signal(false);
@@ -165,6 +216,8 @@ export class ReportesPage {
     this.descargando.set('');
     this.idTrabajador.set(0);
     this.tipoIncidencia.set('');
+    this.tipoRegistro.set('');
+    this.rostro.set('');
     this.busquedaTrab.set('');
     this.mostrarResTrab.set(false);
     this.cargarPreview();
@@ -211,6 +264,21 @@ export class ReportesPage {
     this.cargarPreview();
   }
 
+  onTipoRegistro(e: Event): void {
+    this.tipoRegistro.set((e.target as HTMLSelectElement).value as TipoRegistroReporte);
+    this.cargarPreview();
+  }
+
+  onRostro(e: Event): void {
+    this.rostro.set((e.target as HTMLSelectElement).value as RostroReporte);
+    this.cargarPreview();
+  }
+
+  onEmpresa(e: Event): void {
+    this.idEmpresa.set(Number((e.target as HTMLSelectElement).value));
+    this.cargarPreview();
+  }
+
   private cargarPreview(): void {
     const def = this.reporteSel();
     if (!def) return;
@@ -221,6 +289,9 @@ export class ReportesPage {
 
     const idTrab = this.idTrabajador();
     const tipoInc = this.tipoIncidencia();
+    const tipoReg = this.tipoRegistro();
+    const rostro = this.rostro();
+    const idEmpresa = (def.usaEmpresa && this.idEmpresa()) || undefined;
 
     const ok = (filas: string[][]) => {
       this.preview.set(filas);
@@ -234,15 +305,19 @@ export class ReportesPage {
 
     switch (def.tipo) {
       case 'asistencias':
-        this.asistenciaService.list({ ...fechas, limit }).subscribe({
+        this.asistenciaService.list({ ...fechas, idEmpresa, limit }).subscribe({
           next: (a) =>
             ok(
               a
                 .filter((x) => !idTrab || x.id_trabajador === idTrab)
+                .filter((x) => !tipoReg || x.tipo_registro === tipoReg)
                 .map((x) => [
+                  x.id_emp ?? '—',
                   x.trabajador_nombre ?? `#${x.id_trabajador}`,
+                  x.empresa_nombre ?? '—',
+                  x.puerta_nombre ?? '—',
                   x.tipo_registro,
-                  fmtFechaHora(x.fecha_hora),
+                  ...fechaYHora(x.fecha_hora),
                   x.estado_registro,
                 ]),
             ),
@@ -281,11 +356,21 @@ export class ReportesPage {
         });
         break;
       case 'trabajadores':
-        this.trabajadorService.list({ limit }).subscribe({
-          next: (t) =>
-            ok(t.map((x) => [x.nombre, x.apellido, x.estado, x.tiene_embedding ? 'Sí' : 'No'])),
-          error: fail,
-        });
+        this.trabajadorService
+          .list({ idEmpresa, conRostro: rostro ? rostro === 'con' : undefined, limit })
+          .subscribe({
+            next: (t) =>
+              ok(
+                t.map((x) => [
+                  x.id_emp ?? '—',
+                  x.nombre,
+                  x.apellido,
+                  x.estado,
+                  x.tiene_embedding ? 'Sí' : 'No',
+                ]),
+              ),
+            error: fail,
+          });
         break;
       case 'retardos':
         this.incidenciaService
@@ -312,21 +397,19 @@ export class ReportesPage {
     const def = this.reporteSel();
     if (!def) return;
     this.descargando.set(formato);
-    const opts: {
-      fechaInicio?: string;
-      fechaFin?: string;
-      idTrabajador?: number;
-      tipoIncidencia?: string;
-    } = {};
+    const opts: OpcionesReporte = {};
     if (def.usaFechas) {
       opts.fechaInicio = this.fechaInicio();
       opts.fechaFin = this.fechaFin();
     }
     if (def.usaTrabajador && this.idTrabajador()) opts.idTrabajador = this.idTrabajador();
     if (def.usaTipo && this.tipoIncidencia()) opts.tipoIncidencia = this.tipoIncidencia();
+    if (def.usaTipoRegistro && this.tipoRegistro()) opts.tipoRegistro = this.tipoRegistro();
+    if (def.usaRostro && this.rostro()) opts.rostro = this.rostro();
+    if (def.usaEmpresa && this.idEmpresa()) opts.idEmpresa = this.idEmpresa();
     this.reporteService.descargar(def.tipo, formato, opts).subscribe({
       next: (blob) => {
-        this.reporteService.guardar(blob, `${def.tipo}.${formato}`);
+        this.reporteService.guardar(blob, this.reporteService.nombreArchivo(def.tipo, formato, opts));
         this.descargando.set('');
       },
       error: () => {
