@@ -18,7 +18,7 @@ import {
   PerformanceMode,
   ContourMode,
 } from '@capacitor-mlkit/face-detection';
-import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Geolocation } from '@capacitor/geolocation';
 import { CameraPreview } from '@capacitor-community/camera-preview';
 
@@ -48,6 +48,17 @@ import { VOZ_RECHAZO, vozAprobado } from '../scanner-page/scanner-base';
 
 const UMBRAL = 0.5; // match coseno (= motor.py)
 const UMBRAL_LIVENESS = 0.5; // anti-spoof: score_real mínimo
+/** Con el anti-spoof APAGADO, correrlo solo 1 de cada N frames (datos de calibración
+ *  sin pagar un decode nativo + una inferencia ONNX por frame). */
+const MUESTREO_LIVENESS = 10;
+/** Diagnóstico: además de loguear, escribe los tiempos por tick a
+ *  /sdcard/Android/data/<pkg>/files/tiempos.csv (legible por adb sin build debuggable)
+ *  y mide el heap nativo por etapa (así se localizó la fuga de ML Kit).
+ *  APAGADO en producción: escribía dos ficheros y cruzaba el puente nativo en cada tick.
+ *  Ponlo en true solo para diagnosticar. */
+const MEDIR_A_ARCHIVO = false;
+/** Cada cuántos ticks medir el heap nativo por etapa (cada lectura cruza el puente). */
+const MUESTREO_MEM = 3;
 const COOLDOWN_MS = 8000; // no re-fichar a la misma persona seguido
 const COOLDOWN_INTENTO_MS = 8000; // no registrar el mismo intento cada frame
 const COOLDOWN_FALLBACK_MS = 6000; // mín. entre llamadas de fallback al servidor
@@ -55,7 +66,14 @@ const MAX_POSE = 25; // grados
 const TICK_MS = 1200; // ~0.8 fps (ML Kit por archivo es pesado; menos = menos memoria)
 /** Lado máx. (px) al que reducimos el frame antes de ML Kit/FaceEngine: menos bitmap nativo. */
 const MAX_LADO = 600;
-const FRAMES_SALIDA = 4; // frames sin cara para soltar la presencia (~2.8s; evita parpadeo)
+/** Tiempo sin cara para soltar la presencia. Antes era un contador de FRAMES (4), pensado
+ *  para ticks de ~700 ms (~2,8 s). Con ticks de ~2 s eso se volvió ¡8,5 s! de recuadro
+ *  pegado. Medido en tiempo ya no depende de lo que tarde el pipeline. */
+const MS_SALIDA = 1500;
+/** Tras manejar una presencia, soltarla igualmente pasado este tiempo aunque la cara siga
+ *  ahí: en una FILA la siguiente persona ocupa el mismo sitio y no hay ningún frame sin
+ *  cara que dispare el reset. El doble registro ya lo impide el cooldown por id. */
+const MS_PRESENCIA_MAX = 2000;
 const UMBRAL_DETECCION = 0.75; // calidad mínima de la cara (tamaño+frontal) para escanear (= SCORE_MIN web)
 
 type Estado = 'idle' | 'cargando' | 'detectando' | 'error';
@@ -101,7 +119,7 @@ interface Toast {
 
       <div class="scanner-stage">
         <div class="video-wrap" [class.fullscreen]="camaraAbierta()" (click)="mostrarControles()">
-          <video #video playsinline muted></video>
+          <video #video playsinline muted [style.transform]="esFrontal() ? 'scaleX(-1)' : 'none'"></video>
           <canvas #overlay class="overlay"></canvas>
 
           @if (toasts().length) {
@@ -198,7 +216,16 @@ export class EscaneoComponent implements OnDestroy {
   private manejado = false;       // ya se registró/consultó ESTA presencia → no repite hasta que la cara se vaya
   private ultimoBox: { color: string; label: string } | null = null; // recuadro a mantener
   private ultimoCentro: { cx: number; cy: number } | null = null;     // centro de la cara manejada
-  private framesSinCara = 0;      // frames seguidos sin cara → desbloquea
+  private sinCaraDesde = 0;       // ms del primer frame sin cara (0 = hay cara) → desbloquea
+  private manejadoEn = 0;         // ms en que se manejó la presencia actual
+  private frameLiveness = 0;      // contador para muestrear el anti-spoof cuando está apagado
+  /** ¿La cámara en uso es la frontal? Decide el espejo del preview y del recuadro. */
+  readonly esFrontal = signal(true);
+  /** Cronómetro por etapa del tick (diagnóstico de rendimiento en el device). */
+  private crono: Record<string, number> = {};
+  /** Delta de heap nativo (MB) por etapa, para el diagnóstico de fugas. */
+  private memDelta: Record<string, number> = {};
+  private frameMem = 0;
   private toastSeq = 0;
   private cooldown = new Map<number, number>();
   private cooldownIntento = new Map<string, number>();
@@ -257,7 +284,7 @@ export class EscaneoComponent implements OnDestroy {
     this.manejado = false;
     this.ultimoBox = null;
     this.ultimoCentro = null;
-    this.framesSinCara = 0;
+    this.sinCaraDesde = 0;
     this.status.set('cargando');
     try {
       await this.match.cargar(); // embeddings del roster a RAM
@@ -363,16 +390,45 @@ export class EscaneoComponent implements OnDestroy {
   private async abrirCamara(): Promise<void> {
     if (this.usaNativa) {
       this.setFondoTransparente(true);
+      // CameraPreview NO entiende de `deviceId` (eso es del API web): solo acepta
+      // 'front' | 'rear'. Hay que traducir la cámara elegida en Configuración, o el
+      // ajuste se ignora y siempre abre la frontal.
+      const posicion = await this.posicionNativa();
+      this.esFrontal.set(posicion === 'front');
       // Sin width/height → el plugin usa pantalla completa (evita líos de DPI).
       await CameraPreview.start({
-        position: 'front',
+        position: posicion,
         toBack: true,
         disableAudio: true,
         lockAndroidOrientation: true,
         storeToFile: false,
       });
     } else {
+      this.esFrontal.set(await this.esCamaraFrontal());
       await this.camera.start(this.video()!.nativeElement);
+    }
+  }
+
+  /** Traduce la cámara elegida en Configuración a la posición que entiende CameraPreview. */
+  private async posicionNativa(): Promise<'front' | 'rear'> {
+    return (await this.esCamaraFrontal()) ? 'front' : 'rear';
+  }
+
+  /**
+   * ¿La cámara guardada en Configuración es la frontal? Se resuelve por la etiqueta que
+   * da el sistema (no hay estándar: se buscan las palabras clave habituales). Sin cámara
+   * elegida o si algo falla, se asume frontal, que es el caso normal del kiosko.
+   */
+  private async esCamaraFrontal(): Promise<boolean> {
+    const id = this.cfg.camaraId();
+    if (!id) return true;
+    try {
+      const camaras = await this.camera.listarCamaras();
+      const elegida = camaras.find(c => c.deviceId === id);
+      if (!elegida) return true;
+      return !/back|rear|trasera|environment/i.test(elegida.label ?? '');
+    } catch {
+      return true;
     }
   }
 
@@ -398,7 +454,30 @@ export class EscaneoComponent implements OnDestroy {
    * Reduce el frame a MAX_LADO px (en el renderer, proceso aparte) para achicar el
    * bitmap nativo que decodifica ML Kit/FaceEngine → mucha menos memoria por frame.
    */
-  private reducirDataUrl(dataUrl: string): Promise<string> {
+  private async reducirDataUrl(dataUrl: string): Promise<string> {
+    // Ruta rápida: createImageBitmap decodifica Y escala en una sola pasada nativa, sin
+    // materializar el bitmap a resolución completa (que en 800x1280 son ~4 MB por frame).
+    // Un ImageBitmap respalda memoria NATIVA que el GC de JS no libera: hay que cerrarlo
+    // SIEMPRE. Sin el try/finally, una excepción a mitad dejaba el bitmap colgado
+    // (~4 MB por frame) y eso se acumula sin techo.
+    let bmp: ImageBitmap | undefined, chico: ImageBitmap | undefined;
+    try {
+      bmp = await createImageBitmap(await (await fetch(dataUrl)).blob());
+      const escala = MAX_LADO / Math.max(bmp.width, bmp.height);
+      if (escala >= 1) return dataUrl;
+      const w = Math.round(bmp.width * escala), h = Math.round(bmp.height * escala);
+      chico = await createImageBitmap(bmp, { resizeWidth: w, resizeHeight: h, resizeQuality: 'medium' });
+      if (!this.lienzoReducir) this.lienzoReducir = document.createElement('canvas');
+      const c = this.lienzoReducir;
+      c.width = w; c.height = h;
+      const ctx = c.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(chico, 0, 0);
+        return c.toDataURL('image/jpeg', 0.8);
+      }
+    } catch { /* sin createImageBitmap → ruta clásica de abajo */ }
+    finally { bmp?.close(); chico?.close(); }
+
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
@@ -450,27 +529,50 @@ export class EscaneoComponent implements OnDestroy {
     }
     this.procesando = true;
     let uri: string | undefined;
+    const t0 = performance.now(); let t = t0;
+    const marca = (etapa: string) => { const n = performance.now(); this.crono[etapa] = n - t; t = n; };
+    this.crono = {};
+    // Delta de heap NATIVO por etapa: revela cuál llamada no devuelve la memoria.
+    // Solo 1 de cada N ticks, porque cada lectura cruza el puente nativo.
+    const midiendoMem = MEDIR_A_ARCHIVO && (this.frameMem++ % MUESTREO_MEM === 0);
+    let memPrev = 0;
+    const memMarca = async (etapa: string) => {
+      if (!midiendoMem) return;
+      try {
+        const { asignada } = await FaceEngine.memoriaNativa();
+        if (memPrev) this.memDelta[etapa] = (asignada - memPrev) / 1048576;
+        memPrev = asignada;
+      } catch { /* diagnóstico */ }
+    };
+    if (midiendoMem) { this.memDelta = {}; await memMarca('inicio'); }
     try {
       // Frame (cámara nativa o <video>) → archivo (ML Kit y FaceEngine usan archivo).
       const dataUrl = await this.capturarDataUrl(0.9);
+      marca('captura'); await memMarca('captura');
       const w = await Filesystem.writeFile({
         path: `scan_${Date.now()}.jpg`, data: stripDataUrl(dataUrl), directory: Directory.Cache });
       uri = w.uri;
+      marca('escritura'); await memMarca('escritura');
       const frameW = this.usaNativa
         ? await this.anchoNativo(dataUrl)
         : (this.video()!.nativeElement.videoWidth || 640);
 
+      // Fast en vez de Accurate y minFaceSize alto: en un kiosko la cara ocupa ~0.4 del
+      // frame, así que buscar caras diminutas es trabajo tirado (ML Kit barre menos escalas).
+      // OJO: si el `sim` del diagnóstico baja, el culpable es Fast → volver a Accurate.
       const { faces } = await FaceDetection.processImage({
-        path: uri, performanceMode: PerformanceMode.Accurate,
-        landmarkMode: LandmarkMode.All, contourMode: ContourMode.None, minFaceSize: 0.15 });
+        path: uri, performanceMode: PerformanceMode.Fast,
+        landmarkMode: LandmarkMode.All, contourMode: ContourMode.None, minFaceSize: 0.3 });
+      marca('mlkit'); await memMarca('mlkit');
 
       // Sin cara (o varias): si se fue de verdad (2 frames), desbloquea para el siguiente.
       if (faces.length !== 1) {
         this.calidadPct.set(0);
-        if (++this.framesSinCara >= FRAMES_SALIDA) this.reset();
+        if (!this.sinCaraDesde) this.sinCaraDesde = Date.now();
+        else if (Date.now() - this.sinCaraDesde >= MS_SALIDA) this.reset();
         return;
       }
-      this.framesSinCara = 0;
+      this.sinCaraDesde = 0;
       const f = faces[0];
       const b = { left: f.bounds.left, top: f.bounds.top, right: f.bounds.right, bottom: f.bounds.bottom };
 
@@ -485,8 +587,14 @@ export class EscaneoComponent implements OnDestroy {
       // Ya se manejó ESTA presencia (fichó local o consultó al server) → mantiene el recuadro y
       // NO vuelve a registrar/consultar hasta que la cara se vaya o cambie de persona.
       if (this.manejado) {
-        if (this.ultimoBox) this.dibujarBox(b,this.ultimoBox.color, this.ultimoBox.label);
-        return;
+        // Salvavidas para la FILA: pasado MS_PRESENCIA_MAX se suelta aunque siga habiendo
+        // cara, para poder evaluar a quien venga detrás sin esperar un hueco sin rostros.
+        if (Date.now() - this.manejadoEn >= MS_PRESENCIA_MAX) {
+          this.reset();
+        } else {
+          if (this.ultimoBox) this.dibujarBox(b,this.ultimoBox.color, this.ultimoBox.label);
+          return;
+        }
       }
 
       // Pose no frontal / sin landmarks → recuadro neutro, aún no reconoce.
@@ -506,13 +614,19 @@ export class EscaneoComponent implements OnDestroy {
       }
       this.dibujarBox(b,'#facc15'); // amarillo: analizando (calidad ok)
 
-      // Anti-spoof: se calcula y loguea siempre; solo BLOQUEA si el toggle está ON.
-      const bbox = [b.left, b.top, b.right, b.bottom];
+      // Anti-spoof: con el toggle ON corre en TODOS los frames (es la puerta que bloquea).
+      // Con el toggle OFF su resultado solo se loguea para calibrar, y pagarlo en cada frame
+      // cuesta un decode nativo + una inferencia ONNX que se tiran → se muestrea 1 de cada N.
+      const bloqueaLiveness = this.cfg.livenessOffline();
       let live: { esReal: boolean; scoreReal: number } | undefined;
-      try { live = await FaceEngine.checkLiveness({ path: uri, bbox }); }
-      catch (e: any) { this.log.warn(`liveness err: ${e?.message ?? e}`); }
-      if (live) this.log.info(`liveness real=${live.esReal} score=${live.scoreReal.toFixed(2)}`);
-      if (this.cfg.livenessOffline() && live && (!live.esReal || live.scoreReal < UMBRAL_LIVENESS)) {
+      if (bloqueaLiveness || this.frameLiveness++ % MUESTREO_LIVENESS === 0) {
+        const bbox = [b.left, b.top, b.right, b.bottom];
+        try { live = await FaceEngine.checkLiveness({ path: uri, bbox }); }
+        catch (e: any) { this.log.warn(`liveness err: ${e?.message ?? e}`); }
+        if (live) this.log.info(`liveness real=${live.esReal} score=${live.scoreReal.toFixed(2)}`);
+        marca('liveness'); await memMarca('liveness');
+      }
+      if (bloqueaLiveness && live && (!live.esReal || live.scoreReal < UMBRAL_LIVENESS)) {
         if (!this.enCooldownIntento('spoofing')) {
           this.cooldownIntento.set('spoofing', Date.now());
           await this.eventos.registrarIntento({ tipo: 'spoofing', sim: null,
@@ -525,9 +639,21 @@ export class EscaneoComponent implements OnDestroy {
       }
 
       const { embedding } = await FaceEngine.extractEmbedding({ path: uri, kps });
+      marca('embedding'); await memMarca('embedding');
       const r = this.match.buscar(Float32Array.from(embedding));
+      marca('match');
+      const total = performance.now() - t0;
+      const desglose = Object.entries(this.crono).map(([k, v]) => `${k} ${v.toFixed(0)}`).join(' | ');
+      this.log.info(`⏱ ${desglose} | TOTAL ${total.toFixed(0)}ms`);
+      if (Object.keys(this.memDelta).length) {
+        const mem = Object.entries(this.memDelta).map(([k, v]) => `${k} ${v >= 0 ? '+' : ''}${v.toFixed(1)}`).join(' | ');
+        this.log.info(`🧠 nativo MB: ${mem}`);
+        void this.memAArchivo();
+      }
+      if (MEDIR_A_ARCHIVO) void this.medirAArchivo(total, r?.sim ?? null);
       // Diagnóstico: mejor candidato local y su coseno (aunque no llegue al umbral).
       this.log.info(`local: ${r ? `${r.nombre} ${r.apellido} sim=${r.sim.toFixed(3)}` : 'sin base'} (umbral ${UMBRAL})`);
+      this.log.info(`🔎 ${this.match.diagnostico(Float32Array.from(embedding))}`);
 
       if (r && r.sim >= UMBRAL) {
         const nombre = `${r.nombre} ${r.apellido}`;
@@ -613,7 +739,9 @@ export class EscaneoComponent implements OnDestroy {
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     const w = b.right - b.left, h = b.bottom - b.top;
-    const mx = canvas.width - b.left - w; // espejo
+    // Espejo SOLO con la frontal: con la trasera el preview no se espeja, y espejar
+    // el recuadro lo dejaría en el lado contrario de la cara.
+    const mx = this.esFrontal() ? canvas.width - b.left - w : b.left;
     ctx.lineWidth = 4;
     ctx.strokeStyle = color;
     ctx.strokeRect(mx, b.top, w, h);
@@ -669,6 +797,7 @@ export class EscaneoComponent implements OnDestroy {
     color: string, label: string,
   ): void {
     this.manejado = true;
+    this.manejadoEn = Date.now();
     this.ultimoBox = { color, label };
     this.ultimoCentro = { cx: (b.left + b.right) / 2, cy: (b.top + b.bottom) / 2 };
     this.dibujarBox(b, color, label);
@@ -689,6 +818,36 @@ export class EscaneoComponent implements OnDestroy {
    * "Calidad" de la cara (0-1) como proxy del score de detección (ML Kit no lo da):
    * combina tamaño (qué tan cerca/grande) y qué tan frontal está. Escala fácil de calibrar.
    */
+  /** Escribe una fila CSV con el delta de heap nativo por etapa. */
+  private async memAArchivo(): Promise<void> {
+    try {
+      const m = this.memDelta;
+      const fila = [new Date().toISOString(),
+        (m['captura'] ?? 0).toFixed(2), (m['escritura'] ?? 0).toFixed(2),
+        (m['mlkit'] ?? 0).toFixed(2), (m['liveness'] ?? 0).toFixed(2),
+        (m['embedding'] ?? 0).toFixed(2),
+      ].join(',') + String.fromCharCode(10);
+      await Filesystem.appendFile({ path: 'memoria.csv', data: fila,
+        directory: Directory.External, encoding: Encoding.UTF8 });
+    } catch { /* diagnóstico */ }
+  }
+
+  /** Escribe una fila CSV con los tiempos del tick al almacenamiento externo de la app. */
+  private async medirAArchivo(total: number, sim: number | null): Promise<void> {
+    try {
+      const c = this.crono;
+      const fila = [
+        new Date().toISOString(),
+        (c['captura'] ?? 0).toFixed(0), (c['escritura'] ?? 0).toFixed(0),
+        (c['mlkit'] ?? 0).toFixed(0), (c['liveness'] ?? 0).toFixed(0),
+        (c['embedding'] ?? 0).toFixed(0), (c['match'] ?? 0).toFixed(0),
+        total.toFixed(0), sim === null ? '' : sim.toFixed(3),
+      ].join(',') + String.fromCharCode(10);
+      await Filesystem.appendFile({ path: 'tiempos.csv', data: fila,
+        directory: Directory.External, encoding: Encoding.UTF8 });
+    } catch { /* diagnóstico: nunca debe romper el escaneo */ }
+  }
+
   private calidadCara(f: Face, frameW: number): number {
     const w = f.bounds.right - f.bounds.left;
     const tamano = Math.min(1, w / (frameW * 0.25)); // 1 si la cara ≥25% del ancho del frame

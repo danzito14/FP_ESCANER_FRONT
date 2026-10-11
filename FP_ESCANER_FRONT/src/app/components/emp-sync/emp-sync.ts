@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 import {
   AreaInvalida,
@@ -17,7 +18,7 @@ import {
 @Component({
   selector: 'app-emp-sync',
   standalone: true,
-  imports: [],
+  imports: [RouterLink],
   template: `
     <div class="sync-card">
       <div class="sync-head">
@@ -113,8 +114,9 @@ import {
 
         <div class="sync-areas">
           <button class="btn btn-sm btn-ghost" (click)="toggleAreas()">
-            {{ verAreas() ? 'Ocultar áreas sin clasificar' : 'Áreas sin clasificar (area_invalida)' }}
+            {{ verAreas() ? 'Ocultar empleados sin clasificar' : 'Empleados sin clasificar' }}
           </button>
+          <a class="btn btn-sm btn-ghost" routerLink="/clasificacion">Clasificar puestos →</a>
           @if (verAreas()) {
             @if (cargandoAreas()) {
               <p class="sync-hint">Cargando…</p>
@@ -125,7 +127,7 @@ import {
                 @for (a of areas(); track $index) {
                   <li>
                     <span class="sync-li-nombre">
-                      {{ a.detalle || '(sin detalle)' }} <small>· {{ a.origen_nomina }}</small>
+                      {{ a.detalle || '(sin detalle)' }} <small>· {{ a.origen_nomina }}@if (a.motivo) { · {{ etiqueta(a.motivo) }} }</small>
                     </span>
                     <span class="sync-area-total">{{ a.total }}</span>
                   </li>
@@ -174,7 +176,8 @@ import {
     .sync-estado { font-size: 0.78rem; color: var(--text-muted); text-transform: capitalize; margin-right: 0.35rem; }
     .sync-li-acc { display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; justify-content: flex-end; }
 
-    .sync-areas { margin-top: 0.8rem; }
+    .sync-areas { margin-top: 0.8rem; display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .sync-areas .sync-lista, .sync-areas .sync-hint { flex-basis: 100%; }
     .sync-lista { list-style: none; padding: 0; margin: 0.5rem 0 0;
       border: 1px solid var(--border); border-radius: var(--radius-sm); max-height: 240px; overflow: auto; }
     .sync-lista li { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;

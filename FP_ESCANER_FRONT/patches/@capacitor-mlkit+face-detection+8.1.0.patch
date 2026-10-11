@@ -1,0 +1,65 @@
+diff --git a/node_modules/@capacitor-mlkit/face-detection/android/src/main/java/io/capawesome/capacitorjs/plugins/mlkit/facedetection/FaceDetection.java b/node_modules/@capacitor-mlkit/face-detection/android/src/main/java/io/capawesome/capacitorjs/plugins/mlkit/facedetection/FaceDetection.java
+index 263c7d8..c8bc36c 100644
+--- a/node_modules/@capacitor-mlkit/face-detection/android/src/main/java/io/capawesome/capacitorjs/plugins/mlkit/facedetection/FaceDetection.java
++++ b/node_modules/@capacitor-mlkit/face-detection/android/src/main/java/io/capawesome/capacitorjs/plugins/mlkit/facedetection/FaceDetection.java
+@@ -14,6 +14,20 @@ public class FaceDetection {
+     @NonNull
+     private final FaceDetectionPlugin plugin;
+ 
++    /**
++     * PARCHE (fuga de memoria): el plugin creaba un FaceDetector NUEVO en cada
++     * processImage() y lo cerraba al terminar. Un FaceDetector arrastra el pipeline
++     * nativo del modelo; crear y destruir uno por frame filtra ~11 MB por llamada
++     * (medido en una Galaxy Tab A8: ~6 MB/s, 1,5 GB en 2,5 min hasta que lmkd mata
++     * la app). La guía de ML Kit dice justo lo contrario: crear UNO y reutilizarlo.
++     * Aquí se cachea y solo se recrea si cambian las opciones.
++     */
++    @Nullable
++    private FaceDetector detectorCacheado;
++
++    @Nullable
++    private String opcionesCacheadas;
++
+     public FaceDetection(@NonNull FaceDetectionPlugin plugin) {
+         this.plugin = plugin;
+     }
+@@ -47,25 +61,29 @@ public class FaceDetection {
+         }
+         FaceDetectorOptions faceDetectorOptions = builder.build();
+ 
+-        final FaceDetector faceDetector = com.google.mlkit.vision.face.FaceDetection.getClient(faceDetectorOptions);
++        // Clave de las opciones: solo si cambia hace falta un detector nuevo.
++        String clave = performanceMode + "|" + landmarkMode + "|" + contourMode + "|" +
++            classificationMode + "|" + minFaceSize + "|" + enableTracking;
++        if (detectorCacheado == null || !clave.equals(opcionesCacheadas)) {
++            if (detectorCacheado != null) {
++                detectorCacheado.close();
++            }
++            detectorCacheado = com.google.mlkit.vision.face.FaceDetection.getClient(faceDetectorOptions);
++            opcionesCacheadas = clave;
++        }
++        final FaceDetector faceDetector = detectorCacheado;
+         plugin
+             .getActivity()
+             .runOnUiThread(() -> {
+                 faceDetector
+                     .process(inputImage)
+                     .addOnSuccessListener(faces -> {
+-                        faceDetector.close();
++                        // NO se cierra: se reutiliza en la siguiente llamada.
+                         ProcessImageResult result = new ProcessImageResult(faces);
+                         callback.success(result);
+                     })
+-                    .addOnCanceledListener(() -> {
+-                        faceDetector.close();
+-                        callback.cancel();
+-                    })
+-                    .addOnFailureListener(exception -> {
+-                        faceDetector.close();
+-                        callback.error(exception);
+-                    });
++                    .addOnCanceledListener(() -> callback.cancel())
++                    .addOnFailureListener(exception -> callback.error(exception));
+             });
+     }
+ }

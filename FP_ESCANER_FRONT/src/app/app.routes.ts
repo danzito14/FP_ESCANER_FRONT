@@ -43,6 +43,14 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'clasificacion',
+    canActivate: [scopeGuard('emp_sync:read')],
+    loadComponent: () =>
+      import('./pages/clasificacion-page/clasificacion-page').then(
+        (m) => m.ClasificacionPage,
+      ),
+  },
+  {
     path: 'empresas',
     canActivate: [scopeGuard('empresas:read')],
     loadComponent: () =>

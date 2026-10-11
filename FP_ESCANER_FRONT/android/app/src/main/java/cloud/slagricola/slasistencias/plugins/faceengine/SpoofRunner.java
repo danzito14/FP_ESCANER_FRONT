@@ -36,15 +36,16 @@ public class SpoofRunner {
         try {
             crop = recortar(img, bbox[0], bbox[1], bbox[2] - bbox[0], bbox[3] - bbox[1]);
 
-            float[] chw = new float[3 * IN * IN];
-            byte[] px = new byte[3];
+            // Lectura EN BLOQUE: 1 llamada JNI en vez de IN*IN = 6.400 (ver OnnxRunner).
             int hw = IN * IN;
-            for (int y = 0; y < IN; y++) for (int x = 0; x < IN; x++) {
-                crop.get(y, x, px);
-                int i = y * IN + x;
-                chw[i]        = (px[0] & 0xFF) / 255f;     // B
-                chw[hw + i]   = (px[1] & 0xFF) / 255f;     // G
-                chw[2*hw + i] = (px[2] & 0xFF) / 255f;     // R
+            float[] chw = new float[3 * hw];
+            byte[] buf = new byte[hw * 3];
+            crop.get(0, 0, buf);                           // BGR entrelazado (sin swapRB)
+            for (int i = 0; i < hw; i++) {
+                int o = i * 3;
+                chw[i]        = (buf[o]     & 0xFF) / 255f;  // B
+                chw[hw + i]   = (buf[o + 1] & 0xFF) / 255f;  // G
+                chw[2*hw + i] = (buf[o + 2] & 0xFF) / 255f;  // R
             }
             t = OnnxTensor.createTensor(env, FloatBuffer.wrap(chw), new long[]{1,3,IN,IN});
             res = session.run(Collections.singletonMap(inputName, t));

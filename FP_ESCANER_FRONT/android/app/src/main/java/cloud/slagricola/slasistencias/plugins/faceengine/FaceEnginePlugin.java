@@ -17,6 +17,19 @@ public class FaceEnginePlugin extends Plugin {
         } catch (Exception e) { Logger.error("FaceEngine", "init anti-spoof falló", e); }
     }
 
+    /**
+     * DIAGNÓSTICO: bytes asignados en el heap NATIVO del proceso. Leyéndolo entre etapa
+     * y etapa se ve exactamente qué llamada deja memoria sin devolver (dumpsys solo da
+     * el total del proceso, que no distingue entre ML Kit, ONNX y OpenCV).
+     */
+    @PluginMethod
+    public void memoriaNativa(PluginCall call) {
+        JSObject r = new JSObject();
+        r.put("asignada", android.os.Debug.getNativeHeapAllocatedSize());
+        r.put("total", android.os.Debug.getNativeHeapSize());
+        call.resolve(r);
+    }
+
     /** El APK llama esto tras bajar w600k_r50.onnx, con su ruta absoluta (+ sha256 opcional). */
     @PluginMethod
     public void init(final PluginCall call) {
