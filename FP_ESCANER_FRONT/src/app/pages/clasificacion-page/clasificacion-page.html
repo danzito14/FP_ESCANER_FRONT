@@ -1,0 +1,214 @@
+<section class="crud-page">
+  <header class="crud-header">
+    <div>
+      <h1>Clasificación de puestos</h1>
+      <p class="subtitulo">Puesto (agrícola) o departamento (comercial) de la nómina SYS21 → oficina, empaque o campo.</p>
+    </div>
+    <div class="header-acciones">
+      <button *appPuede="'emp_sync:write'" class="btn btn-ghost" [disabled]="sincronizando()" (click)="sincronizar()">
+        {{ sincronizando() ? 'Sincronizando…' : 'Sincronizar ahora' }}
+      </button>
+      @if (puedeEditar()) {
+        <button class="btn btn-primary" (click)="nueva()">+ Nueva regla</button>
+      }
+    </div>
+  </header>
+
+  @if (error()) { <div class="alert alert-error">{{ error() }}</div> }
+  @if (aviso()) { <div class="alert alert-ok">{{ aviso() }}</div> }
+
+  <!-- ── Pendientes de clasificar ─────────────────────────────────────────── -->
+  <div class="bloque" [class.bloque-alerta]="sinAsignar().length">
+    <div class="bloque-head">
+      <h2>Pendientes de clasificar</h2>
+      @if (sinAsignar().length) {
+        <span class="contador">{{ sinAsignar().length }} puesto(s) · {{ personasSinAsignar() }} persona(s) sin registrar</span>
+      }
+    </div>
+
+    @if (pendientes().length === 0) {
+      <p class="vacio">Todos los puestos de la última sincronización tienen regla. ✓</p>
+    } @else {
+      <div class="crud-table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Puesto / departamento</th>
+              <th>Nómina</th>
+              <th>Personas</th>
+              <th>Empresas</th>
+              <th>Grupo</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of pendientes(); track p.origen_nomina + p.clave) {
+              <tr [class.fila-lista]="p.con_regla">
+                <td><strong>{{ p.nombre }}</strong></td>
+                <td>{{ origenLabel(p.origen_nomina) }}</td>
+                <td>{{ p.personas }}</td>
+                <td>{{ p.empresas.join(', ') || '—' }}</td>
+                @if (p.con_regla) {
+                  <td colspan="2" class="ya-regla">Regla creada · entra en la próxima sincronización</td>
+                } @else if (puedeEditar() && p.clave) {
+                  <td>
+                    <select class="sel" [value]="grupoDe(p)" (change)="elegirGrupo(p, $any($event.target).value)">
+                      <option value="" disabled>Elegir…</option>
+                      @for (g of grupos; track g) { <option [value]="g">{{ grupoLabel(g) }}</option> }
+                    </select>
+                  </td>
+                  <td class="actions">
+                    <button class="btn btn-sm btn-primary" [disabled]="!grupoDe(p) || guardandoPend() === p.origen_nomina + '|' + p.clave" (click)="asignar(p)">
+                      {{ guardandoPend() === p.origen_nomina + '|' + p.clave ? 'Guardando…' : 'Asignar' }}
+                    </button>
+                  </td>
+                } @else {
+                  <td colspan="2" class="ya-regla">{{ p.clave ? 'Pendiente (solo el super-admin asigna)' : 'Sin puesto en la nómina' }}</td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+
+  <!-- ── Reglas ────────────────────────────────────────────────────────────── -->
+  <div class="bloque">
+    <div class="bloque-head">
+      <h2>Reglas</h2>
+      <span class="contador neutro">{{ reglasFiltradas().length }} de {{ reglas().length }}</span>
+    </div>
+
+    <div class="chips-fila">
+      <div class="chips-grupo">
+        <span class="chips-label">Nómina</span>
+        <button class="chip" [class.activa]="!filtroOrigen()" (click)="filtroOrigen.set(''); pagina.set(1)">Todas</button>
+        @for (o of origenes; track o) {
+          <button class="chip" [class.activa]="filtroOrigen() === o" (click)="filtroOrigen.set(o); pagina.set(1)">{{ origenLabel(o) }}</button>
+        }
+      </div>
+      <div class="chips-grupo">
+        <span class="chips-label">Grupo</span>
+        <button class="chip" [class.activa]="!filtroGrupo()" (click)="filtroGrupo.set(''); pagina.set(1)">Todos</button>
+        @for (g of grupos; track g) {
+          <button class="chip" [class.activa]="filtroGrupo() === g" (click)="filtroGrupo.set(g); pagina.set(1)">
+            <span class="dot" [style.background]="grupoColor(g)"></span>{{ grupoLabel(g) }}
+            <span class="chip-num">{{ conteoGrupo()[g] || 0 }}</span>
+          </button>
+        }
+      </div>
+      <input class="buscar" type="search" placeholder="Buscar puesto…" [value]="buscar()"
+             (input)="buscar.set($any($event.target).value); pagina.set(1)" />
+    </div>
+
+    @if (loading()) {
+      <p class="loading">Cargando…</p>
+    } @else {
+      <div class="crud-table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Puesto / departamento</th>
+              <th>Nómina</th>
+              <th>Grupo</th>
+              <th>Permiso de escaneo</th>
+              <th>Acceso interno</th>
+              <th>Actualizó</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of reglasPagina(); track r.id_regla) {
+              <tr>
+                <td>{{ r.nombre }}</td>
+                <td>{{ origenLabel(r.origen_nomina) }}</td>
+                <td><span class="tag" [style.--c]="grupoColor(r.grupo)">{{ grupoLabel(r.grupo) }}</span></td>
+                <td>
+                  {{ r.permiso_efectivo }}
+                  @if (r.permiso_escaneo) { <span class="override" title="Reemplaza el default del grupo">propio</span> }
+                </td>
+                <td>
+                  {{ r.nivel_efectivo || '—' }}
+                  @if (r.nivel_acceso_interno) { <span class="override" title="Reemplaza el default del grupo">propio</span> }
+                </td>
+                <td class="muted">{{ r.actualizado_por || '—' }}</td>
+                <td class="actions">
+                  @if (puedeEditar()) {
+                    <button class="btn btn-sm" (click)="editar(r)">Editar</button>
+                    <button class="btn btn-sm btn-danger" (click)="eliminar(r)">Borrar</button>
+                  }
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="7" class="empty">Sin reglas con este filtro.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <app-paginacion [total]="reglasFiltradas().length" [(pagina)]="pagina" />
+    }
+  </div>
+
+  <!-- ── Modal alta/edición ───────────────────────────────────────────────── -->
+  @if (showForm()) {
+    <div class="modal-backdrop" (click)="cerrar()">
+      <div class="modal" (click)="$event.stopPropagation()">
+        <h2>{{ editando() ? 'Editar regla' : 'Nueva regla' }}</h2>
+        <form class="crud-form" (submit)="$event.preventDefault(); guardar()">
+          <div class="form-row">
+            <div class="form-field">
+              <label>Nómina</label>
+              <select [value]="fOrigen()" [disabled]="!!editando()" (change)="fOrigen.set($any($event.target).value)">
+                @for (o of origenes; track o) { <option [value]="o">{{ origenLabel(o) }}</option> }
+              </select>
+            </div>
+            <div class="form-field">
+              <label>Grupo</label>
+              <select [value]="fGrupo()" (change)="fGrupo.set($any($event.target).value)">
+                @for (g of grupos; track g) { <option [value]="g">{{ grupoLabel(g) }}</option> }
+              </select>
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label>
+              {{ fOrigen() === 'agricola' ? 'Puesto' : 'Departamento' }}
+              <span class="hint">· tal como viene en la nómina (no importan acentos ni mayúsculas)</span>
+            </label>
+            <input type="text" maxlength="150" [value]="fNombre()" (input)="fNombre.set($any($event.target).value)"
+                   [placeholder]="fOrigen() === 'agricola' ? 'Ej. JORNALERO' : 'Ej. Empaque'" />
+          </div>
+
+          <div class="form-row">
+            <div class="form-field">
+              <label>Permiso de escaneo</label>
+              <select [value]="fPermiso()" (change)="fPermiso.set($any($event.target).value)">
+                <option value="">{{ defaultTexto('permiso_escaneo') }}</option>
+                @for (p of opciones()?.permisos ?? []; track p) { <option [value]="p">{{ p }}</option> }
+              </select>
+            </div>
+            <div class="form-field">
+              <label>Acceso interno</label>
+              <select [value]="fNivel()" [disabled]="fGrupo() === 'campo' || fPermiso() === 'campo'"
+                      (change)="fNivel.set($any($event.target).value)">
+                <option value="">{{ defaultTexto('nivel_acceso_interno') }}</option>
+                @for (n of opciones()?.niveles ?? []; track n) { <option [value]="n">{{ n }}</option> }
+              </select>
+            </div>
+          </div>
+          <p class="nota">Normalmente se deja el default. El grupo campo nunca tiene acceso interno.</p>
+
+          @if (formError()) { <div class="alert alert-error">{{ formError() }}</div> }
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-ghost" (click)="cerrar()">Cancelar</button>
+            <button type="submit" class="btn btn-primary" [disabled]="guardando()">
+              {{ guardando() ? 'Guardando…' : 'Guardar' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+</section>

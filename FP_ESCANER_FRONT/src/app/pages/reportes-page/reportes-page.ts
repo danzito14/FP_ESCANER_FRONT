@@ -130,7 +130,7 @@ export class ReportesPage {
       usaTrabajador: true,
       usaTipoRegistro: true,
       usaEmpresa: true,
-      columnas: ['N° empleado', 'Trabajador', 'Empresa', 'Puerta', 'Tipo', 'Fecha', 'Hora', 'Estado'],
+      columnas: ['N° empleado', 'Nómina', 'Trabajador', 'Empresa', 'Puerta', 'Tipo', 'Fecha', 'Hora'],
     },
     {
       tipo: 'incidencias',
@@ -304,7 +304,9 @@ export class ReportesPage {
     };
 
     switch (def.tipo) {
-      case 'asistencias':
+      case 'asistencias': {
+        // /asistencias no trae la nómina; se toma del padrón ya cargado para el filtro.
+        const nomina = new Map(this.trabajadores().map((t) => [t.id_trabajador, t.origen_nomina]));
         this.asistenciaService.list({ ...fechas, idEmpresa, limit }).subscribe({
           next: (a) =>
             ok(
@@ -313,17 +315,18 @@ export class ReportesPage {
                 .filter((x) => !tipoReg || x.tipo_registro === tipoReg)
                 .map((x) => [
                   x.id_emp ?? '—',
+                  nomina.get(x.id_trabajador) ?? '—',
                   x.trabajador_nombre ?? `#${x.id_trabajador}`,
                   x.empresa_nombre ?? '—',
                   x.puerta_nombre ?? '—',
                   x.tipo_registro,
                   ...fechaYHora(x.fecha_hora),
-                  x.estado_registro,
                 ]),
             ),
           error: fail,
         });
         break;
+      }
       case 'incidencias':
         this.incidenciaService.combinado({ ...fechas, origen: 'incidencia', limit }).subscribe({
           next: (e) =>
@@ -408,8 +411,8 @@ export class ReportesPage {
     if (def.usaRostro && this.rostro()) opts.rostro = this.rostro();
     if (def.usaEmpresa && this.idEmpresa()) opts.idEmpresa = this.idEmpresa();
     this.reporteService.descargar(def.tipo, formato, opts).subscribe({
-      next: (blob) => {
-        this.reporteService.guardar(blob, this.reporteService.nombreArchivo(def.tipo, formato, opts));
+      next: ({ blob, nombre }) => {
+        this.reporteService.guardar(blob, nombre);
         this.descargando.set('');
       },
       error: () => {

@@ -35,9 +35,11 @@ export interface MotivoCatalogo {
   label: string;
 }
 
-/** Desglose de 'area_invalida' por detalle (qué áreas etiquetar). Solo super-admin. */
+/** Desglose de los rechazos de mapeo por detalle. Solo super-admin. */
 export interface AreaInvalida {
   origen_nomina: string;
+  /** area_invalida (puesto sin regla) | empresa_no_registrada | area_no_disponible. */
+  motivo?: string;
   detalle: string | null;
   total: number;
 }
