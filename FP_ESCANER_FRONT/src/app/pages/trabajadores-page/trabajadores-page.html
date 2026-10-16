@@ -72,6 +72,7 @@
               }
             </td>
             <td class="actions">
+              <button class="btn btn-sm" (click)="verDetalle(t)">Ver</button>
               <button *appPuede="'trabajadores:write'" class="btn btn-sm" (click)="editar(t)">Editar</button>
               <button *appPuede="'trabajadores:delete'" class="btn btn-sm btn-danger" (click)="eliminar(t)">Desactivar</button>
             </td>
@@ -110,6 +111,47 @@
             (cancel)="cerrar()"
           />
         }
+      </div>
+    </div>
+  }
+
+  @if (detalle(); as t) {
+    <div class="modal-backdrop" (click)="cerrarDetalle()">
+      <div class="modal detalle-trabajador" (click)="$event.stopPropagation()">
+        <h2>{{ t.nombre }} {{ t.apellido }}</h2>
+
+        <div class="detalle-cuerpo">
+          <figure class="detalle-foto">
+            @if (t.foto_url; as url) {
+              <a [href]="url" target="_blank" rel="noopener" title="Ver foto completa">
+                <img [src]="miniatura(url)" [alt]="'Foto de ' + t.nombre" loading="lazy" />
+              </a>
+            } @else {
+              <div class="foto-vacia">Sin foto</div>
+            }
+          </figure>
+
+          <dl class="detalle-datos">
+            <dt>Nº empleado</dt><dd>{{ t.id_emp || '—' }}</dd>
+            <dt>Nómina</dt><dd>{{ t.origen_nomina || '—' }}</dd>
+            <dt>Empresa</dt><dd>{{ empresaNombre(t.id_empresa) }}</dd>
+            <dt>Área</dt><dd>{{ areaNombre(t.id_area) }}</dd>
+            <dt>Estado</dt>
+            <dd>
+              <span class="badge" [class.badge-on]="t.estado === 'activo'" [class.badge-off]="t.estado !== 'activo'">
+                {{ t.estado }}
+              </span>
+            </dd>
+            <dt>Permiso de escaneo</dt><dd>{{ t.permiso_escaneo }}</dd>
+            <dt>Acceso interno</dt><dd>{{ t.nivel_acceso_interno ?? 'Sin permisos' }}</dd>
+            <dt>Rostro registrado</dt><dd>{{ t.tiene_embedding ? 'Sí' : 'No' }}</dd>
+            <dt>Alta</dt><dd>{{ t.fecha_creacion | date: 'dd/MM/yyyy' }}</dd>
+          </dl>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn" (click)="cerrarDetalle()">Cerrar</button>
+        </div>
       </div>
     </div>
   }

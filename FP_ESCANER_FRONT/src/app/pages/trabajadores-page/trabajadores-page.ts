@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subscription } from 'rxjs';
@@ -16,6 +17,7 @@ import {
   TrabajadorUpdate,
 } from '../../core/interfaces/trabajador';
 import { alBuscar, esNumerico } from '../../core/utils/buscar';
+import { miniaturaCloudinary } from '../../core/utils/cloudinary';
 import { AreaTrabajoService } from '../../service/area-trabajo';
 import { AuthService } from '../../service/auth';
 import { EmbeddingService } from '../../service/embedding';
@@ -25,7 +27,10 @@ import { PuedeDirective } from '../../core/directives/puede';
 
 @Component({
   selector: 'app-trabajadores-page',
-  imports: [TrabajadorForm, EmbeddingCapture, EmpSync, LimpiarDuplicados, FiltrosTabla, PuedeDirective, Paginacion],
+  imports: [
+    TrabajadorForm, EmbeddingCapture, EmpSync, LimpiarDuplicados, FiltrosTabla, PuedeDirective,
+    Paginacion, DatePipe,
+  ],
   templateUrl: './trabajadores-page.html',
   styleUrl: './trabajadores-page.scss',
 })
@@ -64,6 +69,11 @@ export class TrabajadoresPage {
   /** Trabajador en proceso de registro de rostro (muestra el capturador en el modal). */
   readonly enrolling = signal<Trabajador | null>(null);
   readonly enrollModo = signal<'registrar' | 'actualizar'>('registrar');
+
+  /** Trabajador abierto en el modal de detalle (null = cerrado). */
+  readonly detalle = signal<Trabajador | null>(null);
+  /** Miniatura (cara centrada) de la foto de Cloudinary que trae el propio trabajador. */
+  readonly miniatura = miniaturaCloudinary;
 
   /** Filtros. 0 = todos. */
   readonly filtroEmpresa = signal(0);
@@ -153,6 +163,19 @@ export class TrabajadoresPage {
 
   areaNombre(id: number): string {
     return this.areas().find((a) => a.id_area === id)?.nombre_area ?? `#${id}`;
+  }
+
+  empresaNombre(id: number | null | undefined): string {
+    if (!id) return '—';
+    return this.empresas().find((e) => e.id_empresa === id)?.nombre_empresa ?? `#${id}`;
+  }
+
+  verDetalle(t: Trabajador): void {
+    this.detalle.set(t);
+  }
+
+  cerrarDetalle(): void {
+    this.detalle.set(null);
   }
 
   /** Filtro con/sin rostro (server-side) → recarga. */
