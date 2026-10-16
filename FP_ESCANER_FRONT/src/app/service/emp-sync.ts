@@ -44,6 +44,31 @@ export interface AreaInvalida {
   total: number;
 }
 
+/** Estado del sync por empleado (GET /emp_sync/estado → SyncEstadoResponse). */
+export interface SyncEstado {
+  id_sync: number;
+  id_emp: string;
+  /** 'agricola' | 'agricola_com' */
+  origen_nomina: string;
+  id_empresa: number | null;
+  estado_foto: 'ok' | 'pendiente' | 'sin_foto' | null;
+  visto_en_ultima_corrida: boolean;
+  /** ISO 8601 */
+  ultima_sync: string | null;
+  /** ISO 8601 */
+  ultima_sync_ok: string | null;
+  /** URL https de la foto en Cloudinary (null = aún no subida). */
+  foto_url: string | null;
+}
+
+/** Filtros de GET /emp_sync/estado. */
+export interface FiltroEstadoSync {
+  /** Nº de nómina. Requiere el filtro `id_emp` en el back; sin él se ignora y llegan los primeros 100. */
+  id_emp?: string;
+  origen?: string;
+  estado_foto?: string;
+}
+
 /** Filtros de la tabla de fotos pendientes. `estado: ''` = todas. */
 export interface FiltroFotos {
   estado?: string;
@@ -72,9 +97,16 @@ export class EmpSyncService {
     return this.http.post(`${API_URL}/emp_sync/fotos`, {});
   }
 
-  /** Estado de sincronización por empleado. */
-  estado(): Observable<unknown> {
-    return this.http.get(`${API_URL}/emp_sync/estado`);
+  /**
+   * Estado de sincronización por empleado (incluye `foto_url` de Cloudinary).
+   * Para un trabajador: `estado({ id_emp, origen })` y tomar `[0]?.foto_url`.
+   */
+  estado(f: FiltroEstadoSync = {}): Observable<SyncEstado[]> {
+    let params = new HttpParams();
+    if (f.id_emp) params = params.set('id_emp', f.id_emp);
+    if (f.origen) params = params.set('origen', f.origen);
+    if (f.estado_foto) params = params.set('estado_foto', f.estado_foto);
+    return this.http.get<SyncEstado[]>(`${API_URL}/emp_sync/estado`, { params });
   }
 
   /**

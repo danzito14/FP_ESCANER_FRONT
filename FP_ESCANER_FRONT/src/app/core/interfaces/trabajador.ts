@@ -16,6 +16,8 @@ export interface Trabajador {
   apellido: string;
   id_area: number;
   foto_perfil?: string | null;
+  /** Última foto aceptada en Cloudinary (del panel o del sync SYS21); null = sin foto. */
+  foto_url?: string | null;
   estado: EstadoTrabajador;
   /** Qué tipo de puertas puede usar (default 'campo'). */
   permiso_escaneo: PermisoEscaneo;

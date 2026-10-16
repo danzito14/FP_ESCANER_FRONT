@@ -20,3 +20,60 @@
     border-top: 1px solid var(--border);
   }
 }
+
+/* Modal "Ver": foto de nómina (Cloudinary) + datos del trabajador. */
+.detalle-cuerpo {
+  display: flex;
+  gap: 1.25rem;
+  align-items: flex-start;
+
+  @media (max-width: 560px) {
+    flex-direction: column;
+    align-items: center;
+  }
+}
+
+.detalle-foto {
+  margin: 0;
+  flex: 0 0 160px;
+  text-align: center;
+
+  img,
+  .foto-vacia {
+    width: 160px;
+    height: 160px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+  }
+
+  img {
+    object-fit: cover;
+    display: block;
+  }
+
+  .foto-vacia {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    font-size: 0.85rem;
+    opacity: 0.7;
+  }
+}
+
+.detalle-datos {
+  flex: 1;
+  margin: 0;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.4rem 1rem;
+
+  dt {
+    font-weight: 600;
+    opacity: 0.75;
+  }
+
+  dd {
+    margin: 0;
+  }
+}
